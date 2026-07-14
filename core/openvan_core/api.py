@@ -21,7 +21,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -54,6 +54,26 @@ class SettingsBody(BaseModel):
     llm_model: str | None = None
     llm_base_url: str | None = None
     simulate: bool | None = None
+
+
+class ActivePersonalityBody(BaseModel):
+    id: str
+
+
+class ForkPersonalityBody(BaseModel):
+    base_id: str
+    name: str
+
+
+class PersonalityUpdateBody(BaseModel):
+    name: str | None = None
+    category: str | None = None
+    tagline: str | None = None
+    traits: list[str] | None = None
+    inspiration: list[str] | None = None
+    style: str | None = None
+    model_hint: str | None = None
+    examples: list[str] | None = None
 
 
 class _WebSocketHub:
@@ -105,15 +125,11 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
     app.state.core = core
 
     def _state_snapshot() -> dict[str, Any]:
-        resolver = core.hub.resolver
         return {
             "entities": [e.as_dict() for e in core.hub.entities.values()],
             "twin": core.twin.snapshot(),
             "notices": core.advisors.active_notices(),
-            "assistant": {
-                "llm": getattr(resolver, "active", False),
-                "model": getattr(resolver, "model", None),
-            },
+            "assistant": core.assistant_state(),
         }
 
     @app.get("/api/health")
@@ -151,8 +167,46 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
             core.hub,
             core.advisors.active_notices(),
             use_llm=getattr(core.hub.resolver, "active", False),
+            persona=core.personalities.get_active().style,
         )
         return {"text": text}
+
+    @app.get("/api/personalities")
+    async def list_personalities() -> dict[str, Any]:
+        return {
+            "active": core.personalities.active_id(),
+            "personalities": [p.as_dict() for p in core.personalities.all()],
+        }
+
+    @app.post("/api/personalities/active")
+    async def set_personality(body: ActivePersonalityBody) -> dict[str, Any]:
+        if not core.personalities.set_active(body.id):
+            raise HTTPException(404, f"unknown personality '{body.id}'")
+        await core.bus.publish("assistant.changed", core.assistant_state())
+        return {"active": core.personalities.active_id()}
+
+    @app.post("/api/personalities/fork")
+    async def fork_personality(body: ForkPersonalityBody) -> dict[str, Any]:
+        forked = core.personalities.fork(body.base_id, body.name)
+        if forked is None:
+            raise HTTPException(404, f"unknown base personality '{body.base_id}'")
+        return forked.as_dict()
+
+    @app.put("/api/personalities/{pid}")
+    async def update_personality(pid: str, body: PersonalityUpdateBody) -> dict[str, Any]:
+        updated = core.personalities.update(pid, **body.model_dump(exclude_none=True))
+        if updated is None:
+            raise HTTPException(404, "unknown or built-in personality (built-ins are read-only)")
+        if pid == core.personalities.active_id():
+            await core.bus.publish("assistant.changed", core.assistant_state())
+        return updated.as_dict()
+
+    @app.delete("/api/personalities/{pid}")
+    async def delete_personality(pid: str) -> dict[str, Any]:
+        if not core.personalities.delete(pid):
+            raise HTTPException(404, "unknown or built-in personality (built-ins cannot be deleted)")
+        await core.bus.publish("assistant.changed", core.assistant_state())
+        return {"active": core.personalities.active_id()}
 
     @app.get("/api/settings")
     async def get_settings() -> dict[str, Any]:

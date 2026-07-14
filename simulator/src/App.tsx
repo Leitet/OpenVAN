@@ -60,7 +60,8 @@ export default function App() {
         </div>
         <div className="status">
           <span className={"conn" + (assistant.llm ? " up" : "")}>
-            {assistant.llm ? `AI: ${assistant.model}` : "AI: offline rules"}
+            {(assistant.llm ? `AI: ${assistant.model}` : "AI: offline rules") +
+              (assistant.personality ? ` · ${assistant.personality}` : "")}
           </span>
           <span className={"conn" + (connected ? " up" : " down")}>
             {connected ? "Core connected" : "Reconnecting…"}

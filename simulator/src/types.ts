@@ -15,6 +15,22 @@ export type Twin = Record<string, number | boolean | string>;
 export interface Assistant {
   llm: boolean;
   model: string | null;
+  personality?: string;
+  personality_id?: string;
+}
+
+export interface Personality {
+  id: string;
+  name: string;
+  category: string;
+  tagline: string;
+  traits: string[];
+  inspiration: string[];
+  style: string;
+  model_hint: "cloud" | "offline";
+  examples: string[];
+  builtin: boolean;
+  based_on: string | null;
 }
 
 export interface Notice {

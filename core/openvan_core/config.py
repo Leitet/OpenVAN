@@ -19,6 +19,9 @@ class Config:
     host: str = "127.0.0.1"
     port: int = 8000
     plugins_dir: Path = field(default_factory=lambda: _REPO_ROOT / "plugins")
+    # Local storage for things that must survive restarts (custom personalities,
+    # the active choice). Offline-first: a plain local directory, no server.
+    data_dir: Path = field(default_factory=lambda: _REPO_ROOT / "data")
     # Run the environment simulation (thermal + water physics) that makes the
     # twin evolve over time. Sim-mode only; a real van gets these from sensors.
     simulate: bool = True
@@ -55,6 +58,8 @@ class Config:
         cfg.port = int(os.environ.get("OPENVAN_PORT", cfg.port))
         if os.environ.get("OPENVAN_PLUGINS_DIR"):
             cfg.plugins_dir = Path(os.environ["OPENVAN_PLUGINS_DIR"])
+        if os.environ.get("OPENVAN_DATA_DIR"):
+            cfg.data_dir = Path(os.environ["OPENVAN_DATA_DIR"])
         if os.environ.get("OPENVAN_AI") is not None:
             cfg.ai_enabled = os.environ["OPENVAN_AI"] not in ("0", "false", "False")
         cfg.llm_base_url = os.environ.get("OPENVAN_LLM_URL", cfg.llm_base_url)

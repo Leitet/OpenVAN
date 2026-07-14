@@ -13,6 +13,9 @@ node_modules/
 simulator/dist/
 *.local
 
+# Local runtime data (custom personalities, active choice, …)
+data/
+
 # Editor / OS
 .DS_Store
 .idea/

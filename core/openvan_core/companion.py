@@ -78,11 +78,19 @@ class Companion:
         }
 
     async def briefing(
-        self, hub: "Hub", notices: list[dict[str, Any]], *, use_llm: bool
+        self,
+        hub: "Hub",
+        notices: list[dict[str, Any]],
+        *,
+        use_llm: bool,
+        persona: str | None = None,
     ) -> str:
         context = self.build_context(hub, notices)
         if use_llm:
-            text = await self.client.chat_text(BRIEFING_SYSTEM, json.dumps(context))
+            system = BRIEFING_SYSTEM
+            if persona:
+                system = f"{BRIEFING_SYSTEM}\n\nVoice & personality — speak in character:\n{persona}"
+            text = await self.client.chat_text(system, json.dumps(context))
             if text:
                 return text.strip()
         return self.render_template(context)

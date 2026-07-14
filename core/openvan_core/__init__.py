@@ -13,6 +13,7 @@ from .companion import Companion
 from .intents import Intent, IntentResolver, IntentResult
 from .llm import LLMIntentResolver, OllamaClient
 from .notices import Advisor, AdvisorEngine, Notice
+from .personalities import Personality, PersonalityStore
 from .plugins import Plugin, PluginManager
 from .runtime import Core, build_core
 from .safety import SafetyDecision, SafetyRule, SafetyValidator
@@ -37,6 +38,8 @@ __all__ = [
     "Advisor",
     "AdvisorEngine",
     "Notice",
+    "Personality",
+    "PersonalityStore",
     "Plugin",
     "PluginManager",
     "Core",

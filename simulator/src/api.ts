@@ -68,3 +68,48 @@ export async function getModels(): Promise<string[]> {
   const data = await (await fetch("/api/models")).json();
   return data.models as string[];
 }
+
+import type { Personality } from "./types";
+
+export async function getPersonalities(): Promise<{
+  active: string;
+  personalities: Personality[];
+}> {
+  return (await fetch("/api/personalities")).json();
+}
+
+export async function setActivePersonality(id: string): Promise<void> {
+  await fetch("/api/personalities/active", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+}
+
+export async function forkPersonality(
+  base_id: string,
+  name: string,
+): Promise<Personality> {
+  const res = await fetch("/api/personalities/fork", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ base_id, name }),
+  });
+  return res.json();
+}
+
+export async function updatePersonality(
+  id: string,
+  patch: Partial<Personality>,
+): Promise<Personality> {
+  const res = await fetch(`/api/personalities/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  return res.json();
+}
+
+export async function deletePersonality(id: string): Promise<void> {
+  await fetch(`/api/personalities/${id}`, { method: "DELETE" });
+}

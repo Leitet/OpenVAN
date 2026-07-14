@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getModels, getSettings, saveSettings } from "../api";
 import type { Settings } from "../types";
+import { Personalities } from "./Personalities";
 
 export function AdminPanel() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -87,6 +88,8 @@ export function AdminPanel() {
           />
         </div>
       </section>
+
+      <Personalities />
 
       <section className="panel span2">
         <h2>Simulation</h2>

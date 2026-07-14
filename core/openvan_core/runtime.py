@@ -19,6 +19,7 @@ from .hub import Hub
 from .intents import IntentResolver
 from .llm import LLMIntentResolver, OllamaClient
 from .notices import AdvisorEngine
+from .personalities import PersonalityStore
 from .plugins import PluginManager
 from .safety import (
     CriticalBatteryLoadShedding,
@@ -41,6 +42,7 @@ class Core:
     simulation: VanSimulation
     advisors: AdvisorEngine
     companion: Companion
+    personalities: PersonalityStore
 
     async def start(self) -> None:
         # Seed the twin first so plugins read sensible values on setup.
@@ -61,6 +63,15 @@ class Core:
         await self.simulation.stop()
         await self.plugins.teardown_all()
 
+    def assistant_state(self) -> dict[str, Any]:
+        resolver = self.hub.resolver
+        return {
+            "llm": getattr(resolver, "active", False),
+            "model": self.config.llm_model,
+            "personality": self.personalities.get_active().name,
+            "personality_id": self.personalities.active_id(),
+        }
+
     # --- runtime settings (Admin UI / API / MCP) -------------------------
     def settings(self) -> dict[str, Any]:
         from . import __version__
@@ -75,6 +86,7 @@ class Core:
             "llm_base_url": self.config.llm_base_url,
             "llm_active": getattr(resolver, "active", False),
             "simulate": self.config.simulate,
+            "personality": self.personalities.active_id(),
             "plugins": [
                 {
                     "domain": p.domain,
@@ -121,10 +133,7 @@ class Core:
 
         result = self.settings()
         await self.bus.publish("settings.changed", {"settings": result})
-        await self.bus.publish(
-            "assistant.changed",
-            {"llm": result["llm_active"], "model": result["llm_model"] if result["llm_active"] else None},
-        )
+        await self.bus.publish("assistant.changed", self.assistant_state())
         return result
 
     async def available_models(self) -> list[str]:
@@ -153,6 +162,7 @@ def build_core(config: Config | None = None) -> Core:
     simulation = VanSimulation(bus, twin)
     advisors = AdvisorEngine(bus, hub)
     companion = Companion(client)
+    personalities = PersonalityStore(config.data_dir / "personalities.json")
     return Core(
         config=config,
         bus=bus,
@@ -163,4 +173,5 @@ def build_core(config: Config | None = None) -> Core:
         simulation=simulation,
         advisors=advisors,
         companion=companion,
+        personalities=personalities,
     )
