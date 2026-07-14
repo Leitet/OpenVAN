@@ -20,11 +20,12 @@ export interface IntentResult {
 export async function sendIntent(
   entity_id: string,
   command: string,
+  params: Record<string, unknown> = {},
 ): Promise<IntentResult> {
   const res = await fetch("/api/intent", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ entity_id, command }),
+    body: JSON.stringify({ entity_id, command, params }),
   });
   return res.json();
 }

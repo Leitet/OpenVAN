@@ -211,6 +211,19 @@ body {
   font-size: 12px;
   text-anchor: middle;
 }
+.heat {
+  fill: #38414d;
+  font-size: 22px;
+  text-anchor: middle;
+}
+.heat.on {
+  fill: var(--bad);
+  filter: drop-shadow(0 0 6px var(--bad));
+}
+
+.heater {
+  margin-top: 14px;
+}
 
 .log ul {
   list-style: none;

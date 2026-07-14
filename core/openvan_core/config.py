@@ -31,6 +31,10 @@ class Config:
             "cabin.temperature": 19.5,
             "outside.temperature": 11.0,
             "cabin_light.on": False,
+            "diesel_heater.on": False,
+            "diesel_heater.setpoint": 20.0,
+            "diesel_heater.power": 0.0,
+            "diesel_tank.level_pct": 70.0,
         }
     )
 

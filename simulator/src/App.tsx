@@ -3,6 +3,7 @@ import { sendIntent, sendText } from "./api";
 import { Gauge } from "./components/Gauge";
 import { SignalSlider } from "./components/SignalSlider";
 import { EventLog } from "./components/EventLog";
+import { HeaterControl } from "./components/HeaterControl";
 import { VanView } from "./components/VanView";
 import { useVanState } from "./useVanState";
 
@@ -16,6 +17,8 @@ export default function App() {
 
   const light = entities["light.cabin"];
   const lightOn = light?.state === "on";
+  const heater = entities["climate.diesel_heater"];
+  const heaterOn = heater?.state === "heating";
   const soc = num(twin["house_battery.soc"]);
 
   const toggleLight = () =>
@@ -43,6 +46,7 @@ export default function App() {
           <h2>Digital twin</h2>
           <VanView
             lightOn={lightOn}
+            heaterOn={heaterOn}
             soc={soc}
             cabinTemp={num(twin["cabin.temperature"])}
           />
@@ -86,6 +90,19 @@ export default function App() {
               min={-20}
               max={40}
             />
+            <Gauge
+              label="Diesel fuel"
+              value={num(twin["diesel_tank.level_pct"])}
+              unit="%"
+              warnBelow={15}
+            />
+            <Gauge
+              label="Heater draw"
+              value={num(twin["diesel_heater.power"])}
+              unit="W"
+              min={0}
+              max={120}
+            />
           </div>
         </section>
 
@@ -98,6 +115,7 @@ export default function App() {
           >
             {lightOn ? "Cabin light: ON" : "Cabin light: OFF"}
           </button>
+          <HeaterControl entity={heater} />
           <form className="text-cmd" onSubmit={runText}>
             <input
               placeholder='Try "turn on the cabin light"'
@@ -115,9 +133,11 @@ export default function App() {
           <SignalSlider label="Fresh water" signalKey="fresh_water.level_pct" value={num(twin["fresh_water.level_pct"])} min={0} max={100} unit="%" />
           <SignalSlider label="Cabin temp" signalKey="cabin.temperature" value={num(twin["cabin.temperature"])} min={-5} max={35} step={0.5} unit="°C" />
           <SignalSlider label="Outside temp" signalKey="outside.temperature" value={num(twin["outside.temperature"])} min={-20} max={40} step={0.5} unit="°C" />
+          <SignalSlider label="Diesel fuel" signalKey="diesel_tank.level_pct" value={num(twin["diesel_tank.level_pct"])} min={0} max={100} unit="%" />
           <p className="hint">
-            Drop the battery below 10% and try the light — Core's safety layer
-            will refuse the non-essential load.
+            Drop the battery below 10% and try a load — Core refuses non-essential
+            devices. Empty the diesel tank and try the heater — it refuses to
+            start without fuel.
           </p>
         </section>
 

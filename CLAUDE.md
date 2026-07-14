@@ -135,6 +135,8 @@ reference plugins:
 
 - `plugins/battery_monitor/` — read-only **sensor** pattern.
 - `plugins/cabin_light/` — controllable **actuator** pattern (with safety).
+- `plugins/diesel_heater/` — **climate** actuator with a setpoint; exercises both
+  the battery load-shedding and fuel-required safety rules.
 
 ---
 

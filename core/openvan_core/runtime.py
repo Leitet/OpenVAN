@@ -15,7 +15,7 @@ from .events import EventBus
 from .hub import Hub
 from .intents import IntentResolver
 from .plugins import PluginManager
-from .safety import CriticalBatteryLoadShedding, SafetyValidator
+from .safety import CriticalBatteryLoadShedding, FuelRequiredToStart, SafetyValidator
 from .twin import VanTwin
 
 
@@ -44,7 +44,9 @@ def build_core(config: Config | None = None) -> Core:
     bus = EventBus()
     twin = VanTwin(bus)
     backend = SimBackend(bus, twin)
-    safety = SafetyValidator(rules=[CriticalBatteryLoadShedding()])
+    safety = SafetyValidator(
+        rules=[CriticalBatteryLoadShedding(), FuelRequiredToStart()]
+    )
     hub = Hub(bus, twin, safety, IntentResolver())
     plugins = PluginManager(hub, backend)
     return Core(config=config, bus=bus, twin=twin, backend=backend, hub=hub, plugins=plugins)

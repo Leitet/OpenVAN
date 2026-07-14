@@ -92,3 +92,43 @@ class CriticalBatteryLoadShedding(SafetyRule):
                 ),
             )
         return SafetyDecision(allowed=True)
+
+
+class FuelRequiredToStart(SafetyRule):
+    """Refuse to start a fuel-burning appliance without enough fuel.
+
+    An entity opts in by declaring ``attributes["fuel_signal"]`` — the raw twin
+    signal (0–100 %) holding its fuel level. Physically obvious: a diesel heater
+    cannot run on an empty tank.
+    """
+
+    name = "fuel_required_to_start"
+
+    def __init__(self, min_level: float = 5.0) -> None:
+        self.min_level = min_level
+
+    async def evaluate(self, intent: Intent, hub: "Hub") -> SafetyDecision | None:
+        if intent.command != "turn_on":
+            return None
+        entity = hub.get_entity(intent.entity_id)
+        if entity is None:
+            return None
+        fuel_signal = entity.attributes.get("fuel_signal")
+        if not fuel_signal:
+            return None
+        level = hub.twin.get(fuel_signal)
+        if level is None:
+            return None
+        try:
+            level = float(level)
+        except (TypeError, ValueError):
+            return None
+        if level < self.min_level:
+            return SafetyDecision(
+                allowed=False,
+                reason=(
+                    f"{entity.name}: fuel at {level:.0f}% is below the {self.min_level:.0f}% "
+                    f"minimum — refusing to start."
+                ),
+            )
+        return SafetyDecision(allowed=True)
