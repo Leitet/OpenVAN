@@ -130,7 +130,7 @@ class _WebSocketHub:
 
 
 def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI:
-    config = config or Config.from_env()
+    config = config or Config.resolve()
     core = core or build_core(config)
     ws_hub = _WebSocketHub()
 

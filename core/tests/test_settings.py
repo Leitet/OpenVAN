@@ -9,11 +9,49 @@ from openvan_core.config import Config
 
 
 @pytest.fixture
-async def core():
-    c = build_core(Config(ai_enabled=False, weather_enabled=False, memory_enabled=False, telemetry_enabled=False))
+async def core(tmp_path):
+    c = build_core(Config(
+        ai_enabled=False, weather_enabled=False, memory_enabled=False,
+        telemetry_enabled=False, data_dir=tmp_path,
+    ))
     await c.start()
     yield c
     await c.stop()
+
+
+def _cfg(tmp_path, **kw):
+    return Config(
+        ai_enabled=False, weather_enabled=False, memory_enabled=False,
+        telemetry_enabled=False, data_dir=tmp_path, **kw,
+    )
+
+
+async def test_settings_persist_across_restart(tmp_path, monkeypatch):
+    c1 = build_core(_cfg(tmp_path))
+    await c1.start()
+    await c1.apply_settings(
+        offline_model="llama3.1:8b", simulate=False, online_api_key="secret-key"
+    )
+    await c1.stop()
+
+    saved = (tmp_path / "settings.json").read_text()
+    assert "llama3.1:8b" in saved
+    assert "secret-key" not in saved  # API key is never written to disk
+
+    # A fresh resolve() (pointed at the same data dir) restores the choices.
+    monkeypatch.setenv("OPENVAN_DATA_DIR", str(tmp_path))
+    restored = Config.resolve()
+    assert restored.llm_model == "llama3.1:8b"
+    assert restored.simulate is False
+    assert restored.online_api_key is None
+
+
+def test_env_overrides_persisted(tmp_path, monkeypatch):
+    (tmp_path / "settings.json").write_text('{"llm_model": "persisted-model"}')
+    monkeypatch.setenv("OPENVAN_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("OPENVAN_LLM_MODEL", "env-model")
+    cfg = Config.resolve()
+    assert cfg.llm_model == "env-model"  # env wins over the persisted file
 
 
 async def test_settings_reports_state_and_plugins(core):

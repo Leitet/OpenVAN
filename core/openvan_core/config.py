@@ -6,12 +6,33 @@ config server required). ``plugins_dir`` defaults to the monorepo ``plugins/``.
 
 from __future__ import annotations
 
+import json
+import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
+
 _CORE_DIR = Path(__file__).resolve().parent.parent  # .../core
 _REPO_ROOT = _CORE_DIR.parent  # repo root
+
+# Settings changed at runtime (Admin UI / API) that survive a restart. The API
+# key is deliberately NOT here — it stays in memory / env only, never on disk.
+_PERSISTED_FIELDS = (
+    "ai_enabled",
+    "default_connectivity",
+    "llm_base_url",
+    "llm_model",
+    "online_provider",
+    "online_base_url",
+    "online_model",
+    "simulate",
+)
+
+
+def settings_path(data_dir: Path) -> Path:
+    return Path(data_dir) / "settings.json"
 
 
 @dataclass
@@ -85,9 +106,37 @@ class Config:
         }
     )
 
+    # --- persistence -----------------------------------------------------
+    def persistable(self) -> dict:
+        """The runtime-changeable settings that survive a restart (no API key)."""
+        return {f: getattr(self, f) for f in _PERSISTED_FIELDS}
+
+    def apply(self, data: dict) -> None:
+        for f in _PERSISTED_FIELDS:
+            if f in data and data[f] is not None:
+                setattr(self, f, data[f])
+
+    @classmethod
+    def resolve(cls) -> "Config":
+        """Build the effective config: defaults < persisted file < environment."""
+        cfg = cls()
+        if os.environ.get("OPENVAN_DATA_DIR"):
+            cfg.data_dir = Path(os.environ["OPENVAN_DATA_DIR"])
+        path = settings_path(cfg.data_dir)
+        if path.exists():
+            try:
+                cfg.apply(json.loads(path.read_text()))
+            except (OSError, ValueError):
+                logger.warning("could not read settings file %s", path)
+        cfg._apply_env()  # env has the final say
+        return cfg
+
     @classmethod
     def from_env(cls) -> "Config":
-        cfg = cls()
+        return cls()._apply_env()
+
+    def _apply_env(self) -> "Config":
+        cfg = self
         cfg.host = os.environ.get("OPENVAN_HOST", cfg.host)
         cfg.port = int(os.environ.get("OPENVAN_PORT", cfg.port))
         if os.environ.get("OPENVAN_PLUGINS_DIR"):

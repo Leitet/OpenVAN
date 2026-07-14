@@ -76,10 +76,11 @@ Remaining:
 - Map markers for past stays on the Journey map.
 
 ## Admin / platform
+Settings persistence landed (`data/settings.json`; defaults < persisted < env;
+API key never persisted). Remaining:
 - MCP server exposing settings + control (parity with the Admin UI / REST API).
 - Auth for the Admin UI; separate it from the simulator for real deployments.
 - Per-plugin enable/disable and configuration from the Admin UI.
-- Settings persistence (currently runtime-only; survive restarts).
 
 ## Simulator realism
 - Battery SoC driven by the energy balance (solar − loads) instead of injected.

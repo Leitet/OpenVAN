@@ -226,7 +226,9 @@ openvan/
 **Settings live at runtime.** `Core.settings()` / `Core.apply_settings()` back the
 Admin UI (`/api/settings`, `/api/models?connectivity=…`) — offline/online model
 config, default connectivity, AI enable, sim toggle. The same surface is what an
-MCP server would expose. Changes publish `settings.changed` / `assistant.changed`.
+MCP server would expose. Changes publish `settings.changed` / `assistant.changed`
+and **persist to `data/settings.json`** (loaded via `Config.resolve()`:
+defaults < persisted < env). The **API key is never persisted** — memory/env only.
 
 **Personalities = voice only** (`personalities.py`): six built-ins + user forks,
 persisted to `data/` (gitignored). A personality shapes phrasing, never facts,

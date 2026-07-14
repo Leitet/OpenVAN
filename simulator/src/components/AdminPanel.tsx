@@ -246,6 +246,10 @@ export function AdminPanel() {
             </li>
           ))}
         </ul>
+        <p className="hint">
+          Settings persist across restarts (saved locally). The API key is the
+          exception — it stays in memory only and is never written to disk.
+        </p>
       </section>
 
       <div className="save-status">

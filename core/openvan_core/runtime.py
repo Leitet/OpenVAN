@@ -7,6 +7,7 @@ non-HTTP front-ends like a voice loop) can drive a fully-formed Core directly.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 from typing import Any
@@ -176,10 +177,18 @@ class Core:
             else:
                 await self.simulation.stop()
 
+        self._save_settings()
         result = self.settings()
         await self.bus.publish("settings.changed", {"settings": result})
         await self.bus.publish("assistant.changed", self.assistant_state())
         return result
+
+    def _save_settings(self) -> None:
+        from .config import settings_path
+
+        path = settings_path(self.config.data_dir)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(self.config.persistable(), indent=2))
 
     def predictions(self) -> dict[str, Any]:
         from .predictions import compute_predictions

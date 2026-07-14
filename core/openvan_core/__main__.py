@@ -12,7 +12,7 @@ from .config import Config
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-    config = Config.from_env()
+    config = Config.resolve()
     app = build_app(config)
     uvicorn.run(app, host=config.host, port=config.port)
 
