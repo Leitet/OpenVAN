@@ -102,6 +102,7 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
         return {
             "entities": [e.as_dict() for e in core.hub.entities.values()],
             "twin": core.twin.snapshot(),
+            "notices": core.advisors.active_notices(),
             "assistant": {
                 "llm": getattr(resolver, "active", False),
                 "model": getattr(resolver, "model", None),
@@ -132,6 +133,19 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
     async def sim_signal(body: SignalBody) -> dict[str, str]:
         await core.twin.set_signal(body.key, body.value, source="sim")
         return {"status": "ok"}
+
+    @app.get("/api/notices")
+    async def notices() -> dict[str, Any]:
+        return {"notices": core.advisors.active_notices()}
+
+    @app.post("/api/briefing")
+    async def briefing() -> dict[str, str]:
+        text = await core.companion.briefing(
+            core.hub,
+            core.advisors.active_notices(),
+            use_llm=getattr(core.hub.resolver, "active", False),
+        )
+        return {"text": text}
 
     @app.websocket("/ws")
     async def ws_endpoint(ws: WebSocket) -> None:

@@ -10,11 +10,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .backends import Backend, SimBackend
+from .companion import Companion
 from .config import Config
 from .events import EventBus
 from .hub import Hub
 from .intents import IntentResolver
 from .llm import LLMIntentResolver, OllamaClient
+from .notices import AdvisorEngine
 from .plugins import PluginManager
 from .safety import (
     CriticalBatteryLoadShedding,
@@ -35,6 +37,8 @@ class Core:
     hub: Hub
     plugins: PluginManager
     simulation: VanSimulation
+    advisors: AdvisorEngine
+    companion: Companion
 
     async def start(self) -> None:
         # Seed the twin first so plugins read sensible values on setup.
@@ -46,8 +50,12 @@ class Core:
             await self.hub.resolver.startup()
         if self.config.simulate:
             self.simulation.start()
+        # Subscribe advisors, then evaluate once against the seeded state.
+        self.advisors.start()
+        await self.advisors.evaluate()
 
     async def stop(self) -> None:
+        await self.advisors.stop()
         await self.simulation.stop()
         await self.plugins.teardown_all()
 
@@ -64,13 +72,13 @@ def build_core(config: Config | None = None) -> Core:
             PumpDryRunProtection(),
         ]
     )
-    resolver = LLMIntentResolver(
-        OllamaClient(config.llm_base_url, config.llm_model),
-        fallback=IntentResolver(),
-    )
+    client = OllamaClient(config.llm_base_url, config.llm_model)
+    resolver = LLMIntentResolver(client, fallback=IntentResolver())
     hub = Hub(bus, twin, safety, resolver)
     plugins = PluginManager(hub, backend)
     simulation = VanSimulation(bus, twin)
+    advisors = AdvisorEngine(bus, hub)
+    companion = Companion(client)
     return Core(
         config=config,
         bus=bus,
@@ -79,4 +87,6 @@ def build_core(config: Config | None = None) -> Core:
         hub=hub,
         plugins=plugins,
         simulation=simulation,
+        advisors=advisors,
+        companion=companion,
     )

@@ -38,3 +38,9 @@ export async function sendText(text: string): Promise<IntentResult> {
   });
   return res.json();
 }
+
+export async function getBriefing(): Promise<string> {
+  const res = await fetch("/api/briefing", { method: "POST" });
+  const data = await res.json();
+  return data.text as string;
+}

@@ -52,6 +52,7 @@ Rules:
 class LLMClient(Protocol):
     async def available(self) -> bool: ...
     async def chat_json(self, system: str, user: str) -> str | None: ...
+    async def chat_text(self, system: str, user: str) -> str | None: ...
 
 
 class OllamaClient:
@@ -76,16 +77,25 @@ class OllamaClient:
             return False
 
     async def chat_json(self, system: str, user: str) -> str | None:
-        payload = {
+        return await self._chat(system, user, json_format=True, temperature=0.0)
+
+    async def chat_text(self, system: str, user: str) -> str | None:
+        return await self._chat(system, user, json_format=False, temperature=0.6)
+
+    async def _chat(
+        self, system: str, user: str, *, json_format: bool, temperature: float
+    ) -> str | None:
+        payload: dict[str, Any] = {
             "model": self.model,
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            "format": "json",
             "stream": False,
-            "options": {"temperature": 0},
+            "options": {"temperature": temperature},
         }
+        if json_format:
+            payload["format"] = "json"
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 resp = await client.post(f"{self.base_url}/api/chat", json=payload)

@@ -106,6 +106,17 @@ with no model at all — enforce this: never make the assistant a hard requireme
   implement the same `read` / `write` / `watch` interface. **This seam is why
   Rule 1 is cheap.**
 
+### Proactive companion (`notices.py`, `companion.py`)
+
+OpenVan speaks up before being asked. `Advisor`s are deterministic, offline-first
+threshold checks over live state (low fresh water, grey tank full, battery
+runtime, low diesel); the `AdvisorEngine` is edge-triggered — it emits
+`notice.created` when a condition starts and `notice.cleared` when it stops, so
+the companion never nags every tick. `Companion` composes a warm briefing from the
+same facts: LLM-phrased when a model is available, templated otherwise (Rule 3).
+Like the intent path, the AI only rewords facts we give it — it invents nothing
+and controls nothing. New advisors: add an `Advisor` subclass to `default_advisors`.
+
 ### Environment simulation (`simulation.py`)
 
 The twin holds state; `VanSimulation` makes it *evolve* — the heater warms the

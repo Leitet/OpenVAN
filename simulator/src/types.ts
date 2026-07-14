@@ -17,6 +17,15 @@ export interface Assistant {
   model: string | null;
 }
 
+export interface Notice {
+  key: string;
+  level: "info" | "suggestion" | "warning";
+  category: string;
+  title: string;
+  message: string;
+  data: Record<string, unknown>;
+}
+
 export interface WsMessage {
   topic: string;
   data: any;

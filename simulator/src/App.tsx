@@ -4,6 +4,7 @@ import { Gauge } from "./components/Gauge";
 import { SignalSlider } from "./components/SignalSlider";
 import { EventLog } from "./components/EventLog";
 import { HeaterControl } from "./components/HeaterControl";
+import { Companion } from "./components/Companion";
 import { VanView } from "./components/VanView";
 import { useVanState } from "./useVanState";
 
@@ -12,7 +13,7 @@ function num(v: unknown): number | undefined {
 }
 
 export default function App() {
-  const { entities, twin, log, assistant, connected } = useVanState();
+  const { entities, twin, log, assistant, notices, connected } = useVanState();
   const [text, setText] = useState("");
 
   const light = entities["light.cabin"];
@@ -52,6 +53,10 @@ export default function App() {
       </header>
 
       <main className="grid">
+        <section className="panel span2">
+          <Companion notices={notices} />
+        </section>
+
         <section className="panel twin">
           <h2>Digital twin</h2>
           <VanView

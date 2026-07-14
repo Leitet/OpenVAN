@@ -9,8 +9,10 @@ from .backends import Backend, SimBackend
 from .entities import Entity
 from .events import Event, EventBus
 from .hub import Hub
+from .companion import Companion
 from .intents import Intent, IntentResolver, IntentResult
 from .llm import LLMIntentResolver, OllamaClient
+from .notices import Advisor, AdvisorEngine, Notice
 from .plugins import Plugin, PluginManager
 from .runtime import Core, build_core
 from .safety import SafetyDecision, SafetyRule, SafetyValidator
@@ -31,6 +33,10 @@ __all__ = [
     "IntentResult",
     "LLMIntentResolver",
     "OllamaClient",
+    "Companion",
+    "Advisor",
+    "AdvisorEngine",
+    "Notice",
     "Plugin",
     "PluginManager",
     "Core",

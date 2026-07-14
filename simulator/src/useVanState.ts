@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Assistant, Entity, LogEntry, Twin, WsMessage } from "./types";
+import type { Assistant, Entity, LogEntry, Notice, Twin, WsMessage } from "./types";
 
 const MAX_LOG = 40;
 
@@ -13,6 +13,7 @@ export function useVanState() {
   const [twin, setTwin] = useState<Twin>({});
   const [log, setLog] = useState<LogEntry[]>([]);
   const [assistant, setAssistant] = useState<Assistant>({ llm: false, model: null });
+  const [notices, setNotices] = useState<Record<string, Notice>>({});
   const [connected, setConnected] = useState(false);
   const logId = useRef(0);
 
@@ -32,6 +33,11 @@ export function useVanState() {
           setEntities(map);
           setTwin(msg.data.twin as Twin);
           if (msg.data.assistant) setAssistant(msg.data.assistant as Assistant);
+          {
+            const map2: Record<string, Notice> = {};
+            for (const n of (msg.data.notices ?? []) as Notice[]) map2[n.key] = n;
+            setNotices(map2);
+          }
           break;
         }
         case "entity.registered":
@@ -42,6 +48,20 @@ export function useVanState() {
         }
         case "twin.signal_changed": {
           setTwin((prev) => ({ ...prev, [msg.data.key]: msg.data.value }));
+          break;
+        }
+        case "notice.created": {
+          const n = msg.data.notice as Notice;
+          setNotices((prev) => ({ ...prev, [n.key]: n }));
+          break;
+        }
+        case "notice.cleared": {
+          const n = msg.data.notice as Notice;
+          setNotices((prev) => {
+            const next = { ...prev };
+            delete next[n.key];
+            return next;
+          });
           break;
         }
         case "intent.evaluated": {
@@ -83,5 +103,12 @@ export function useVanState() {
     };
   }, [handle]);
 
-  return { entities, twin, log, assistant, connected };
+  return {
+    entities,
+    twin,
+    log,
+    assistant,
+    notices: Object.values(notices),
+    connected,
+  };
 }
