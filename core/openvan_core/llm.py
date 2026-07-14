@@ -39,7 +39,10 @@ Respond with JSON ONLY, no prose:
 
 Rules:
 - Use only an entity_id and command that appear in `devices`.
-- If nothing fits, respond {"entity_id": null}.
+- Infer the device from the user's underlying need, not just explicit names:
+  wanting water or to wash → the water pump; feeling cold → the heater;
+  it being dark → a light. Map the need to the single most relevant device.
+- If genuinely nothing fits, respond {"entity_id": null}.
 - For a temperature setpoint, use command "set_temperature" with
   params {"temperature": <number in Celsius>}.
 - Choose the single best action. Never invent devices or commands.
