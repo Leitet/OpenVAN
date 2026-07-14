@@ -47,15 +47,22 @@ export async function getBriefing(): Promise<string> {
 
 import type { Settings } from "./types";
 
+export interface SettingsPatch {
+  ai_enabled?: boolean;
+  default_connectivity?: "online" | "offline";
+  offline_model?: string;
+  offline_base_url?: string;
+  online_model?: string;
+  online_base_url?: string;
+  online_api_key?: string;
+  simulate?: boolean;
+}
+
 export async function getSettings(): Promise<Settings> {
   return (await fetch("/api/settings")).json();
 }
 
-export async function saveSettings(
-  patch: Partial<
-    Pick<Settings, "ai_enabled" | "llm_model" | "llm_base_url" | "simulate">
-  >,
-): Promise<Settings> {
+export async function saveSettings(patch: SettingsPatch): Promise<Settings> {
   const res = await fetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -64,8 +71,12 @@ export async function saveSettings(
   return res.json();
 }
 
-export async function getModels(): Promise<string[]> {
-  const data = await (await fetch("/api/models")).json();
+export async function getModels(
+  connectivity: "online" | "offline" = "offline",
+): Promise<string[]> {
+  const data = await (
+    await fetch(`/api/models?connectivity=${connectivity}`)
+  ).json();
   return data.models as string[];
 }
 

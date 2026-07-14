@@ -16,10 +16,9 @@ import json
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from .llm import LLMClient
-
 if TYPE_CHECKING:  # pragma: no cover
     from .hub import Hub
+    from .llm import ModelRouter
 
 BRIEFING_SYSTEM = """\
 You are OpenVan, a warm and concise travel companion living in a camper van.
@@ -43,8 +42,8 @@ def _greeting(hour: int) -> str:
 
 
 class Companion:
-    def __init__(self, client: LLMClient) -> None:
-        self.client = client
+    def __init__(self, router: "ModelRouter") -> None:
+        self.router = router
 
     def build_context(
         self, hub: "Hub", notices: list[dict[str, Any]], *, hour: int | None = None
@@ -86,11 +85,11 @@ class Companion:
         persona: str | None = None,
     ) -> str:
         context = self.build_context(hub, notices)
-        if use_llm:
+        if use_llm and self.router.active:
             system = BRIEFING_SYSTEM
             if persona:
                 system = f"{BRIEFING_SYSTEM}\n\nVoice & personality — speak in character:\n{persona}"
-            text = await self.client.chat_text(system, json.dumps(context))
+            text = await self.router.build_client().chat_text(system, json.dumps(context))
             if text:
                 return text.strip()
         return self.render_template(context)

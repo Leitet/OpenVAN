@@ -72,16 +72,21 @@ async def test_active_personality_flows_into_assistant_state(core):
     assert core.assistant_state()["personality"] == "Ranger"
 
 
-async def test_briefing_uses_active_persona(core, monkeypatch):
+async def test_briefing_uses_active_persona(core):
     seen = {}
 
-    async def fake_chat_text(system, user):
-        seen["system"] = system
-        return "ok"
+    class FakeClient:
+        async def available(self):
+            return True
+
+        async def chat_text(self, system, user):
+            seen["system"] = system
+            return "ok"
 
     core.personalities.set_active("pulse")
-    monkeypatch.setattr(core.companion.client, "chat_text", fake_chat_text)
+    core.router._client_factory = lambda _b: FakeClient()
+    core.router._active = True
     await core.companion.briefing(
         core.hub, [], use_llm=True, persona=core.personalities.get_active().style
     )
-    assert "Pulse" in seen["system"]  # persona injected into the prompt
+    assert "Pulse" in seen["system"]  # active persona injected into the prompt

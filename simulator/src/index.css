@@ -182,9 +182,16 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.hint-pill.cloud {
+.hint-pill.online {
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.sub {
+  margin: 18px 0 6px;
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 .persona-cat {
   color: var(--muted);

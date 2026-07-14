@@ -11,7 +11,12 @@ from .events import Event, EventBus
 from .hub import Hub
 from .companion import Companion
 from .intents import Intent, IntentResolver, IntentResult
-from .llm import LLMIntentResolver, OllamaClient
+from .llm import (
+    LLMIntentResolver,
+    ModelRouter,
+    OllamaClient,
+    OpenAICompatibleClient,
+)
 from .notices import Advisor, AdvisorEngine, Notice
 from .personalities import Personality, PersonalityStore
 from .plugins import Plugin, PluginManager
@@ -33,7 +38,9 @@ __all__ = [
     "IntentResolver",
     "IntentResult",
     "LLMIntentResolver",
+    "ModelRouter",
     "OllamaClient",
+    "OpenAICompatibleClient",
     "Companion",
     "Advisor",
     "AdvisorEngine",

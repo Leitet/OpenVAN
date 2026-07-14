@@ -19,17 +19,31 @@ async def core():
 async def test_settings_reports_state_and_plugins(core):
     s = core.settings()
     assert s["ai_enabled"] is False
-    assert s["llm_active"] is False
+    assert s["assistant"]["llm"] is False
     assert s["simulate"] is True
+    assert s["default_connectivity"] == "offline"
+    assert "has_key" in s["online"]
     domains = {p["domain"] for p in s["plugins"]}
     assert {"battery_monitor", "cabin_light", "diesel_heater", "water_system"} <= domains
 
 
-async def test_change_model_updates_config_and_client(core):
-    result = await core.apply_settings(llm_model="llama3.1:8b")
-    assert result["llm_model"] == "llama3.1:8b"
+async def test_change_offline_model_updates_config(core):
+    result = await core.apply_settings(offline_model="llama3.1:8b")
+    assert result["offline"]["model"] == "llama3.1:8b"
     assert core.config.llm_model == "llama3.1:8b"
-    assert core.hub.resolver.client.model == "llama3.1:8b"
+
+
+async def test_configure_online_endpoint(core):
+    result = await core.apply_settings(
+        online_base_url="https://api.example/v1",
+        online_model="gpt-x",
+        online_api_key="secret",
+    )
+    assert result["online"]["base_url"] == "https://api.example/v1"
+    assert result["online"]["model"] == "gpt-x"
+    assert result["online"]["has_key"] is True
+    # The key itself is never echoed back in settings.
+    assert "secret" not in str(result)
 
 
 async def test_toggle_simulation(core):

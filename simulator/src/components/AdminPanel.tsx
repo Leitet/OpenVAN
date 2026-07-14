@@ -5,14 +5,20 @@ import { Personalities } from "./Personalities";
 
 export function AdminPanel() {
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [models, setModels] = useState<string[]>([]);
+  const [offlineModels, setOfflineModels] = useState<string[]>([]);
+  const [onlineModels, setOnlineModels] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const load = async () => {
-    const [s, m] = await Promise.all([getSettings(), getModels()]);
+    const [s, off, on] = await Promise.all([
+      getSettings(),
+      getModels("offline"),
+      getModels("online"),
+    ]);
     setSettings(s);
-    setModels(m);
+    setOfflineModels(off);
+    setOnlineModels(on);
   };
 
   useEffect(() => {
@@ -33,11 +39,15 @@ export function AdminPanel() {
 
   if (!settings) return <div className="panel span2">Loading settings…</div>;
 
-  // Always include the currently-configured model, even if Ollama reports it
-  // under a different tag (e.g. "llama3.2" vs "llama3.2:latest").
-  const modelOptions = Array.from(
-    new Set([...models, settings.llm_model].filter(Boolean)),
+  // Always keep the currently-configured model selectable, even if the server
+  // reports it under a different tag ("llama3.2" vs "llama3.2:latest").
+  const offlineOptions = Array.from(
+    new Set([...offlineModels, settings.offline.model].filter(Boolean)),
   );
+  const onlineOptions = Array.from(
+    new Set([...onlineModels, settings.online.model].filter(Boolean)),
+  );
+  const a = settings.assistant;
 
   return (
     <div className="admin">
@@ -52,41 +62,108 @@ export function AdminPanel() {
           />
         </div>
         <div className="setting-row">
+          <label>Default connectivity (for profiles set to “inherit”)</label>
+          <select
+            value={settings.default_connectivity}
+            onChange={(e) =>
+              patch({
+                default_connectivity: e.target.value as "online" | "offline",
+              })
+            }
+          >
+            <option value="offline">offline</option>
+            <option value="online">online</option>
+          </select>
+        </div>
+        <p className="hint">
+          Effective now: <strong>{a.connectivity}</strong> / {a.model}{" "}
+          <span className={"pill" + (a.llm ? " on" : "")}>
+            {a.llm ? "active" : "offline / rules"}
+          </span>{" "}
+          — voice: {a.personality}
+        </p>
+
+        <h3 className="sub">Offline model (local Ollama)</h3>
+        <div className="setting-row">
           <label>Model</label>
-          <div className="setting-control">
+          <select
+            value={settings.offline.model}
+            onChange={(e) => patch({ offline_model: e.target.value })}
+          >
+            {offlineOptions.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="setting-row">
+          <label>Server URL</label>
+          <input
+            className="text-setting"
+            defaultValue={settings.offline.base_url}
+            onBlur={(e) =>
+              e.target.value !== settings.offline.base_url &&
+              patch({ offline_base_url: e.target.value })
+            }
+          />
+        </div>
+
+        <h3 className="sub">Online model (OpenAI-compatible)</h3>
+        <div className="setting-row">
+          <label>API base URL</label>
+          <input
+            className="text-setting"
+            placeholder="https://api.openai.com/v1"
+            defaultValue={settings.online.base_url}
+            onBlur={(e) =>
+              e.target.value !== settings.online.base_url &&
+              patch({ online_base_url: e.target.value })
+            }
+          />
+        </div>
+        <div className="setting-row">
+          <label>Model</label>
+          {onlineOptions.length ? (
             <select
-              value={settings.llm_model}
-              disabled={!settings.ai_enabled}
-              onChange={(e) => patch({ llm_model: e.target.value })}
+              value={settings.online.model}
+              onChange={(e) => patch({ online_model: e.target.value })}
             >
-              {modelOptions.map((m) => (
+              {onlineOptions.map((m) => (
                 <option key={m} value={m}>
                   {m}
                 </option>
               ))}
             </select>
-            <span className={"pill" + (settings.llm_active ? " on" : "")}>
-              {settings.llm_active ? "active" : "offline / rules"}
-            </span>
-          </div>
+          ) : (
+            <input
+              className="text-setting"
+              placeholder="model id"
+              defaultValue={settings.online.model}
+              onBlur={(e) =>
+                e.target.value !== settings.online.model &&
+                patch({ online_model: e.target.value })
+              }
+            />
+          )}
         </div>
-        {models.length === 0 && (
-          <p className="hint">
-            No local models found. Install <code>ollama</code> and run{" "}
-            <code>ollama pull llama3.2</code>, then reload.
-          </p>
-        )}
         <div className="setting-row">
-          <label>LLM server URL</label>
+          <label>
+            API key {settings.online.has_key && <span className="pill on">set</span>}
+          </label>
           <input
             className="text-setting"
-            defaultValue={settings.llm_base_url}
+            type="password"
+            placeholder={settings.online.has_key ? "•••••• (stored in memory)" : "paste key"}
             onBlur={(e) =>
-              e.target.value !== settings.llm_base_url &&
-              patch({ llm_base_url: e.target.value })
+              e.target.value && patch({ online_api_key: e.target.value })
             }
           />
         </div>
+        <p className="hint">
+          The key is held in memory only (never written to disk). Set it here, or
+          via the <code>OPENVAN_ONLINE_API_KEY</code> environment variable.
+        </p>
       </section>
 
       <Personalities />

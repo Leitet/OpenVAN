@@ -62,7 +62,10 @@ export function Personalities() {
           >
             <div className="persona-head">
               <strong>{p.name}</strong>
-              <span className={"pill hint-pill " + p.model_hint}>{p.model_hint}</span>
+              <span className={"pill hint-pill " + p.connectivity}>
+                {p.connectivity}
+                {p.model !== "inherit" ? ` · ${p.model}` : ""}
+              </span>
             </div>
             <div className="persona-cat">{p.category}</div>
             <div className="persona-traits">
@@ -147,7 +150,8 @@ function PersonalityEditor({
         tagline: draft.tagline,
         traits: draft.traits,
         style: draft.style,
-        model_hint: draft.model_hint,
+        connectivity: draft.connectivity,
+        model: draft.model,
         examples: draft.examples,
       });
       await onSaved();
@@ -184,14 +188,21 @@ function PersonalityEditor({
         />
       </label>
       <label className="field">
-        <span>Model hint</span>
+        <span>Connectivity</span>
         <select
-          value={draft.model_hint}
-          onChange={(e) => set({ model_hint: e.target.value as "cloud" | "offline" })}
+          value={draft.connectivity}
+          onChange={(e) =>
+            set({ connectivity: e.target.value as Personality["connectivity"] })
+          }
         >
+          <option value="inherit">inherit (use default)</option>
           <option value="offline">offline</option>
-          <option value="cloud">cloud</option>
+          <option value="online">online</option>
         </select>
+      </label>
+      <label className="field">
+        <span>Model (or “inherit”)</span>
+        <input value={draft.model} onChange={(e) => set({ model: e.target.value })} />
       </label>
       <label className="field">
         <span>Voice / persona (how it speaks)</span>

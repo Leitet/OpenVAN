@@ -60,12 +60,15 @@ remote access, maps), never a dependency of the core control path.
 
 ### RULE 4 — Model-agnostic
 
-Users choose their AI: local LLM, cloud LLM, or hybrid. Keep the intent-resolver
-seam (`IntentResolver`) provider-neutral. No hard dependency on any single model.
-The default `LLMIntentResolver` (`llm.py`) talks to a local Ollama server via an
-`LLMClient` interface; any client implementing `available` + `chat_json` plugs in.
-It **always** falls back to the offline rule-based resolver, so text commands work
-with no model at all — enforce this: never make the assistant a hard requirement.
+Users choose their AI: local LLM, cloud LLM, or hybrid. `llm.py` has two clients
+behind one `LLMClient` interface — `OllamaClient` (offline) and
+`OpenAICompatibleClient` (online, any OpenAI-compatible endpoint). A `ModelRouter`
+picks the effective client from the **active profile's** binding (each profile is
+`online` / `offline` / `inherit`, with a global default), falling back to the other
+connectivity if the preferred one isn't reachable. Model choice is **separate from
+personality** — voice and model are orthogonal. It **always** falls back to the
+offline rule-based resolver, so text commands work with no model at all — never
+make the assistant a hard requirement.
 
 ---
 
@@ -187,9 +190,15 @@ openvan/
 ```
 
 **Settings live at runtime.** `Core.settings()` / `Core.apply_settings()` back the
-Admin UI (`/api/settings`, `/api/models`) — model choice, AI enable, sim toggle.
-The same surface is what an MCP server would expose. Changes publish
-`settings.changed` / `assistant.changed` on the bus.
+Admin UI (`/api/settings`, `/api/models?connectivity=…`) — offline/online model
+config, default connectivity, AI enable, sim toggle. The same surface is what an
+MCP server would expose. Changes publish `settings.changed` / `assistant.changed`.
+
+**Personalities = voice only** (`personalities.py`): six built-ins + user forks,
+persisted to `data/` (gitignored). A personality shapes phrasing, never facts,
+intents or safety. Its `connectivity` + `model` are the per-profile model binding
+(Rule 4), not part of the character. Online API keys live in memory / env, never
+on disk.
 
 **Ideas go in [backlog.md](backlog.md)**, not lost in chat — capture, don't build,
 until scheduled.

@@ -17,7 +17,12 @@ from .config import Config
 from .events import EventBus
 from .hub import Hub
 from .intents import IntentResolver
-from .llm import LLMIntentResolver, OllamaClient
+from .llm import (
+    LLMIntentResolver,
+    ModelRouter,
+    OllamaClient,
+    OpenAICompatibleClient,
+)
 from .notices import AdvisorEngine
 from .personalities import PersonalityStore
 from .plugins import PluginManager
@@ -43,6 +48,7 @@ class Core:
     advisors: AdvisorEngine
     companion: Companion
     personalities: PersonalityStore
+    router: ModelRouter
 
     async def start(self) -> None:
         # Seed the twin first so plugins read sensible values on setup.
@@ -50,8 +56,7 @@ class Core:
             await self.twin.set_signal(key, value, source="seed")
         self.plugins.discover(self.config.plugins_dir)
         await self.plugins.setup_all()
-        if self.config.ai_enabled:
-            await self.hub.resolver.startup()
+        await self.router.refresh()  # probe the effective model for the active profile
         if self.config.simulate:
             self.simulation.start()
         # Subscribe advisors, then evaluate once against the seeded state.
@@ -64,10 +69,11 @@ class Core:
         await self.plugins.teardown_all()
 
     def assistant_state(self) -> dict[str, Any]:
-        resolver = self.hub.resolver
+        binding = self.router.binding()
         return {
-            "llm": getattr(resolver, "active", False),
-            "model": self.config.llm_model,
+            "llm": self.router.active,
+            "connectivity": binding.connectivity,
+            "model": binding.model,
             "personality": self.personalities.get_active().name,
             "personality_id": self.personalities.active_id(),
         }
@@ -76,15 +82,22 @@ class Core:
     def settings(self) -> dict[str, Any]:
         from . import __version__
 
-        resolver = self.hub.resolver
         return {
             "version": __version__,
             "host": self.config.host,
             "port": self.config.port,
             "ai_enabled": self.config.ai_enabled,
-            "llm_model": self.config.llm_model,
-            "llm_base_url": self.config.llm_base_url,
-            "llm_active": getattr(resolver, "active", False),
+            "default_connectivity": self.config.default_connectivity,
+            "offline": {
+                "base_url": self.config.llm_base_url,
+                "model": self.config.llm_model,
+            },
+            "online": {
+                "base_url": self.config.online_base_url,
+                "model": self.config.online_model,
+                "has_key": bool(self.config.online_api_key),
+            },
+            "assistant": self.assistant_state(),
             "simulate": self.config.simulate,
             "personality": self.personalities.active_id(),
             "plugins": [
@@ -102,27 +115,31 @@ class Core:
         self,
         *,
         ai_enabled: bool | None = None,
-        llm_model: str | None = None,
-        llm_base_url: str | None = None,
+        default_connectivity: str | None = None,
+        offline_model: str | None = None,
+        offline_base_url: str | None = None,
+        online_model: str | None = None,
+        online_base_url: str | None = None,
+        online_api_key: str | None = None,
         simulate: bool | None = None,
     ) -> dict[str, Any]:
-        client = getattr(self.hub.resolver, "client", None)
-        if llm_model is not None:
-            self.config.llm_model = llm_model
-            if client is not None:
-                client.model = llm_model
-        if llm_base_url is not None:
-            self.config.llm_base_url = llm_base_url
-            if client is not None:
-                client.base_url = llm_base_url.rstrip("/")
         if ai_enabled is not None:
             self.config.ai_enabled = ai_enabled
+        if default_connectivity is not None:
+            self.config.default_connectivity = default_connectivity
+        if offline_model is not None:
+            self.config.llm_model = offline_model
+        if offline_base_url is not None:
+            self.config.llm_base_url = offline_base_url.rstrip("/")
+        if online_model is not None:
+            self.config.online_model = online_model
+        if online_base_url is not None:
+            self.config.online_base_url = online_base_url.rstrip("/")
+        if online_api_key is not None:
+            self.config.online_api_key = online_api_key or None
 
-        # Re-probe (or deactivate) the assistant so model/url/enable take effect.
-        if self.config.ai_enabled:
-            await self.hub.resolver.startup()
-        else:
-            self.hub.resolver.deactivate()
+        # Re-resolve the effective model for the active profile + new config.
+        await self.router.refresh()
 
         if simulate is not None and simulate != self.config.simulate:
             self.config.simulate = simulate
@@ -136,10 +153,17 @@ class Core:
         await self.bus.publish("assistant.changed", self.assistant_state())
         return result
 
-    async def available_models(self) -> list[str]:
-        client = getattr(self.hub.resolver, "client", None)
-        if client is None or not hasattr(client, "list_models"):
-            return []
+    async def available_models(self, connectivity: str = "offline") -> list[str]:
+        if connectivity == "online":
+            if not self.config.online_base_url:
+                return []
+            client = OpenAICompatibleClient(
+                self.config.online_base_url,
+                self.config.online_model,
+                self.config.online_api_key,
+            )
+        else:
+            client = OllamaClient(self.config.llm_base_url, self.config.llm_model)
         return await client.list_models()
 
 
@@ -155,14 +179,14 @@ def build_core(config: Config | None = None) -> Core:
             PumpDryRunProtection(),
         ]
     )
-    client = OllamaClient(config.llm_base_url, config.llm_model)
-    resolver = LLMIntentResolver(client, fallback=IntentResolver())
+    personalities = PersonalityStore(config.data_dir / "personalities.json")
+    router = ModelRouter(config, personalities)
+    resolver = LLMIntentResolver(router, fallback=IntentResolver())
     hub = Hub(bus, twin, safety, resolver)
     plugins = PluginManager(hub, backend)
     simulation = VanSimulation(bus, twin)
     advisors = AdvisorEngine(bus, hub)
-    companion = Companion(client)
-    personalities = PersonalityStore(config.data_dir / "personalities.json")
+    companion = Companion(router)
     return Core(
         config=config,
         bus=bus,
@@ -174,4 +198,5 @@ def build_core(config: Config | None = None) -> Core:
         advisors=advisors,
         companion=companion,
         personalities=personalities,
+        router=router,
     )

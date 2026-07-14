@@ -15,9 +15,12 @@ export type Twin = Record<string, number | boolean | string>;
 export interface Assistant {
   llm: boolean;
   model: string | null;
+  connectivity?: "online" | "offline";
   personality?: string;
   personality_id?: string;
 }
+
+export type Connectivity = "online" | "offline" | "inherit";
 
 export interface Personality {
   id: string;
@@ -27,10 +30,25 @@ export interface Personality {
   traits: string[];
   inspiration: string[];
   style: string;
-  model_hint: "cloud" | "offline";
+  connectivity: Connectivity;
+  model: string;
   examples: string[];
   builtin: boolean;
   based_on: string | null;
+}
+
+export interface Settings {
+  version: string;
+  host: string;
+  port: number;
+  ai_enabled: boolean;
+  default_connectivity: "online" | "offline";
+  offline: { base_url: string; model: string };
+  online: { base_url: string; model: string; has_key: boolean };
+  assistant: Assistant;
+  simulate: boolean;
+  personality: string;
+  plugins: PluginInfo[];
 }
 
 export interface Notice {
@@ -47,18 +65,6 @@ export interface PluginInfo {
   name: string;
   version: string;
   categories: string[];
-}
-
-export interface Settings {
-  version: string;
-  host: string;
-  port: number;
-  ai_enabled: boolean;
-  llm_model: string;
-  llm_base_url: string;
-  llm_active: boolean;
-  simulate: boolean;
-  plugins: PluginInfo[];
 }
 
 export interface WsMessage {

@@ -25,11 +25,20 @@ class Config:
     # Run the environment simulation (thermal + water physics) that makes the
     # twin evolve over time. Sim-mode only; a real van gets these from sensors.
     simulate: bool = True
-    # Local, model-agnostic AI assistant (Ollama by default). Optional: if the
-    # model is unreachable, OpenVan falls back to the offline rule-based resolver.
+    # Model-agnostic AI assistant. Optional: if the model is unreachable, OpenVan
+    # falls back to the offline rule-based resolver.
     ai_enabled: bool = True
+    # Which connectivity a profile uses when it doesn't specify one.
+    default_connectivity: str = "offline"  # "offline" | "online"
+    # Offline models: a local Ollama server.
     llm_base_url: str = "http://127.0.0.1:11434"
     llm_model: str = "llama3.2"
+    # Online models: any OpenAI-compatible endpoint (base_url must serve
+    # /chat/completions and /models, e.g. https://api.openai.com/v1). The API key
+    # comes from the environment and is kept in memory, never written to disk.
+    online_base_url: str = ""
+    online_model: str = ""
+    online_api_key: str | None = None
     # Seed the twin with a pleasant default van state so the simulator has
     # something to show on first load.
     seed_twin: dict[str, float | bool] = field(
@@ -62,6 +71,12 @@ class Config:
             cfg.data_dir = Path(os.environ["OPENVAN_DATA_DIR"])
         if os.environ.get("OPENVAN_AI") is not None:
             cfg.ai_enabled = os.environ["OPENVAN_AI"] not in ("0", "false", "False")
+        cfg.default_connectivity = os.environ.get(
+            "OPENVAN_DEFAULT_CONNECTIVITY", cfg.default_connectivity
+        )
         cfg.llm_base_url = os.environ.get("OPENVAN_LLM_URL", cfg.llm_base_url)
         cfg.llm_model = os.environ.get("OPENVAN_LLM_MODEL", cfg.llm_model)
+        cfg.online_base_url = os.environ.get("OPENVAN_ONLINE_URL", cfg.online_base_url)
+        cfg.online_model = os.environ.get("OPENVAN_ONLINE_MODEL", cfg.online_model)
+        cfg.online_api_key = os.environ.get("OPENVAN_ONLINE_API_KEY", cfg.online_api_key)
         return cfg

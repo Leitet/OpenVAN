@@ -51,8 +51,12 @@ class SignalBody(BaseModel):
 
 class SettingsBody(BaseModel):
     ai_enabled: bool | None = None
-    llm_model: str | None = None
-    llm_base_url: str | None = None
+    default_connectivity: str | None = None
+    offline_model: str | None = None
+    offline_base_url: str | None = None
+    online_model: str | None = None
+    online_base_url: str | None = None
+    online_api_key: str | None = None
     simulate: bool | None = None
 
 
@@ -72,7 +76,8 @@ class PersonalityUpdateBody(BaseModel):
     traits: list[str] | None = None
     inspiration: list[str] | None = None
     style: str | None = None
-    model_hint: str | None = None
+    connectivity: str | None = None
+    model: str | None = None
     examples: list[str] | None = None
 
 
@@ -217,8 +222,8 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
         return await core.apply_settings(**body.model_dump(exclude_none=True))
 
     @app.get("/api/models")
-    async def models() -> dict[str, Any]:
-        return {"models": await core.available_models()}
+    async def models(connectivity: str = "offline") -> dict[str, Any]:
+        return {"models": await core.available_models(connectivity)}
 
     @app.websocket("/ws")
     async def ws_endpoint(ws: WebSocket) -> None:

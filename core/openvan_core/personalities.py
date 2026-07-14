@@ -19,9 +19,13 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# model_hint is advisory: which kind of model the personality is designed for.
-CLOUD = "cloud"
+# Connectivity is a real, per-profile model binding (not baked-in character):
+# each profile can independently run online or offline, or "inherit" the global
+# default. The model id is likewise separate — "inherit" uses the default model
+# for the chosen connectivity.
+ONLINE = "online"
 OFFLINE = "offline"
+INHERIT = "inherit"
 
 
 @dataclass
@@ -33,7 +37,8 @@ class Personality:
     traits: list[str]
     inspiration: list[str]  # the "think: …" references
     style: str  # persona guidance appended to the briefing system prompt
-    model_hint: str = OFFLINE  # "cloud" | "offline" (advisory)
+    connectivity: str = INHERIT  # "online" | "offline" | "inherit"
+    model: str = INHERIT  # specific model id, or "inherit"
     examples: list[str] = field(default_factory=list)
     builtin: bool = False
     based_on: str | None = None
@@ -57,7 +62,7 @@ BUILTINS: list[Personality] = [
             "when time and range allow. Keep the traveller comfortable and unhurried. A "
             "sentence or two of graceful, thoughtful prose."
         ),
-        model_hint=CLOUD,
+        connectivity=ONLINE,
         examples=[
             "There's a beautiful lake just five minutes off the route. We have plenty of daylight left.",
         ],
@@ -76,7 +81,7 @@ BUILTINS: list[Personality] = [
             "dramatic: state conditions plainly and reassure through competence, not "
             "excitement. Brief, grounded and dependable."
         ),
-        model_hint=CLOUD,
+        connectivity=ONLINE,
         examples=["Road conditions ahead are rough, but well within our capabilities."],
         builtin=True,
     ),
@@ -92,7 +97,7 @@ BUILTINS: list[Personality] = [
             "quick, simple and efficient. Short, plain status lines. No flourish, no "
             "small talk. One line wherever possible."
         ),
-        model_hint=OFFLINE,
+        connectivity=OFFLINE,
         examples=["Water: 63%.", "Cabin ready."],
         builtin=True,
     ),
@@ -108,7 +113,7 @@ BUILTINS: list[Personality] = [
             "methodical, excellent at diagnostics. Lead with the most diagnostically "
             "relevant fact — precise numbers and trends. Neutral and exact, no small talk."
         ),
-        model_hint=OFFLINE,
+        connectivity=OFFLINE,
         examples=["Battery temperature is increasing faster than expected."],
         builtin=True,
     ),
@@ -124,7 +129,7 @@ BUILTINS: list[Personality] = [
             "relaxed, wise, curious voice. You enjoy the history and culture of places and the "
             "roads between them, and like to share a small, apt observation. Unhurried and warm."
         ),
-        model_hint=CLOUD,
+        connectivity=ONLINE,
         examples=["This village has been welcoming travelers for over six hundred years."],
         builtin=True,
     ),
@@ -140,7 +145,7 @@ BUILTINS: list[Personality] = [
             "Never waste words. Report only what matters, in as few words as possible — often a "
             "single clause. No pleasantries."
         ),
-        model_hint=OFFLINE,
+        connectivity=OFFLINE,
         examples=["Charging.", "Door open.", "Ready."],
         builtin=True,
     ),
@@ -150,7 +155,11 @@ DEFAULT_PERSONALITY = "aurora"
 
 _EDITABLE = {
     "name", "category", "tagline", "traits", "inspiration", "style",
-    "model_hint", "examples",
+    "connectivity", "model", "examples",
+}
+_FIELDS = {
+    "id", "name", "category", "tagline", "traits", "inspiration", "style",
+    "connectivity", "model", "examples", "builtin", "based_on",
 }
 
 
@@ -241,8 +250,12 @@ class PersonalityStore:
         self._active = data.get("active", self._default)
         self._custom = {}
         for raw in data.get("custom", []):
+            # Migrate/ignore legacy or unknown keys (e.g. an older "model_hint").
+            fields = {k: v for k, v in raw.items() if k in _FIELDS}
+            if "connectivity" not in fields and raw.get("model_hint") == "cloud":
+                fields["connectivity"] = ONLINE
             try:
-                personality = Personality(**raw)
+                personality = Personality(**fields)
                 personality.builtin = False
                 self._custom[personality.id] = personality
             except TypeError:
