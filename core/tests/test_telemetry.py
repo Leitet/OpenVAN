@@ -63,6 +63,18 @@ def test_rate_per_hour(tmp_path):
     store.close()
 
 
+def test_export_rows(tmp_path):
+    store = _store(tmp_path)
+    store.record("solar.power", 100.0, 100.0)
+    store.record("house_battery.soc", 80.0, 150.0)
+    store.record("solar.power", 120.0, 200.0)
+    all_rows = store.export(since_ts=0)
+    assert len(all_rows) == 3
+    solar = store.export(since_ts=0, keys=["solar.power"])
+    assert [r[2] for r in solar] == [100.0, 120.0]
+    store.close()
+
+
 def test_prune_drops_old_samples(tmp_path):
     store = _store(tmp_path)
     store.record("solar.power", 100.0, 100.0)

@@ -17,12 +17,15 @@ WS   /ws                      live stream of every Core event
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
 import logging
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -244,6 +247,27 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
             core.telemetry.series, key, since, None, bucket
         )
         return {"key": key, "points": points}
+
+    @app.get("/api/telemetry/export")
+    async def telemetry_export(key: str | None = None, minutes: float = 1440.0) -> Response:
+        if not core.config.telemetry_enabled:
+            return Response("", media_type="text/csv")
+        since = time.time() - minutes * 60.0
+        rows = await asyncio.to_thread(
+            core.telemetry.export, since, None, [key] if key else None
+        )
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(["key", "timestamp", "iso", "value"])
+        for k, ts, value in rows:
+            iso = datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+            writer.writerow([k, f"{ts:.3f}", iso, value])
+        filename = f"openvan-telemetry-{key or 'all'}.csv"
+        return Response(
+            buf.getvalue(),
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     @app.websocket("/ws")
     async def ws_endpoint(ws: WebSocket) -> None:

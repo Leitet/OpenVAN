@@ -44,7 +44,12 @@ export function Trends() {
 
   return (
     <section className="panel span2">
-      <h2>Trends · last hour</h2>
+      <div className="companion-head">
+        <h2>Trends · last hour</h2>
+        <a className="mini" href="/api/telemetry/export?minutes=1440" download>
+          Export CSV (24h)
+        </a>
+      </div>
       <div className="spark-grid">
         {METRICS.map((m) => (
           <Sparkline

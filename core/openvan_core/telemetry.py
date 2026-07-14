@@ -127,6 +127,32 @@ class TelemetryStore:
             return None
         return (last[1] - first[1]) / hours
 
+    def export(
+        self,
+        since_ts: float,
+        until_ts: float | None = None,
+        keys: list[str] | None = None,
+    ) -> list[tuple[str, float, float]]:
+        """Rows of (key, ts, value) for export, ordered by time."""
+        if self._conn is None:
+            return []
+        until_ts = until_ts if until_ts is not None else _FAR_FUTURE
+        with self._lock:
+            if keys:
+                placeholders = ",".join("?" * len(keys))
+                rows = self._conn.execute(
+                    f"SELECT key, ts, value FROM samples "
+                    f"WHERE key IN ({placeholders}) AND ts >= ? AND ts <= ? ORDER BY ts",
+                    (*keys, since_ts, until_ts),
+                ).fetchall()
+            else:
+                rows = self._conn.execute(
+                    "SELECT key, ts, value FROM samples "
+                    "WHERE ts >= ? AND ts <= ? ORDER BY ts",
+                    (since_ts, until_ts),
+                ).fetchall()
+        return [(r[0], r[1], r[2]) for r in rows]
+
     def prune(self, older_than_ts: float) -> int:
         if self._conn is None:
             return 0

@@ -11,7 +11,7 @@ from openvan_core.intents import Intent
 
 @pytest.fixture
 async def core():
-    c = build_core(Config(ai_enabled=False))
+    c = build_core(Config(ai_enabled=False, telemetry_enabled=False))
     await c.start()
     yield c
     await c.stop()
