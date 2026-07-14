@@ -1,0 +1,39 @@
+"""OpenVan Core — an offline-first, AI-first operating system for camper vans.
+
+Home Assistant knows your home. OpenVan understands your journey.
+"""
+
+from __future__ import annotations
+
+from .backends import Backend, SimBackend
+from .entities import Entity
+from .events import Event, EventBus
+from .hub import Hub
+from .intents import Intent, IntentResolver, IntentResult
+from .plugins import Plugin, PluginManager
+from .runtime import Core, build_core
+from .safety import SafetyDecision, SafetyRule, SafetyValidator
+from .twin import VanTwin
+
+__version__ = "0.1.0"
+
+__all__ = [
+    "Backend",
+    "SimBackend",
+    "Entity",
+    "Event",
+    "EventBus",
+    "Hub",
+    "Intent",
+    "IntentResolver",
+    "IntentResult",
+    "Plugin",
+    "PluginManager",
+    "Core",
+    "build_core",
+    "SafetyDecision",
+    "SafetyRule",
+    "SafetyValidator",
+    "VanTwin",
+    "__version__",
+]

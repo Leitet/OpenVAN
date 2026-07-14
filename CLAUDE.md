@@ -1,0 +1,191 @@
+# CLAUDE.md — OpenVan
+
+Architecture, patterns and the rules every contributor (human or AI) must follow.
+Read this before writing code.
+
+---
+
+## What OpenVan is
+
+An **open, AI-first, offline-first operating system for camper vans**.
+
+> Home Assistant knows your home. OpenVan understands your journey.
+
+OpenVan is not a replacement for Home Assistant — it is a natural extension of
+it for the *vehicle* ecosystem. When the van comes home, it becomes part of the
+home's automation.
+
+Three core values guide every decision:
+
+- **Smart** — AI helps people make better decisions.
+- **Pleasant** — a helpful companion, not an industrial control panel.
+- **Open** — users own their data, choose their hardware, choose their AI.
+
+---
+
+## The non-negotiable rules
+
+### RULE 1 — Every feature must work in the simulator
+
+There is **no physical van yet**. The [web simulator](simulator/) is a digital
+twin of the van and is our primary development and test surface.
+
+> **When you add a feature, you add its simulator support in the same change.**
+> A plugin that cannot be exercised from the simulator is not done.
+
+Concretely, a new plugin must:
+
+1. Read/write hardware **only** through a `Backend` (never touch hardware
+   directly), so it runs against the simulated `VanTwin` out of the box.
+2. Expose its raw signals so the simulator can inject sensor values and observe
+   actuator effects (add sliders/controls to the simulator when introducing new
+   signal keys).
+3. Ship a test in `core/tests/` proving its behaviour against the twin.
+
+This is not busywork — it is what keeps the AI feedback loop fast: change → run
+Core → drive it from the simulator (or a test) → see the result → adjust.
+
+### RULE 2 — The AI never controls hardware directly
+
+The AI only proposes an **`Intent`**. OpenVan Core validates every intent through
+the **safety layer** (battery state, vehicle status, safety rules, environmental
+constraints) before anything acts. Never add a code path that lets a model call
+an actuator without going through `Hub.execute_intent` → `SafetyValidator`.
+
+### RULE 3 — Offline-first
+
+Core functionality (lighting, heating, battery, water, automation, local voice)
+must work with **no internet**. Cloud is an *enhancement* (weather, cloud AI,
+remote access, maps), never a dependency of the core control path.
+
+### RULE 4 — Model-agnostic
+
+Users choose their AI: local LLM, cloud LLM, or hybrid. Keep the intent-resolver
+seam (`IntentResolver`) provider-neutral. No hard dependency on any single model.
+
+---
+
+## Architecture
+
+```
+        Simulator (React)  ── the digital twin UI / test surface
+              │  HTTP + WebSocket
+              ▼
+        ┌───────────────────────────── OpenVan Core (Python) ─────────────────┐
+        │  api.py        FastAPI + WebSocket (local only)                      │
+        │  hub.py        entity registry · routes intents · calls safety       │
+        │  safety.py     SafetyValidator + rules (allow / deny / modify)       │
+        │  intents.py    Intent + IntentResolver (LLM-agnostic seam)           │
+        │  plugins.py    Plugin base + directory-based PluginManager           │
+        │  entities.py   semantic, HA-style entities                           │
+        │  events.py     async pub/sub EventBus (the spine)                    │
+        │  backends.py   Backend seam:  SimBackend  ──▶  VanTwin               │
+        │  twin.py       VanTwin: raw simulated hardware signals               │
+        └─────────────────────────────────────────────────────────────────────┘
+              ▲
+              │ Backend interface (read / write / watch)
+        ┌─────┴───────────────┐
+        │  plugins/           │   battery_monitor · cabin_light · (your plugin)
+        └─────────────────────┘
+```
+
+### Two layers, one seam
+
+- **Twin signals** (`twin.py`) are the *raw hardware* reality — `house_battery.soc`,
+  `cabin_light.on`. In simulation these are driven by the simulator; on a real
+  van they come from actual devices.
+- **Entities** (`entities.py`) are OpenVan's *semantic* model — `sensor.house_battery_soc`
+  with a unit and friendly name, `light.cabin` with commands.
+- Plugins bridge the two, and they do it **only** through a `Backend`
+  (`backends.py`). Today the only backend is `SimBackend` (maps to `VanTwin`).
+  A real deployment adds `VictronBackend`, `ModbusBackend`, `CanBackend`, … that
+  implement the same `read` / `write` / `watch` interface. **This seam is why
+  Rule 1 is cheap.**
+
+### Data flow
+
+- Sensor: simulator injects `house_battery.soc` → `VanTwin` emits
+  `twin.signal_changed` → `battery_monitor` updates `sensor.house_battery_soc` →
+  WebSocket → simulator gauge moves.
+- Command: simulator/AI sends an `Intent` → `Hub.execute_intent` → `SafetyValidator`
+  → plugin handler writes the actuator signal via `Backend` → twin updates →
+  simulator reflects it. Every evaluation emits `intent.evaluated` (shown in the
+  simulator's activity/safety log).
+
+---
+
+## Plugin structure
+
+Plugins live under [`plugins/`](plugins/), one package per plugin. Each declares
+a **domain** and one or more **categories** so features group cleanly:
+
+| Category   | Examples                                   |
+| ---------- | ------------------------------------------ |
+| `energy`   | battery monitor, solar, shore power, inverter |
+| `lighting` | cabin lights, awning light, reading lamps  |
+| `climate`  | diesel heater, fan, A/C, thermostat        |
+| `water`    | fresh/grey tanks, pump, water heater       |
+| `sensors`  | temperature, humidity, GPS, gas, motion    |
+| `vehicle`  | OBD-II, CAN bus, doors, ignition           |
+| `connectivity` | Starlink, LTE, Wi-Fi                   |
+
+A plugin is a subclass of `openvan_core.Plugin` that self-registers. See
+[docs/PLUGINS.md](docs/PLUGINS.md) for a step-by-step guide, and the two
+reference plugins:
+
+- `plugins/battery_monitor/` — read-only **sensor** pattern.
+- `plugins/cabin_light/` — controllable **actuator** pattern (with safety).
+
+---
+
+## Repository layout
+
+```
+openvan/
+  core/                 Python Core (offline-first brain)
+    openvan_core/       the package
+    tests/              pytest — the AI feedback loop
+    pyproject.toml
+  plugins/              one package per plugin
+    battery_monitor/
+    cabin_light/
+  simulator/            React + Vite digital-twin UI
+  docs/
+    PLUGINS.md          how to write a plugin (+ simulator support)
+  CLAUDE.md             (this file)
+  README.md
+```
+
+---
+
+## Working on OpenVan
+
+```bash
+# Core
+cd core && python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+pytest                      # must pass before every commit
+python -m openvan_core      # serves http://127.0.0.1:8000
+
+# Simulator (separate terminal)
+cd simulator && npm install
+npm run dev                 # http://localhost:5173, proxies to Core
+```
+
+### Standards
+
+- **Tests before features.** New code needs tests; `pytest` must be green.
+- **Simple over clever.** If you're proud of how clever it is, simplify it.
+- **Physics before code.** Model what the physical system actually does
+  (e.g. shed non-essential loads at critical SoC — don't fake a demo).
+- **One integration at a time.** Land plugins focused and complete.
+- **Simulators are not reality.** Keep improving the twin's realism, and validate
+  against real hardware before shipping a backend.
+- **Measure, don't guess.** Benchmark timing/energy numbers rather than inventing
+  them.
+
+### Branch & PR
+
+- Branch: `{issue-number}-short-description`.
+- Keep PRs to one logical change; link the issue; squash-merge.
+- A PR that adds a feature without simulator support or tests is incomplete.
