@@ -341,7 +341,8 @@ class ModelRouter:
         if binding.connectivity == "online":
             provider = getattr(self.config, "online_provider", "openai")
             if provider == "anthropic":
-                return AnthropicClient(binding.api_key, binding.model, binding.base_url)
+                # base_url is OpenAI-oriented config; Anthropic uses its own endpoint.
+                return AnthropicClient(binding.api_key, binding.model)
             return OpenAICompatibleClient(binding.base_url, binding.model, binding.api_key)
         return OllamaClient(binding.base_url, binding.model)
 

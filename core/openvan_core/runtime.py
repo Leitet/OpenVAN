@@ -164,7 +164,6 @@ class Core:
                 client = AnthropicClient(
                     self.config.online_api_key,
                     self.config.online_model,
-                    self.config.online_base_url,
                 )
             elif self.config.online_base_url:
                 client = OpenAICompatibleClient(

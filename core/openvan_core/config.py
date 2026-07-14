@@ -38,7 +38,7 @@ class Config:
     # targets the Claude Messages API (base_url defaults to api.anthropic.com).
     # The API key comes from the environment and is kept in memory, never on disk.
     online_provider: str = "openai"  # "openai" | "anthropic"
-    online_base_url: str = ""
+    online_base_url: str = "https://api.openai.com/v1"
     online_model: str = ""
     online_api_key: str | None = None
     # Seed the twin with a pleasant default van state so the simulator has

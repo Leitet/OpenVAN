@@ -3,6 +3,29 @@ import { getModels, getSettings, saveSettings } from "../api";
 import type { Settings } from "../types";
 import { Personalities } from "./Personalities";
 
+// Curated fallbacks so the dropdowns are useful before (or without) a live
+// /models fetch. Merged with fetched models + the current value.
+const KNOWN_ONLINE_MODELS: Record<"openai" | "anthropic", string[]> = {
+  openai: [
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    "gpt-4-turbo",
+    "o3",
+    "o4-mini",
+    "gpt-3.5-turbo",
+  ],
+  anthropic: [
+    "claude-opus-4-8",
+    "claude-sonnet-4-6",
+    "claude-haiku-4-5",
+    "claude-fable-5",
+    "claude-opus-4-7",
+    "claude-opus-4-6",
+  ],
+};
+
 export function AdminPanel() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [offlineModels, setOfflineModels] = useState<string[]>([]);
@@ -31,6 +54,13 @@ export function AdminPanel() {
     try {
       const updated = await saveSettings(p);
       setSettings(updated);
+      // Provider / URL / key changes affect which models are reachable.
+      const [off, on] = await Promise.all([
+        getModels("offline"),
+        getModels("online"),
+      ]);
+      setOfflineModels(off);
+      setOnlineModels(on);
       setSaved(true);
     } finally {
       setSaving(false);
@@ -45,7 +75,13 @@ export function AdminPanel() {
     new Set([...offlineModels, settings.offline.model].filter(Boolean)),
   );
   const onlineOptions = Array.from(
-    new Set([...onlineModels, settings.online.model].filter(Boolean)),
+    new Set(
+      [
+        ...(KNOWN_ONLINE_MODELS[settings.online.provider] ?? []),
+        ...onlineModels,
+        settings.online.model,
+      ].filter(Boolean),
+    ),
   );
   const a = settings.assistant;
 
@@ -138,28 +174,17 @@ export function AdminPanel() {
         )}
         <div className="setting-row">
           <label>Model</label>
-          {onlineOptions.length ? (
-            <select
-              value={settings.online.model}
-              onChange={(e) => patch({ online_model: e.target.value })}
-            >
-              {onlineOptions.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              className="text-setting"
-              placeholder="model id"
-              defaultValue={settings.online.model}
-              onBlur={(e) =>
-                e.target.value !== settings.online.model &&
-                patch({ online_model: e.target.value })
-              }
-            />
-          )}
+          <select
+            value={settings.online.model}
+            onChange={(e) => patch({ online_model: e.target.value })}
+          >
+            {!settings.online.model && <option value="">— choose a model —</option>}
+            {onlineOptions.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="setting-row">
           <label>
