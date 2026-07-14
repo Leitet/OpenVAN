@@ -166,13 +166,13 @@ class TravelMemory:
         return self._fetch(new_id)
 
     def _target_id(self) -> int | None:
-        if self._open_id is not None:
-            return self._open_id
+        # The most-recently-created stay (a fresh bookmark wins over an
+        # already-open auto-stay), matching the top of the journal list.
         if self._conn is None:
             return None
         with self._lock:
             row = self._conn.execute(
-                "SELECT id FROM stays ORDER BY started_at DESC LIMIT 1"
+                "SELECT id FROM stays ORDER BY started_at DESC, id DESC LIMIT 1"
             ).fetchone()
         return row[0] if row else None
 

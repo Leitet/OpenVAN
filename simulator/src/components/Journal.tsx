@@ -76,6 +76,14 @@ export function Journal() {
           <strong>{current.place || "Here"}</strong> — camped since{" "}
           {when(current.started_at)} · {duration(current.duration_hours)}
           {current.condition ? ` · ${current.condition}` : ""}
+        </div>
+      )}
+
+      {stays.length > 0 && (
+        <div className="stay-annotate">
+          <span className="stay-annotate-label">
+            Annotate latest · {stays[0].place || coords(stays[0])}
+          </span>
           <div className="stay-forms">
             <input
               placeholder="Name this place…"

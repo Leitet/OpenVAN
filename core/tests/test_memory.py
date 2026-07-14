@@ -74,6 +74,22 @@ def test_bookmark_note_and_place(tmp_path):
     mem.close()
 
 
+def test_note_targets_most_recent_stay(tmp_path):
+    twin = FakeTwin(**{
+        "vehicle.ignition": False, "vehicle.speed_kmh": 0.0,
+        "gps.lat": 46.0, "gps.lon": 11.0, "house_battery.soc": 90.0,
+    })
+    mem = _memory(tmp_path, twin)
+    mem.tick(1000.0)
+    mem.tick(1061.0)  # an auto-stay is open (older started_at)
+    booked = mem.bookmark("passing through")  # newer -> should be the target
+    mem.set_place("Overlook")
+    stays = mem.list_stays()
+    assert stays[0]["id"] == booked["id"]
+    assert stays[0]["place"] == "Overlook"
+    mem.close()
+
+
 def test_solar_energy_over_stay(tmp_path):
     from openvan_core.telemetry import TelemetryStore
 
