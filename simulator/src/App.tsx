@@ -19,10 +19,15 @@ export default function App() {
   const lightOn = light?.state === "on";
   const heater = entities["climate.diesel_heater"];
   const heaterOn = heater?.state === "heating";
+  const pump = entities["switch.water_pump"];
+  const pumpOn = pump?.state === "on";
   const soc = num(twin["house_battery.soc"]);
 
   const toggleLight = () =>
     sendIntent("light.cabin", lightOn ? "turn_off" : "turn_on");
+
+  const togglePump = () =>
+    sendIntent("switch.water_pump", pumpOn ? "turn_off" : "turn_on");
 
   const runText = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +82,11 @@ export default function App() {
               warnBelow={15}
             />
             <Gauge
+              label="Grey water"
+              value={num(twin["grey_water.level_pct"])}
+              unit="%"
+            />
+            <Gauge
               label="Cabin"
               value={num(twin["cabin.temperature"])}
               unit="°C"
@@ -116,6 +126,13 @@ export default function App() {
             {lightOn ? "Cabin light: ON" : "Cabin light: OFF"}
           </button>
           <HeaterControl entity={heater} />
+          <button
+            className={"toggle" + (pumpOn ? " on" : "")}
+            onClick={togglePump}
+            disabled={!pump}
+          >
+            {pumpOn ? "Water pump: RUNNING" : "Water pump: OFF"}
+          </button>
           <form className="text-cmd" onSubmit={runText}>
             <input
               placeholder='Try "turn on the cabin light"'
@@ -131,13 +148,13 @@ export default function App() {
           <SignalSlider label="Battery SoC" signalKey="house_battery.soc" value={soc} min={0} max={100} unit="%" />
           <SignalSlider label="Solar power" signalKey="solar.power" value={num(twin["solar.power"])} min={0} max={600} step={10} unit="W" />
           <SignalSlider label="Fresh water" signalKey="fresh_water.level_pct" value={num(twin["fresh_water.level_pct"])} min={0} max={100} unit="%" />
-          <SignalSlider label="Cabin temp" signalKey="cabin.temperature" value={num(twin["cabin.temperature"])} min={-5} max={35} step={0.5} unit="°C" />
           <SignalSlider label="Outside temp" signalKey="outside.temperature" value={num(twin["outside.temperature"])} min={-20} max={40} step={0.5} unit="°C" />
           <SignalSlider label="Diesel fuel" signalKey="diesel_tank.level_pct" value={num(twin["diesel_tank.level_pct"])} min={0} max={100} unit="%" />
           <p className="hint">
-            Drop the battery below 10% and try a load — Core refuses non-essential
-            devices. Empty the diesel tank and try the heater — it refuses to
-            start without fuel.
+            Cabin temperature is simulated: set the outside temp cold, turn on the
+            heater, and watch the cabin warm toward the setpoint. Run the pump to
+            drain fresh into grey. Safety blocks: non-essential loads below 10%
+            battery, the heater without fuel, the pump when the fresh tank is empty.
           </p>
         </section>
 

@@ -132,3 +132,42 @@ class FuelRequiredToStart(SafetyRule):
                 ),
             )
         return SafetyDecision(allowed=True)
+
+
+class PumpDryRunProtection(SafetyRule):
+    """Refuse to run a pump dry — running a water pump with no water damages it.
+
+    An entity opts in with ``attributes["dry_run_signal"]`` — the raw twin signal
+    (0–100 %) holding the level of the source tank it draws from.
+    """
+
+    name = "pump_dry_run_protection"
+
+    def __init__(self, min_level: float = 2.0) -> None:
+        self.min_level = min_level
+
+    async def evaluate(self, intent: Intent, hub: "Hub") -> SafetyDecision | None:
+        if intent.command != "turn_on":
+            return None
+        entity = hub.get_entity(intent.entity_id)
+        if entity is None:
+            return None
+        signal = entity.attributes.get("dry_run_signal")
+        if not signal:
+            return None
+        level = hub.twin.get(signal)
+        if level is None:
+            return None
+        try:
+            level = float(level)
+        except (TypeError, ValueError):
+            return None
+        if level < self.min_level:
+            return SafetyDecision(
+                allowed=False,
+                reason=(
+                    f"{entity.name}: source tank at {level:.0f}% — refusing to run the "
+                    f"pump dry."
+                ),
+            )
+        return SafetyDecision(allowed=True)

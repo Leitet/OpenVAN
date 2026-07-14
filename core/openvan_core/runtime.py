@@ -15,7 +15,13 @@ from .events import EventBus
 from .hub import Hub
 from .intents import IntentResolver
 from .plugins import PluginManager
-from .safety import CriticalBatteryLoadShedding, FuelRequiredToStart, SafetyValidator
+from .safety import (
+    CriticalBatteryLoadShedding,
+    FuelRequiredToStart,
+    PumpDryRunProtection,
+    SafetyValidator,
+)
+from .simulation import VanSimulation
 from .twin import VanTwin
 
 
@@ -27,6 +33,7 @@ class Core:
     backend: Backend
     hub: Hub
     plugins: PluginManager
+    simulation: VanSimulation
 
     async def start(self) -> None:
         # Seed the twin first so plugins read sensible values on setup.
@@ -34,8 +41,11 @@ class Core:
             await self.twin.set_signal(key, value, source="seed")
         self.plugins.discover(self.config.plugins_dir)
         await self.plugins.setup_all()
+        if self.config.simulate:
+            self.simulation.start()
 
     async def stop(self) -> None:
+        await self.simulation.stop()
         await self.plugins.teardown_all()
 
 
@@ -45,8 +55,21 @@ def build_core(config: Config | None = None) -> Core:
     twin = VanTwin(bus)
     backend = SimBackend(bus, twin)
     safety = SafetyValidator(
-        rules=[CriticalBatteryLoadShedding(), FuelRequiredToStart()]
+        rules=[
+            CriticalBatteryLoadShedding(),
+            FuelRequiredToStart(),
+            PumpDryRunProtection(),
+        ]
     )
     hub = Hub(bus, twin, safety, IntentResolver())
     plugins = PluginManager(hub, backend)
-    return Core(config=config, bus=bus, twin=twin, backend=backend, hub=hub, plugins=plugins)
+    simulation = VanSimulation(bus, twin)
+    return Core(
+        config=config,
+        bus=bus,
+        twin=twin,
+        backend=backend,
+        hub=hub,
+        plugins=plugins,
+        simulation=simulation,
+    )

@@ -102,6 +102,17 @@ seam (`IntentResolver`) provider-neutral. No hard dependency on any single model
   implement the same `read` / `write` / `watch` interface. **This seam is why
   Rule 1 is cheap.**
 
+### Environment simulation (`simulation.py`)
+
+The twin holds state; `VanSimulation` makes it *evolve* — the heater warms the
+cabin toward its setpoint, the cabin loses heat to the outside, the pump moves
+water fresh → grey. This is **environment physics, not a feature**, so it lives in
+the simulation layer (alongside `SimBackend`), not in a plugin. It runs only in
+sim mode (`Config.simulate`); a real van gets these values from sensors. Values
+a plugin *owns as an actuator* (e.g. `diesel_heater.on`) are written by the
+plugin; values the *world* determines (e.g. `cabin.temperature`) are the
+simulation's. Its constants are illustrative — measure a real van before shipping.
+
 ### Data flow
 
 - Sensor: simulator injects `house_battery.soc` → `VanTwin` emits
@@ -137,6 +148,8 @@ reference plugins:
 - `plugins/cabin_light/` — controllable **actuator** pattern (with safety).
 - `plugins/diesel_heater/` — **climate** actuator with a setpoint; exercises both
   the battery load-shedding and fuel-required safety rules.
+- `plugins/water_system/` — **water** tanks (fresh/grey) + a pump with dry-run
+  protection; the pump is `essential` so it is never load-shed.
 
 ---
 

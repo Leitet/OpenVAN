@@ -13,6 +13,7 @@ from .intents import Intent, IntentResolver, IntentResult
 from .plugins import Plugin, PluginManager
 from .runtime import Core, build_core
 from .safety import SafetyDecision, SafetyRule, SafetyValidator
+from .simulation import VanSimulation
 from .twin import VanTwin
 
 __version__ = "0.1.0"
@@ -34,6 +35,7 @@ __all__ = [
     "SafetyDecision",
     "SafetyRule",
     "SafetyValidator",
+    "VanSimulation",
     "VanTwin",
     "__version__",
 ]

@@ -19,6 +19,9 @@ class Config:
     host: str = "127.0.0.1"
     port: int = 8000
     plugins_dir: Path = field(default_factory=lambda: _REPO_ROOT / "plugins")
+    # Run the environment simulation (thermal + water physics) that makes the
+    # twin evolve over time. Sim-mode only; a real van gets these from sensors.
+    simulate: bool = True
     # Seed the twin with a pleasant default van state so the simulator has
     # something to show on first load.
     seed_twin: dict[str, float | bool] = field(
@@ -28,6 +31,8 @@ class Config:
             "house_battery.current": -4.2,
             "solar.power": 240.0,
             "fresh_water.level_pct": 55.0,
+            "grey_water.level_pct": 8.0,
+            "water_pump.on": False,
             "cabin.temperature": 19.5,
             "outside.temperature": 11.0,
             "cabin_light.on": False,
