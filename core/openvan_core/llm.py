@@ -199,6 +199,89 @@ class OpenAICompatibleClient:
             return None
 
 
+class AnthropicClient:
+    """Anthropic Messages API client.
+
+    Raw httpx (like the other clients) to keep the LLM layer dependency-light and
+    uniform across backends — the same reason we don't pull in the OpenAI SDK for
+    the OpenAI-compatible client. Talks to POST /v1/messages: system is a
+    top-level field, max_tokens is required, and the reply is content[].text.
+    """
+
+    API_VERSION = "2023-06-01"
+
+    def __init__(
+        self,
+        api_key: str | None,
+        model: str,
+        base_url: str = "https://api.anthropic.com",
+        timeout: float = 30.0,
+        max_tokens: int = 1024,
+    ) -> None:
+        self.api_key = api_key
+        self.model = model
+        self.base_url = (base_url or "https://api.anthropic.com").rstrip("/")
+        self.timeout = timeout
+        self.max_tokens = max_tokens
+
+    def _headers(self) -> dict[str, str]:
+        return {
+            "content-type": "application/json",
+            "anthropic-version": self.API_VERSION,
+            "x-api-key": self.api_key or "",
+        }
+
+    async def available(self) -> bool:
+        if not self.api_key:
+            return False
+        try:
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                resp = await client.get(f"{self.base_url}/v1/models", headers=self._headers())
+                return resp.status_code == 200
+        except Exception:
+            return False
+
+    async def list_models(self) -> list[str]:
+        if not self.api_key:
+            return []
+        try:
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                resp = await client.get(f"{self.base_url}/v1/models", headers=self._headers())
+                resp.raise_for_status()
+                return [m["id"] for m in resp.json().get("data", [])]
+        except Exception:
+            return []
+
+    async def chat_json(self, system: str, user: str) -> str | None:
+        # Anthropic has no response_format flag here; the system prompt already
+        # demands JSON-only, and the caller parses defensively.
+        return await self._message(system, user)
+
+    async def chat_text(self, system: str, user: str) -> str | None:
+        return await self._message(system, user)
+
+    async def _message(self, system: str, user: str) -> str | None:
+        payload = {
+            "model": self.model,
+            "max_tokens": self.max_tokens,
+            "system": system,
+            "messages": [{"role": "user", "content": user}],
+        }
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                resp = await client.post(
+                    f"{self.base_url}/v1/messages", json=payload, headers=self._headers()
+                )
+                resp.raise_for_status()
+                for block in resp.json().get("content", []):
+                    if block.get("type") == "text":
+                        return block.get("text")
+                return None
+        except Exception as exc:
+            logger.warning("Anthropic call failed: %r", exc)
+            return None
+
+
 @dataclass
 class ModelBinding:
     connectivity: str  # "online" | "offline"
@@ -256,6 +339,9 @@ class ModelRouter:
 
     def _default_factory(self, binding: ModelBinding) -> LLMClient:
         if binding.connectivity == "online":
+            provider = getattr(self.config, "online_provider", "openai")
+            if provider == "anthropic":
+                return AnthropicClient(binding.api_key, binding.model, binding.base_url)
             return OpenAICompatibleClient(binding.base_url, binding.model, binding.api_key)
         return OllamaClient(binding.base_url, binding.model)
 

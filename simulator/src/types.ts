@@ -44,7 +44,12 @@ export interface Settings {
   ai_enabled: boolean;
   default_connectivity: "online" | "offline";
   offline: { base_url: string; model: string };
-  online: { base_url: string; model: string; has_key: boolean };
+  online: {
+    provider: "openai" | "anthropic";
+    base_url: string;
+    model: string;
+    has_key: boolean;
+  };
   assistant: Assistant;
   simulate: boolean;
   personality: string;

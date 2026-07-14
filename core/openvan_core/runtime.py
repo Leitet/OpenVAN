@@ -18,6 +18,7 @@ from .events import EventBus
 from .hub import Hub
 from .intents import IntentResolver
 from .llm import (
+    AnthropicClient,
     LLMIntentResolver,
     ModelRouter,
     OllamaClient,
@@ -93,6 +94,7 @@ class Core:
                 "model": self.config.llm_model,
             },
             "online": {
+                "provider": self.config.online_provider,
                 "base_url": self.config.online_base_url,
                 "model": self.config.online_model,
                 "has_key": bool(self.config.online_api_key),
@@ -118,6 +120,7 @@ class Core:
         default_connectivity: str | None = None,
         offline_model: str | None = None,
         offline_base_url: str | None = None,
+        online_provider: str | None = None,
         online_model: str | None = None,
         online_base_url: str | None = None,
         online_api_key: str | None = None,
@@ -131,6 +134,8 @@ class Core:
             self.config.llm_model = offline_model
         if offline_base_url is not None:
             self.config.llm_base_url = offline_base_url.rstrip("/")
+        if online_provider is not None:
+            self.config.online_provider = online_provider
         if online_model is not None:
             self.config.online_model = online_model
         if online_base_url is not None:
@@ -155,13 +160,20 @@ class Core:
 
     async def available_models(self, connectivity: str = "offline") -> list[str]:
         if connectivity == "online":
-            if not self.config.online_base_url:
+            if self.config.online_provider == "anthropic":
+                client = AnthropicClient(
+                    self.config.online_api_key,
+                    self.config.online_model,
+                    self.config.online_base_url,
+                )
+            elif self.config.online_base_url:
+                client = OpenAICompatibleClient(
+                    self.config.online_base_url,
+                    self.config.online_model,
+                    self.config.online_api_key,
+                )
+            else:
                 return []
-            client = OpenAICompatibleClient(
-                self.config.online_base_url,
-                self.config.online_model,
-                self.config.online_api_key,
-            )
         else:
             client = OllamaClient(self.config.llm_base_url, self.config.llm_model)
         return await client.list_models()

@@ -109,19 +109,33 @@ export function AdminPanel() {
           />
         </div>
 
-        <h3 className="sub">Online model (OpenAI-compatible)</h3>
+        <h3 className="sub">Online model</h3>
         <div className="setting-row">
-          <label>API base URL</label>
-          <input
-            className="text-setting"
-            placeholder="https://api.openai.com/v1"
-            defaultValue={settings.online.base_url}
-            onBlur={(e) =>
-              e.target.value !== settings.online.base_url &&
-              patch({ online_base_url: e.target.value })
+          <label>Provider</label>
+          <select
+            value={settings.online.provider}
+            onChange={(e) =>
+              patch({ online_provider: e.target.value as "openai" | "anthropic" })
             }
-          />
+          >
+            <option value="openai">OpenAI-compatible</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+          </select>
         </div>
+        {settings.online.provider === "openai" && (
+          <div className="setting-row">
+            <label>API base URL</label>
+            <input
+              className="text-setting"
+              placeholder="https://api.openai.com/v1"
+              defaultValue={settings.online.base_url}
+              onBlur={(e) =>
+                e.target.value !== settings.online.base_url &&
+                patch({ online_base_url: e.target.value })
+              }
+            />
+          </div>
+        )}
         <div className="setting-row">
           <label>Model</label>
           {onlineOptions.length ? (

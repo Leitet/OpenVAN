@@ -33,9 +33,11 @@ class Config:
     # Offline models: a local Ollama server.
     llm_base_url: str = "http://127.0.0.1:11434"
     llm_model: str = "llama3.2"
-    # Online models: any OpenAI-compatible endpoint (base_url must serve
-    # /chat/completions and /models, e.g. https://api.openai.com/v1). The API key
-    # comes from the environment and is kept in memory, never written to disk.
+    # Online models. Provider "openai" targets any OpenAI-compatible endpoint
+    # (base_url must serve /chat/completions and /models); provider "anthropic"
+    # targets the Claude Messages API (base_url defaults to api.anthropic.com).
+    # The API key comes from the environment and is kept in memory, never on disk.
+    online_provider: str = "openai"  # "openai" | "anthropic"
     online_base_url: str = ""
     online_model: str = ""
     online_api_key: str | None = None
@@ -76,6 +78,7 @@ class Config:
         )
         cfg.llm_base_url = os.environ.get("OPENVAN_LLM_URL", cfg.llm_base_url)
         cfg.llm_model = os.environ.get("OPENVAN_LLM_MODEL", cfg.llm_model)
+        cfg.online_provider = os.environ.get("OPENVAN_ONLINE_PROVIDER", cfg.online_provider)
         cfg.online_base_url = os.environ.get("OPENVAN_ONLINE_URL", cfg.online_base_url)
         cfg.online_model = os.environ.get("OPENVAN_ONLINE_MODEL", cfg.online_model)
         cfg.online_api_key = os.environ.get("OPENVAN_ONLINE_API_KEY", cfg.online_api_key)

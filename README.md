@@ -81,6 +81,13 @@ safety layer still vets it. Without Ollama, the header shows **AI: offline
 rules** and simple phrasings still work. Configure with `OPENVAN_LLM_MODEL`,
 `OPENVAN_LLM_URL`, or disable entirely with `OPENVAN_AI=0`.
 
+**Online (cloud) models** are optional and per-profile — set them in the Admin
+tab or via env. Two providers: any OpenAI-compatible endpoint
+(`OPENVAN_ONLINE_PROVIDER=openai`, `OPENVAN_ONLINE_URL`, `OPENVAN_ONLINE_MODEL`) or
+Anthropic/Claude (`OPENVAN_ONLINE_PROVIDER=anthropic`, `OPENVAN_ONLINE_MODEL`,
+e.g. `claude-opus-4-8`). The key comes from `OPENVAN_ONLINE_API_KEY` (or the Admin
+UI, memory-only) and is never written to disk.
+
 ---
 
 ## Architecture in one picture

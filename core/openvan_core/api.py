@@ -54,6 +54,7 @@ class SettingsBody(BaseModel):
     default_connectivity: str | None = None
     offline_model: str | None = None
     offline_base_url: str | None = None
+    online_provider: str | None = None
     online_model: str | None = None
     online_base_url: str | None = None
     online_api_key: str | None = None

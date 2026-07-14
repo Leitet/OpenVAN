@@ -12,6 +12,7 @@ from .hub import Hub
 from .companion import Companion
 from .intents import Intent, IntentResolver, IntentResult
 from .llm import (
+    AnthropicClient,
     LLMIntentResolver,
     ModelRouter,
     OllamaClient,
@@ -37,6 +38,7 @@ __all__ = [
     "Intent",
     "IntentResolver",
     "IntentResult",
+    "AnthropicClient",
     "LLMIntentResolver",
     "ModelRouter",
     "OllamaClient",

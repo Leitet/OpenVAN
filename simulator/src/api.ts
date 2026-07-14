@@ -52,6 +52,7 @@ export interface SettingsPatch {
   default_connectivity?: "online" | "offline";
   offline_model?: string;
   offline_base_url?: string;
+  online_provider?: "openai" | "anthropic";
   online_model?: string;
   online_base_url?: string;
   online_api_key?: string;

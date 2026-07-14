@@ -60,9 +60,11 @@ remote access, maps), never a dependency of the core control path.
 
 ### RULE 4 — Model-agnostic
 
-Users choose their AI: local LLM, cloud LLM, or hybrid. `llm.py` has two clients
-behind one `LLMClient` interface — `OllamaClient` (offline) and
-`OpenAICompatibleClient` (online, any OpenAI-compatible endpoint). A `ModelRouter`
+Users choose their AI: local LLM, cloud LLM, or hybrid. `llm.py` has three clients
+behind one `LLMClient` interface — `OllamaClient` (offline) and, for online, either
+`OpenAICompatibleClient` (any OpenAI-compatible endpoint) or `AnthropicClient`
+(Claude Messages API), selected by `online_provider`. All are raw-httpx, no vendor
+SDKs, to keep the edge runtime small. A `ModelRouter`
 picks the effective client from the **active profile's** binding (each profile is
 `online` / `offline` / `inherit`, with a global default), falling back to the other
 connectivity if the preferred one isn't reachable. Model choice is **separate from

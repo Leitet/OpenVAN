@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from openvan_core.config import Config
 from openvan_core.entities import Entity
-from openvan_core.llm import LLMIntentResolver, ModelRouter
+from openvan_core.llm import (
+    AnthropicClient,
+    LLMIntentResolver,
+    ModelRouter,
+    OpenAICompatibleClient,
+)
 from openvan_core.personalities import PersonalityStore
 
 
@@ -116,6 +121,29 @@ def test_profile_model_override(tmp_path):
     store.set_active(forked.id)
     binding = ModelRouter(config, store).effective_binding()
     assert binding.model == "llama3.1:8b"
+
+
+def test_online_provider_selects_client(tmp_path):
+    store = PersonalityStore(tmp_path / "p.json")
+    store.set_active("aurora")  # online profile
+
+    openai_cfg = Config(data_dir=tmp_path, online_base_url="https://x/v1", online_model="gpt-x")
+    openai_client = ModelRouter(openai_cfg, store).build_client()
+    assert isinstance(openai_client, OpenAICompatibleClient)
+
+    claude_cfg = Config(
+        data_dir=tmp_path,
+        online_provider="anthropic",
+        online_model="claude-opus-4-8",
+        online_api_key="k",
+    )
+    claude_client = ModelRouter(claude_cfg, store).build_client()
+    assert isinstance(claude_client, AnthropicClient)
+    assert claude_client.base_url == "https://api.anthropic.com"  # default endpoint
+
+
+async def test_anthropic_client_unavailable_without_key():
+    assert await AnthropicClient(None, "claude-opus-4-8").available() is False
 
 
 async def test_online_unconfigured_gracefully_falls_back_to_offline(tmp_path):
