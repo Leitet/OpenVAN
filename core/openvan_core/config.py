@@ -25,6 +25,10 @@ class Config:
     # Run the environment simulation (thermal + water physics) that makes the
     # twin evolve over time. Sim-mode only; a real van gets these from sensors.
     simulate: bool = True
+    # Local time-series telemetry (SQLite under data_dir). Records every numeric
+    # signal for graphs, trends and predictions.
+    telemetry_enabled: bool = True
+    telemetry_retention_days: float = 7.0
     # Model-agnostic AI assistant. Optional: if the model is unreachable, OpenVan
     # falls back to the offline rule-based resolver.
     ai_enabled: bool = True
@@ -73,6 +77,8 @@ class Config:
             cfg.data_dir = Path(os.environ["OPENVAN_DATA_DIR"])
         if os.environ.get("OPENVAN_AI") is not None:
             cfg.ai_enabled = os.environ["OPENVAN_AI"] not in ("0", "false", "False")
+        if os.environ.get("OPENVAN_TELEMETRY") is not None:
+            cfg.telemetry_enabled = os.environ["OPENVAN_TELEMETRY"] not in ("0", "false", "False")
         cfg.default_connectivity = os.environ.get(
             "OPENVAN_DEFAULT_CONNECTIVITY", cfg.default_connectivity
         )

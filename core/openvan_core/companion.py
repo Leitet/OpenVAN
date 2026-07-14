@@ -13,12 +13,14 @@ only rewords facts we give it — it never invents data or controls anything).
 from __future__ import annotations
 
 import json
+import time
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover
     from .hub import Hub
     from .llm import ModelRouter
+    from .telemetry import TelemetryStore
 
 BRIEFING_SYSTEM = """\
 You are OpenVan, a warm and concise travel companion living in a camper van.
@@ -42,8 +44,11 @@ def _greeting(hour: int) -> str:
 
 
 class Companion:
-    def __init__(self, router: "ModelRouter") -> None:
+    def __init__(
+        self, router: "ModelRouter", telemetry: "TelemetryStore | None" = None
+    ) -> None:
         self.router = router
+        self.telemetry = telemetry
 
     def build_context(
         self, hub: "Hub", notices: list[dict[str, Any]], *, hour: int | None = None
@@ -59,6 +64,13 @@ class Companion:
                 _BATTERY_CAPACITY_AH * (soc / 100.0) / abs(current) / 24.0, 1
             )
 
+        # Trend from actual recent history, not just the instantaneous reading.
+        battery_trend = None
+        if self.telemetry is not None:
+            rate = self.telemetry.rate_per_hour("house_battery.soc", time.time() - 3600)
+            if rate is not None:
+                battery_trend = round(rate, 2)
+
         return {
             "hour": hour,
             "greeting": _greeting(hour),
@@ -66,6 +78,7 @@ class Companion:
             "cabin_temp_c": _num(twin.get("cabin.temperature")),
             "battery_soc_pct": soc,
             "battery_days_left": battery_days,
+            "battery_trend_pct_per_hour": battery_trend,
             "fresh_water_pct": _num(twin.get("fresh_water.level_pct")),
             "grey_water_pct": _num(twin.get("grey_water.level_pct")),
             "diesel_pct": _num(twin.get("diesel_tank.level_pct")),
@@ -109,6 +122,10 @@ class Companion:
             parts.append(f"The battery should last about {days:g} more day(s).")
         elif soc is not None:
             parts.append(f"The battery is at {soc:.0f}% and charging.")
+
+        trend = ctx.get("battery_trend_pct_per_hour")
+        if trend is not None and trend <= -0.5:
+            parts.append(f"It's been dropping about {abs(trend):.1f}% an hour.")
 
         for notice in ctx.get("notices", []):
             parts.append(notice["message"])

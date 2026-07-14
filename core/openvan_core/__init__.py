@@ -24,6 +24,7 @@ from .plugins import Plugin, PluginManager
 from .runtime import Core, build_core
 from .safety import SafetyDecision, SafetyRule, SafetyValidator
 from .simulation import VanSimulation
+from .telemetry import TelemetryRecorder, TelemetryStore
 from .twin import VanTwin
 
 __version__ = "0.1.0"
@@ -57,6 +58,8 @@ __all__ = [
     "SafetyRule",
     "SafetyValidator",
     "VanSimulation",
+    "TelemetryStore",
+    "TelemetryRecorder",
     "VanTwin",
     "__version__",
 ]

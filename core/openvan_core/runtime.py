@@ -7,6 +7,7 @@ non-HTTP front-ends like a voice loop) can drive a fully-formed Core directly.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 
 from typing import Any
@@ -34,6 +35,7 @@ from .safety import (
     SafetyValidator,
 )
 from .simulation import VanSimulation
+from .telemetry import TelemetryRecorder, TelemetryStore
 from .twin import VanTwin
 
 
@@ -50,8 +52,16 @@ class Core:
     companion: Companion
     personalities: PersonalityStore
     router: ModelRouter
+    telemetry: TelemetryStore
+    telemetry_recorder: TelemetryRecorder
 
     async def start(self) -> None:
+        # Open telemetry and start recording before seeding, so the initial
+        # state is captured as the first samples.
+        if self.config.telemetry_enabled:
+            self.telemetry.open()
+            self.telemetry.prune(time.time() - self.config.telemetry_retention_days * 86400)
+            self.telemetry_recorder.start()
         # Seed the twin first so plugins read sensible values on setup.
         for key, value in self.config.seed_twin.items():
             await self.twin.set_signal(key, value, source="seed")
@@ -67,6 +77,9 @@ class Core:
     async def stop(self) -> None:
         await self.advisors.stop()
         await self.simulation.stop()
+        if self.config.telemetry_enabled:
+            await self.telemetry_recorder.stop()
+            self.telemetry.close()
         await self.plugins.teardown_all()
 
     def assistant_state(self) -> dict[str, Any]:
@@ -197,7 +210,11 @@ def build_core(config: Config | None = None) -> Core:
     plugins = PluginManager(hub, backend)
     simulation = VanSimulation(bus, twin)
     advisors = AdvisorEngine(bus, hub)
-    companion = Companion(router)
+    telemetry = TelemetryStore(
+        config.data_dir / "telemetry.db", config.telemetry_retention_days
+    )
+    telemetry_recorder = TelemetryRecorder(bus, telemetry)
+    companion = Companion(router, telemetry)
     return Core(
         config=config,
         bus=bus,
@@ -209,5 +226,7 @@ def build_core(config: Config | None = None) -> Core:
         advisors=advisors,
         companion=companion,
         personalities=personalities,
+        telemetry=telemetry,
+        telemetry_recorder=telemetry_recorder,
         router=router,
     )

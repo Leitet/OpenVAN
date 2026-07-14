@@ -39,6 +39,19 @@ export async function sendText(text: string): Promise<IntentResult> {
   return res.json();
 }
 
+import type { TelemetryPoint } from "./types";
+
+export async function getSeries(
+  key: string,
+  minutes = 60,
+  bucket?: number,
+): Promise<TelemetryPoint[]> {
+  const q = new URLSearchParams({ key, minutes: String(minutes) });
+  if (bucket) q.set("bucket", String(bucket));
+  const data = await (await fetch(`/api/telemetry/series?${q}`)).json();
+  return data.points as TelemetryPoint[];
+}
+
 export async function getBriefing(): Promise<string> {
   const res = await fetch("/api/briefing", { method: "POST" });
   const data = await res.json();

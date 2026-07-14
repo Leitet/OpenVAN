@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -225,6 +226,24 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
     @app.get("/api/models")
     async def models(connectivity: str = "offline") -> dict[str, Any]:
         return {"models": await core.available_models(connectivity)}
+
+    @app.get("/api/telemetry/keys")
+    async def telemetry_keys() -> dict[str, Any]:
+        if not core.config.telemetry_enabled:
+            return {"keys": []}
+        return {"keys": await asyncio.to_thread(core.telemetry.keys)}
+
+    @app.get("/api/telemetry/series")
+    async def telemetry_series(
+        key: str, minutes: float = 60.0, bucket: float | None = None
+    ) -> dict[str, Any]:
+        if not core.config.telemetry_enabled:
+            return {"key": key, "points": []}
+        since = time.time() - minutes * 60.0
+        points = await asyncio.to_thread(
+            core.telemetry.series, key, since, None, bucket
+        )
+        return {"key": key, "points": points}
 
     @app.websocket("/ws")
     async def ws_endpoint(ws: WebSocket) -> None:

@@ -122,6 +122,17 @@ same facts: LLM-phrased when a model is available, templated otherwise (Rule 3).
 Like the intent path, the AI only rewords facts we give it — it invents nothing
 and controls nothing. New advisors: add an `Advisor` subclass to `default_advisors`.
 
+### Telemetry (`telemetry.py`)
+
+Every numeric twin signal is recorded to a local **SQLite** time-series
+(`data/telemetry.db`, stdlib — no dependency, offline-first). `TelemetryRecorder`
+subscribes to `twin.signal_changed`, so **any signal a new plugin introduces is
+captured automatically** — no wiring needed. `TelemetryStore` offers `series`
+(with read-time bucket downsampling), `rate_per_hour` (trends), and retention
+`prune`. All DB access runs off the loop via `asyncio.to_thread`. This history
+powers the simulator's sparklines (`/api/telemetry/series`) and feeds the
+companion real drain-rate trends, not just instantaneous readings.
+
 ### Environment simulation (`simulation.py`)
 
 The twin holds state; `VanSimulation` makes it *evolve* — the heater warms the

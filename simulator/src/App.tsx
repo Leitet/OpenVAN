@@ -6,6 +6,7 @@ import { EventLog } from "./components/EventLog";
 import { HeaterControl } from "./components/HeaterControl";
 import { Companion } from "./components/Companion";
 import { AdminPanel } from "./components/AdminPanel";
+import { Trends } from "./components/Trends";
 import { VanView } from "./components/VanView";
 import { useVanState } from "./useVanState";
 
@@ -194,6 +195,8 @@ export default function App() {
             battery, the heater without fuel, the pump when the fresh tank is empty.
           </p>
         </section>
+
+        <Trends />
 
         <section className="panel">
           <EventLog log={log} />

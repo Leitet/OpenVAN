@@ -56,6 +56,11 @@ export interface Settings {
   plugins: PluginInfo[];
 }
 
+export interface TelemetryPoint {
+  t: number;
+  v: number;
+}
+
 export interface Notice {
   key: string;
   level: "info" | "suggestion" | "warning";
