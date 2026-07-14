@@ -8,6 +8,15 @@ import {
 } from "../api";
 import type { Personality } from "../types";
 
+const BUILTIN_IDS = new Set(["aurora", "ranger", "scout", "forge", "nomad", "pulse"]);
+
+// Card artwork lives in public/personalities/. Forks inherit their base's art.
+function imageFor(p: Personality): string | null {
+  if (BUILTIN_IDS.has(p.id)) return `/personalities/${p.id}.jpg`;
+  if (p.based_on && BUILTIN_IDS.has(p.based_on)) return `/personalities/${p.based_on}.jpg`;
+  return null;
+}
+
 export function Personalities() {
   const [list, setList] = useState<Personality[]>([]);
   const [active, setActive] = useState<string>("");
@@ -54,62 +63,74 @@ export function Personalities() {
       </p>
 
       <div className="persona-grid">
-        {list.map((p) => (
-          <div
-            key={p.id}
-            className={"persona-card" + (p.id === active ? " active" : "")}
-            onClick={() => choose(p.id)}
-          >
-            <div className="persona-head">
-              <strong>{p.name}</strong>
-              <span className={"pill hint-pill " + p.connectivity}>
-                {p.connectivity}
-                {p.model !== "inherit" ? ` · ${p.model}` : ""}
-              </span>
-            </div>
-            <div className="persona-cat">{p.category}</div>
-            <div className="persona-traits">
-              {p.traits.map((t) => (
-                <span key={t} className="chip">
-                  {t}
-                </span>
-              ))}
-            </div>
-            <div className="persona-line">“{p.tagline}”</div>
-            <div className="persona-actions" onClick={(e) => e.stopPropagation()}>
-              {p.id === active && <span className="persona-active">✓ active</span>}
-              <button className="mini" onClick={() => setForking(p.id)}>
-                Fork
+        {list.map((p) => {
+          const img = imageFor(p);
+          const isActive = p.id === active;
+          return (
+            <div
+              key={p.id}
+              className={"persona-card" + (isActive ? " active" : "")}
+            >
+              <button
+                className="persona-art"
+                onClick={() => choose(p.id)}
+                title={`Use ${p.name}`}
+              >
+                {img ? (
+                  <img src={img} alt={p.name} loading="lazy" />
+                ) : (
+                  <div className="persona-art-fallback">
+                    <strong>{p.name}</strong>
+                    <span>{p.category}</span>
+                  </div>
+                )}
+                {!p.builtin && (
+                  <span className="persona-custom-tag">{p.name}</span>
+                )}
+                {isActive && <span className="persona-active-badge">✓ Active</span>}
               </button>
-              {!p.builtin && (
-                <>
-                  <button className="mini" onClick={() => setEditing(p)}>
-                    Edit
+
+              <div className="persona-bar">
+                <span className={"pill hint-pill " + p.connectivity}>
+                  {p.connectivity}
+                  {p.model !== "inherit" ? ` · ${p.model}` : ""}
+                </span>
+                <div className="persona-bar-actions">
+                  <button className="mini" onClick={() => setForking(p.id)}>
+                    Fork
                   </button>
-                  <button className="mini danger" onClick={() => remove(p.id)}>
-                    Delete
+                  {!p.builtin && (
+                    <>
+                      <button className="mini" onClick={() => setEditing(p)}>
+                        Edit
+                      </button>
+                      <button className="mini danger" onClick={() => remove(p.id)}>
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {forking === p.id && (
+                <div className="fork-row">
+                  <input
+                    autoFocus
+                    placeholder="Name your fork"
+                    value={forkName}
+                    onChange={(e) => setForkName(e.target.value)}
+                  />
+                  <button className="mini" onClick={() => doFork(p.id)}>
+                    Create
                   </button>
-                </>
+                  <button className="mini" onClick={() => setForking(null)}>
+                    Cancel
+                  </button>
+                </div>
               )}
             </div>
-            {forking === p.id && (
-              <div className="fork-row" onClick={(e) => e.stopPropagation()}>
-                <input
-                  autoFocus
-                  placeholder="Name your fork"
-                  value={forkName}
-                  onChange={(e) => setForkName(e.target.value)}
-                />
-                <button className="mini" onClick={() => doFork(p.id)}>
-                  Create
-                </button>
-                <button className="mini" onClick={() => setForking(null)}>
-                  Cancel
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {editing && (

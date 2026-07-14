@@ -209,7 +209,8 @@ MCP server would expose. Changes publish `settings.changed` / `assistant.changed
 
 **Personalities = voice only** (`personalities.py`): six built-ins + user forks,
 persisted to `data/` (gitignored). A personality shapes phrasing, never facts,
-intents or safety. Its `connectivity` + `model` are the per-profile model binding
+intents or safety. The Admin picker shows each one's trading-card artwork
+(`simulator/public/personalities/<id>.jpg`); forks inherit their base's art. Its `connectivity` + `model` are the per-profile model binding
 (Rule 4), not part of the character. Online API keys live in memory / env, never
 on disk.
 
