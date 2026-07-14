@@ -143,8 +143,34 @@ class BatteryRuntime(Advisor):
         )
 
 
+class LongDrive(Advisor):
+    """Suggest a break after driving continuously for a while."""
+
+    key = "long_drive"
+
+    def __init__(self, threshold_s: float = 7200.0) -> None:
+        self.threshold_s = threshold_s
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        raw = hub.twin.get("vehicle.trip_seconds")
+        if raw is None:
+            return None
+        try:
+            seconds = float(raw)
+        except (TypeError, ValueError):
+            return None
+        if seconds < self.threshold_s:
+            return None
+        hours = seconds / 3600.0
+        return Notice(
+            self.key, "suggestion", "journey", "Time for a break?",
+            f"You've been driving for about {hours:.1f}h — a short stop might be nice.",
+            {"hours": round(hours, 1)},
+        )
+
+
 def default_advisors() -> list[Advisor]:
-    return [LowFreshWater(), GreyWaterFull(), LowDiesel(), BatteryRuntime()]
+    return [LowFreshWater(), GreyWaterFull(), LowDiesel(), BatteryRuntime(), LongDrive()]
 
 
 class AdvisorEngine:

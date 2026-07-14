@@ -15,6 +15,7 @@ later (Sourceful principle: simulators are not reality; measure before shipping)
 from __future__ import annotations
 
 import asyncio
+import math
 from dataclasses import dataclass
 
 from .events import EventBus
@@ -65,6 +66,7 @@ class VanSimulation:
     async def step(self, dt: float) -> None:
         await self._step_thermal(dt)
         await self._step_water(dt)
+        await self._step_vehicle(dt)
 
     async def _step_thermal(self, dt: float) -> None:
         cabin = _as_float(self._twin.get("cabin.temperature"))
@@ -88,6 +90,34 @@ class VanSimulation:
             return
         await self._twin.set_signal("fresh_water.level_pct", round(max(0.0, fresh - delta), 2))
         await self._twin.set_signal("grey_water.level_pct", round(min(100.0, grey + delta), 2))
+
+    async def _step_vehicle(self, dt: float) -> None:
+        if not self._twin.get("vehicle.ignition"):
+            if _as_float(self._twin.get("vehicle.trip_seconds")):
+                await self._twin.set_signal("vehicle.trip_seconds", 0.0)
+            return
+        speed = _as_float(self._twin.get("vehicle.speed_kmh")) or 0.0
+        if speed <= 0:
+            await self._twin.set_signal("vehicle.trip_seconds", 0.0)
+            return
+
+        trip = (_as_float(self._twin.get("vehicle.trip_seconds")) or 0.0) + dt
+        await self._twin.set_signal("vehicle.trip_seconds", round(trip, 1))
+
+        distance_km = speed * (dt / 3600.0)
+        odo = (_as_float(self._twin.get("vehicle.odometer_km")) or 0.0) + distance_km
+        await self._twin.set_signal("vehicle.odometer_km", round(odo, 3))
+
+        lat = _as_float(self._twin.get("gps.lat"))
+        lon = _as_float(self._twin.get("gps.lon"))
+        heading = _as_float(self._twin.get("vehicle.heading")) or 0.0
+        if lat is not None and lon is not None:
+            # Dead reckoning: heading 0 = north, 90 = east.
+            hr = math.radians(heading)
+            dlat = distance_km / 111.0 * math.cos(hr)
+            dlon = distance_km / (111.0 * max(0.01, math.cos(math.radians(lat)))) * math.sin(hr)
+            await self._twin.set_signal("gps.lat", round(lat + dlat, 6))
+            await self._twin.set_signal("gps.lon", round(lon + dlon, 6))
 
     def start(self) -> None:
         if self._task is None:

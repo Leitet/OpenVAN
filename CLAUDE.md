@@ -181,6 +181,9 @@ reference plugins:
   the battery load-shedding and fuel-required safety rules.
 - `plugins/water_system/` — **water** tanks (fresh/grey) + a pump with dry-run
   protection; the pump is `essential` so it is never load-shed.
+- `plugins/vehicle/` — **vehicle** GPS/speed/heading/odometer/ignition sensors
+  (read-only, like a real OBD/GPS feed). The sim engine dead-reckons position
+  from speed+heading; the `LongDrive` advisor suggests breaks.
 
 ---
 

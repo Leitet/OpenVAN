@@ -8,6 +8,7 @@ import { Companion } from "./components/Companion";
 import { AdminPanel } from "./components/AdminPanel";
 import { Trends } from "./components/Trends";
 import { Predictions } from "./components/Predictions";
+import { Journey } from "./components/Journey";
 import { VanView } from "./components/VanView";
 import { useVanState } from "./useVanState";
 
@@ -196,6 +197,8 @@ export default function App() {
             battery, the heater without fuel, the pump when the fresh tank is empty.
           </p>
         </section>
+
+        <Journey twin={twin} />
 
         <Trends />
 
