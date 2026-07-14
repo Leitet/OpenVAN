@@ -50,15 +50,15 @@ intents stay identical).
 - Victron, MQTT, Matter, ESPHome, Shelly, Starlink, Home Assistant bridge.
 
 ## Telemetry & data
-Local time-series storage landed (SQLite `telemetry.py`: recording, series with
-read-time downsampling, retention prune, rate/trend; sparklines in the sim;
-battery-drain trend feeds the companion). Remaining refinements:
-- **Export** (CSV / download) of a signal's history.
-- **Write-time rollups** for very long retention (hourly/daily aggregates) so
-  months of data stay small — read-time bucketing only helps within retention.
-- **Predictions** built on the history: solar forecast, water-empty ETA,
-  battery-runtime from real drain rate (the advisor still uses instantaneous current).
-- Richer AI context: feed a few key trends into intent/briefing prompts.
+Local time-series storage complete: SQLite recording, read-time downsampling,
+CSV export, write-time hourly/daily rollups (months of history), predictions
+(battery/water/diesel ETAs + solar Wh), and predictions fed into the companion
+briefing. Possible future work:
+- Weather-aware **solar forecast** (waits on the weather integration; current
+  forecast is a plain linear/integral model).
+- Battery-runtime **advisor** using the real drain rate (the advisor still uses
+  instantaneous current; predictions already expose the trend-based ETA).
+- Configurable per-signal retention; anomaly detection on trends.
 
 ## Travel memory
 - A living journal: places stayed, dates, weather, photos, notes, energy used.

@@ -13,9 +13,10 @@ only rewords facts we give it — it never invents data or controls anything).
 from __future__ import annotations
 
 import json
-import time
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
+
+from .predictions import compute_predictions
 
 if TYPE_CHECKING:  # pragma: no cover
     from .hub import Hub
@@ -64,12 +65,9 @@ class Companion:
                 _BATTERY_CAPACITY_AH * (soc / 100.0) / abs(current) / 24.0, 1
             )
 
-        # Trend from actual recent history, not just the instantaneous reading.
-        battery_trend = None
-        if self.telemetry is not None:
-            rate = self.telemetry.rate_per_hour("house_battery.soc", time.time() - 3600)
-            if rate is not None:
-                battery_trend = round(rate, 2)
+        # Predictions from actual recent history, not just instantaneous readings.
+        predictions = compute_predictions(twin, self.telemetry)
+        battery_trend = predictions.get("battery_rate_pct_per_hour")
 
         return {
             "hour": hour,
@@ -79,6 +77,7 @@ class Companion:
             "battery_soc_pct": soc,
             "battery_days_left": battery_days,
             "battery_trend_pct_per_hour": battery_trend,
+            "predictions": predictions,
             "fresh_water_pct": _num(twin.get("fresh_water.level_pct")),
             "grey_water_pct": _num(twin.get("grey_water.level_pct")),
             "diesel_pct": _num(twin.get("diesel_tank.level_pct")),
@@ -126,6 +125,11 @@ class Companion:
         trend = ctx.get("battery_trend_pct_per_hour")
         if trend is not None and trend <= -0.5:
             parts.append(f"It's been dropping about {abs(trend):.1f}% an hour.")
+
+        preds = ctx.get("predictions") or {}
+        water_eta = preds.get("fresh_water_empty_hours")
+        if water_eta is not None and water_eta < 24:
+            parts.append(f"At this rate the fresh water runs out in about {water_eta:g} hours.")
 
         for notice in ctx.get("notices", []):
             parts.append(notice["message"])

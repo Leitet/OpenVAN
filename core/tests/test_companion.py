@@ -71,6 +71,13 @@ async def test_llm_failure_falls_back_to_template(core):
     assert text  # non-empty template
 
 
+async def test_context_includes_predictions(core):
+    ctx = core.companion.build_context(core.hub, [])
+    assert "predictions" in ctx and isinstance(ctx["predictions"], dict)
+    # solar energy integral is always computed when telemetry is present
+    assert "solar_wh_24h" in ctx["predictions"]
+
+
 def test_template_starts_with_greeting():
     from openvan_core.companion import Companion
 
