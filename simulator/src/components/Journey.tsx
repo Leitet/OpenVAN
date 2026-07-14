@@ -17,7 +17,14 @@ export function Journey({ twin }: { twin: Twin }) {
     <section className="panel span2">
       <h2>Journey</h2>
       <div className="journey-grid">
-        <JourneyMap />
+        <div>
+          <JourneyMap />
+          <div className="journey-legend">
+            <span><i className="dot here" /> position</span>
+            <span><i className="dot stay" /> past stay</span>
+            <span><i className="dot open" /> here now</span>
+          </div>
+        </div>
         <div className="journey-side">
           <div className="journey-readouts">
             <div>
