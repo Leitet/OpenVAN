@@ -169,6 +169,27 @@ class LongDrive(Advisor):
         )
 
 
+class RainSoon(Advisor):
+    """Warn when rain is approaching (from the weather service)."""
+
+    key = "rain_soon"
+
+    def __init__(self, weather: Any, threshold_h: float = 2.0) -> None:
+        self.weather = weather
+        self.threshold_h = threshold_h
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        eta = self.weather.rain_eta_hours()
+        if eta is None or eta > self.threshold_h:
+            return None
+        when = "shortly" if eta < 0.5 else f"in about {eta:g}h"
+        return Notice(
+            self.key, "suggestion", "weather", "Rain approaching",
+            f"Rain is expected {when} — you might want to close up and stow gear.",
+            {"eta_hours": eta},
+        )
+
+
 def default_advisors() -> list[Advisor]:
     return [LowFreshWater(), GreyWaterFull(), LowDiesel(), BatteryRuntime(), LongDrive()]
 
@@ -189,6 +210,9 @@ class AdvisorEngine:
         )
         self._unsubscribers.append(
             self.bus.subscribe("twin.signal_changed", self._on_change)
+        )
+        self._unsubscribers.append(
+            self.bus.subscribe("weather.updated", self._on_change)
         )
 
     async def _on_change(self, _event) -> None:

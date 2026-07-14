@@ -58,7 +58,7 @@ async def test_trip_resets_when_ignition_off():
 
 @pytest.fixture
 async def core(tmp_path):
-    c = build_core(Config(ai_enabled=False, telemetry_enabled=False, data_dir=tmp_path))
+    c = build_core(Config(ai_enabled=False, weather_enabled=False, telemetry_enabled=False, data_dir=tmp_path))
     await c.start()
     yield c
     await c.stop()

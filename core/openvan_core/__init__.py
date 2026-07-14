@@ -27,6 +27,7 @@ from .safety import SafetyDecision, SafetyRule, SafetyValidator
 from .simulation import VanSimulation
 from .telemetry import TelemetryRecorder, TelemetryStore
 from .twin import VanTwin
+from .weather import WeatherService
 
 __version__ = "0.1.0"
 
@@ -62,6 +63,7 @@ __all__ = [
     "VanSimulation",
     "TelemetryStore",
     "TelemetryRecorder",
+    "WeatherService",
     "VanTwin",
     "__version__",
 ]

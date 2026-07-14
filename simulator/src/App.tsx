@@ -9,6 +9,7 @@ import { AdminPanel } from "./components/AdminPanel";
 import { Trends } from "./components/Trends";
 import { Predictions } from "./components/Predictions";
 import { Journey } from "./components/Journey";
+import { Weather } from "./components/Weather";
 import { VanView } from "./components/VanView";
 import { useVanState } from "./useVanState";
 
@@ -199,6 +200,8 @@ export default function App() {
         </section>
 
         <Journey twin={twin} />
+
+        <Weather />
 
         <Trends />
 

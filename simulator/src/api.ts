@@ -56,6 +56,26 @@ export async function getPredictions(): Promise<Record<string, number>> {
   return (await fetch("/api/telemetry/predictions")).json();
 }
 
+import type { Weather } from "./types";
+
+export async function getWeather(): Promise<Weather> {
+  return (await fetch("/api/weather")).json();
+}
+
+export async function refreshWeather(): Promise<Weather> {
+  return (await fetch("/api/weather/refresh", { method: "POST" })).json();
+}
+
+export async function simulateWeather(scenario: "rain" | "clear"): Promise<Weather> {
+  return (
+    await fetch("/api/weather/simulate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scenario }),
+    })
+  ).json();
+}
+
 export async function getBriefing(): Promise<string> {
   const res = await fetch("/api/briefing", { method: "POST" });
   const data = await res.json();

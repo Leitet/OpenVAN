@@ -122,6 +122,15 @@ same facts: LLM-phrased when a model is available, templated otherwise (Rule 3).
 Like the intent path, the AI only rewords facts we give it — it invents nothing
 and controls nothing. New advisors: add an `Advisor` subclass to `default_advisors`.
 
+### Weather (`weather.py`)
+
+Location-aware, offline-first. `WeatherService` fetches the forecast for the
+van's current GPS (from the vehicle plugin) via **open-meteo** (keyless), caches
+it to `data/weather.json`, and serves the last-known forecast when offline (cloud
+enhances, never required). Feeds the `RainSoon` advisor, the companion briefing
+("rain expected in an hour"), and the simulator's weather panel. A `simulate()`
+path injects a synthetic forecast so the rain behaviour works offline/in tests.
+
 ### Telemetry (`telemetry.py`)
 
 Every numeric twin signal is recorded to a local **SQLite** time-series

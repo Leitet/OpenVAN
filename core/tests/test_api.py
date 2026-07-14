@@ -9,7 +9,7 @@ from openvan_core.config import Config
 
 
 def test_state_intent_and_safety_over_http():
-    with TestClient(build_app(Config(ai_enabled=False, telemetry_enabled=False))) as client:
+    with TestClient(build_app(Config(ai_enabled=False, weather_enabled=False, telemetry_enabled=False))) as client:
         state = client.get("/api/state").json()
         entity_ids = {e["entity_id"] for e in state["entities"]}
         assert {"light.cabin", "sensor.house_battery_soc"} <= entity_ids

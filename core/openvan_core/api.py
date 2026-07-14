@@ -53,6 +53,10 @@ class SignalBody(BaseModel):
     value: Any
 
 
+class WeatherSimBody(BaseModel):
+    scenario: str = "rain"
+
+
 class SettingsBody(BaseModel):
     ai_enabled: bool | None = None
     default_connectivity: str | None = None
@@ -253,6 +257,25 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
                 core.telemetry.series, key, since, None, bucket
             )
         return {"key": key, "points": points}
+
+    @app.get("/api/weather")
+    async def weather() -> dict[str, Any]:
+        if not core.config.weather_enabled:
+            return {}
+        return core.weather.snapshot()
+
+    @app.post("/api/weather/refresh")
+    async def weather_refresh() -> dict[str, Any]:
+        if not core.config.weather_enabled:
+            return {}
+        await core.weather.refresh()
+        return core.weather.snapshot()
+
+    @app.post("/api/weather/simulate")
+    async def weather_simulate(body: WeatherSimBody) -> dict[str, Any]:
+        if not core.config.weather_enabled:
+            return {}
+        return await core.weather.simulate(body.scenario)
 
     @app.get("/api/telemetry/predictions")
     async def telemetry_predictions() -> dict[str, Any]:

@@ -22,6 +22,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from .hub import Hub
     from .llm import ModelRouter
     from .telemetry import TelemetryStore
+    from .weather import WeatherService
 
 BRIEFING_SYSTEM = """\
 You are OpenVan, a warm and concise travel companion living in a camper van.
@@ -46,10 +47,14 @@ def _greeting(hour: int) -> str:
 
 class Companion:
     def __init__(
-        self, router: "ModelRouter", telemetry: "TelemetryStore | None" = None
+        self,
+        router: "ModelRouter",
+        telemetry: "TelemetryStore | None" = None,
+        weather: "WeatherService | None" = None,
     ) -> None:
         self.router = router
         self.telemetry = telemetry
+        self.weather = weather
 
     def build_context(
         self, hub: "Hub", notices: list[dict[str, Any]], *, hour: int | None = None
@@ -69,7 +74,16 @@ class Companion:
         predictions = compute_predictions(twin, self.telemetry)
         battery_trend = predictions.get("battery_rate_pct_per_hour")
 
+        weather = self.weather.snapshot() if self.weather is not None else {}
+
         return {
+            "weather": {
+                "condition": (weather.get("current") or {}).get("condition"),
+                "outside_temp_c": (weather.get("current") or {}).get("temp_c"),
+                "rain_eta_hours": weather.get("rain_eta_hours"),
+            }
+            if weather
+            else None,
             "hour": hour,
             "greeting": _greeting(hour),
             "outside_temp_c": _num(twin.get("outside.temperature")),
@@ -130,6 +144,12 @@ class Companion:
         water_eta = preds.get("fresh_water_empty_hours")
         if water_eta is not None and water_eta < 24:
             parts.append(f"At this rate the fresh water runs out in about {water_eta:g} hours.")
+
+        weather = ctx.get("weather") or {}
+        rain_eta = weather.get("rain_eta_hours")
+        if rain_eta is not None and rain_eta <= 2:
+            when = "shortly" if rain_eta < 0.5 else f"in about {rain_eta:g} hour(s)"
+            parts.append(f"Rain is expected {when}.")
 
         for notice in ctx.get("notices", []):
             parts.append(notice["message"])

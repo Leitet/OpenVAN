@@ -31,6 +31,11 @@ class Config:
     telemetry_retention_days: float = 7.0  # raw samples
     telemetry_rollup_days: float = 365.0  # hourly/daily aggregates
     telemetry_roll_interval_s: float = 600.0  # how often to roll up + prune
+    # Location-aware weather (open-meteo, keyless). Offline-first: cached forecast
+    # when there's no internet. Cloud enhances, never required.
+    weather_enabled: bool = True
+    weather_base_url: str = "https://api.open-meteo.com/v1/forecast"
+    weather_refresh_s: float = 600.0
     # Model-agnostic AI assistant. Optional: if the model is unreachable, OpenVan
     # falls back to the offline rule-based resolver.
     ai_enabled: bool = True
@@ -89,6 +94,8 @@ class Config:
             cfg.ai_enabled = os.environ["OPENVAN_AI"] not in ("0", "false", "False")
         if os.environ.get("OPENVAN_TELEMETRY") is not None:
             cfg.telemetry_enabled = os.environ["OPENVAN_TELEMETRY"] not in ("0", "false", "False")
+        if os.environ.get("OPENVAN_WEATHER") is not None:
+            cfg.weather_enabled = os.environ["OPENVAN_WEATHER"] not in ("0", "false", "False")
         cfg.default_connectivity = os.environ.get(
             "OPENVAN_DEFAULT_CONNECTIVITY", cfg.default_connectivity
         )

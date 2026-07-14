@@ -45,17 +45,21 @@ intents stay identical).
 - Snooze / acknowledge notices; per-notice preferences.
 
 ## Integrations (plugins)
-- Weather (offline core, cloud-enhance) to power "rain in an hour".
-- GPS / navigation; `vehicle` plugin (OBD-II, CAN) for speed, odometer, doors.
-- Victron, MQTT, Matter, ESPHome, Shelly, Starlink, Home Assistant bridge.
+GPS / vehicle plugin and weather (open-meteo, offline-first) both landed.
+Remaining:
+- Navigation / routing + destination ETA (builds on the GPS the vehicle plugin
+  now provides).
+- OBD-II / CAN detail for the vehicle plugin (doors, fuel, engine data).
+- Real device backends: Victron, MQTT, Matter, ESPHome, Shelly, Starlink,
+  Home Assistant bridge — implement the `Backend` seam against real hardware.
 
 ## Telemetry & data
 Local time-series storage complete: SQLite recording, read-time downsampling,
 CSV export, write-time hourly/daily rollups (months of history), predictions
 (battery/water/diesel ETAs + solar Wh), and predictions fed into the companion
 briefing. Possible future work:
-- Weather-aware **solar forecast** (waits on the weather integration; current
-  forecast is a plain linear/integral model).
+- Weather-aware **solar forecast** — the weather service now provides cloud
+  cover / forecast, so a cloud-adjusted solar prediction is unblocked.
 - Battery-runtime **advisor** using the real drain rate (the advisor still uses
   instantaneous current; predictions already expose the trend-based ETA).
 - Configurable per-signal retention; anomaly detection on trends.

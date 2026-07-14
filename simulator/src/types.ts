@@ -61,6 +61,30 @@ export interface TelemetryPoint {
   v: number;
 }
 
+export interface WeatherHour {
+  t: string;
+  temp_c: number | null;
+  precip_mm: number | null;
+  precip_prob: number | null;
+  cloud_pct: number | null;
+}
+
+export interface Weather {
+  source?: string;
+  online?: boolean;
+  updated_at?: number;
+  current?: {
+    temp_c: number | null;
+    precip_mm: number | null;
+    cloud_pct: number | null;
+    wind_kmh: number | null;
+    code: number | null;
+    condition: string | null;
+  };
+  hourly?: WeatherHour[];
+  rain_eta_hours?: number | null;
+}
+
 export interface Notice {
   key: string;
   level: "info" | "suggestion" | "warning";

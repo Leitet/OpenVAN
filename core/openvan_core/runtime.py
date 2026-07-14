@@ -24,7 +24,7 @@ from .llm import (
     OllamaClient,
     OpenAICompatibleClient,
 )
-from .notices import AdvisorEngine
+from .notices import AdvisorEngine, RainSoon, default_advisors
 from .personalities import PersonalityStore
 from .plugins import PluginManager
 from .safety import (
@@ -36,6 +36,7 @@ from .safety import (
 from .simulation import VanSimulation
 from .telemetry import TelemetryRecorder, TelemetryStore
 from .twin import VanTwin
+from .weather import WeatherService
 
 
 @dataclass
@@ -53,6 +54,7 @@ class Core:
     router: ModelRouter
     telemetry: TelemetryStore
     telemetry_recorder: TelemetryRecorder
+    weather: WeatherService
 
     async def start(self) -> None:
         # Open telemetry and start recording before seeding, so the initial
@@ -71,8 +73,12 @@ class Core:
         # Subscribe advisors, then evaluate once against the seeded state.
         self.advisors.start()
         await self.advisors.evaluate()
+        if self.config.weather_enabled:
+            await self.weather.start()
 
     async def stop(self) -> None:
+        if self.config.weather_enabled:
+            await self.weather.stop()
         await self.advisors.stop()
         await self.simulation.stop()
         if self.config.telemetry_enabled:
@@ -213,7 +219,12 @@ def build_core(config: Config | None = None) -> Core:
     hub = Hub(bus, twin, safety, resolver)
     plugins = PluginManager(hub, backend)
     simulation = VanSimulation(bus, twin)
-    advisors = AdvisorEngine(bus, hub)
+    weather = WeatherService(
+        config,
+        get_location=lambda: (twin.get("gps.lat"), twin.get("gps.lon")),
+        bus=bus,
+    )
+    advisors = AdvisorEngine(bus, hub, default_advisors() + [RainSoon(weather)])
     telemetry = TelemetryStore(
         config.data_dir / "telemetry.db", config.telemetry_retention_days
     )
@@ -224,7 +235,7 @@ def build_core(config: Config | None = None) -> Core:
         raw_retention_days=config.telemetry_retention_days,
         rollup_retention_days=config.telemetry_rollup_days,
     )
-    companion = Companion(router, telemetry)
+    companion = Companion(router, telemetry, weather)
     return Core(
         config=config,
         bus=bus,
@@ -238,5 +249,6 @@ def build_core(config: Config | None = None) -> Core:
         personalities=personalities,
         telemetry=telemetry,
         telemetry_recorder=telemetry_recorder,
+        weather=weather,
         router=router,
     )
