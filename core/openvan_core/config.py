@@ -36,6 +36,10 @@ class Config:
     weather_enabled: bool = True
     weather_base_url: str = "https://api.open-meteo.com/v1/forecast"
     weather_refresh_s: float = 600.0
+    # Travel memory — auto-logs "stays" when parked. Offline-first, SQLite.
+    memory_enabled: bool = True
+    memory_dwell_s: float = 90.0  # parked this long before a stay is logged
+    memory_check_s: float = 15.0  # how often to check for park/depart
     # Model-agnostic AI assistant. Optional: if the model is unreachable, OpenVan
     # falls back to the offline rule-based resolver.
     ai_enabled: bool = True
@@ -96,6 +100,8 @@ class Config:
             cfg.telemetry_enabled = os.environ["OPENVAN_TELEMETRY"] not in ("0", "false", "False")
         if os.environ.get("OPENVAN_WEATHER") is not None:
             cfg.weather_enabled = os.environ["OPENVAN_WEATHER"] not in ("0", "false", "False")
+        if os.environ.get("OPENVAN_MEMORY") is not None:
+            cfg.memory_enabled = os.environ["OPENVAN_MEMORY"] not in ("0", "false", "False")
         cfg.default_connectivity = os.environ.get(
             "OPENVAN_DEFAULT_CONNECTIVITY", cfg.default_connectivity
         )

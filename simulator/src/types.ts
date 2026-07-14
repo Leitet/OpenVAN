@@ -85,6 +85,21 @@ export interface Weather {
   rain_eta_hours?: number | null;
 }
 
+export interface Stay {
+  id: number;
+  lat: number | null;
+  lon: number | null;
+  place: string | null;
+  started_at: number | null;
+  ended_at: number | null;
+  open: boolean;
+  duration_hours: number | null;
+  soc_used_pct: number | null;
+  solar_wh: number | null;
+  condition: string | null;
+  notes: string;
+}
+
 export interface Notice {
   key: string;
   level: "info" | "suggestion" | "warning";

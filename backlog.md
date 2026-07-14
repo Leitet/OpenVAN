@@ -65,8 +65,15 @@ briefing. Possible future work:
 - Configurable per-signal retention; anomaly detection on trends.
 
 ## Travel memory
-- A living journal: places stayed, dates, weather, photos, notes, energy used.
-- "Do you remember that lake two years ago?" recall.
+Living journal landed (`memory.py`: auto-logged stays with GPS/weather/energy,
+notes, place names, bookmarks; Journal panel; fed to the companion for recall).
+Remaining:
+- **Photos** attached to a stay (needs file upload/storage).
+- **Reverse geocoding** for automatic place names (keyless Nominatim, with a
+  cached/offline fallback).
+- Conversational recall ("remember that lake two years ago?") once the assistant
+  has a Q&A surface beyond intent resolution.
+- Map markers for past stays on the Journey map.
 
 ## Admin / platform
 - MCP server exposing settings + control (parity with the Admin UI / REST API).

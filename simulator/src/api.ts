@@ -76,6 +76,29 @@ export async function simulateWeather(scenario: "rain" | "clear"): Promise<Weath
   ).json();
 }
 
+import type { Stay } from "./types";
+
+export async function getStays(): Promise<{ stays: Stay[]; current: Stay | null }> {
+  return (await fetch("/api/memory/stays")).json();
+}
+
+async function postJson(url: string, body: unknown) {
+  return (
+    await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+  ).json();
+}
+
+export const bookmarkHere = (note: string) =>
+  postJson("/api/memory/bookmark", { note });
+export const addStayNote = (text: string) => postJson("/api/memory/note", { text });
+export const nameStay = (name: string) => postJson("/api/memory/place", { name });
+export const deleteStay = (id: number) =>
+  fetch(`/api/memory/stays/${id}`, { method: "DELETE" });
+
 export async function getBriefing(): Promise<string> {
   const res = await fetch("/api/briefing", { method: "POST" });
   const data = await res.json();

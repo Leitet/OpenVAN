@@ -21,6 +21,7 @@ from .predictions import compute_predictions
 if TYPE_CHECKING:  # pragma: no cover
     from .hub import Hub
     from .llm import ModelRouter
+    from .memory import TravelMemory
     from .telemetry import TelemetryStore
     from .weather import WeatherService
 
@@ -51,10 +52,12 @@ class Companion:
         router: "ModelRouter",
         telemetry: "TelemetryStore | None" = None,
         weather: "WeatherService | None" = None,
+        memory: "TravelMemory | None" = None,
     ) -> None:
         self.router = router
         self.telemetry = telemetry
         self.weather = weather
+        self.memory = memory
 
     def build_context(
         self, hub: "Hub", notices: list[dict[str, Any]], *, hour: int | None = None
@@ -76,7 +79,22 @@ class Companion:
 
         weather = self.weather.snapshot() if self.weather is not None else {}
 
+        recent_stays = []
+        if self.memory is not None:
+            for s in self.memory.list_stays(3):
+                recent_stays.append(
+                    {
+                        "place": s.get("place"),
+                        "lat": s.get("lat"),
+                        "lon": s.get("lon"),
+                        "nights": round((s.get("duration_hours") or 0) / 24.0, 1),
+                        "condition": s.get("condition"),
+                        "notes": s.get("notes"),
+                    }
+                )
+
         return {
+            "recent_stays": recent_stays,
             "weather": {
                 "condition": (weather.get("current") or {}).get("condition"),
                 "outside_temp_c": (weather.get("current") or {}).get("temp_c"),

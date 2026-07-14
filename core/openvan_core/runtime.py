@@ -24,6 +24,7 @@ from .llm import (
     OllamaClient,
     OpenAICompatibleClient,
 )
+from .memory import TravelMemory
 from .notices import AdvisorEngine, RainSoon, default_advisors
 from .personalities import PersonalityStore
 from .plugins import PluginManager
@@ -55,6 +56,7 @@ class Core:
     telemetry: TelemetryStore
     telemetry_recorder: TelemetryRecorder
     weather: WeatherService
+    memory: TravelMemory
 
     async def start(self) -> None:
         # Open telemetry and start recording before seeding, so the initial
@@ -75,8 +77,12 @@ class Core:
         await self.advisors.evaluate()
         if self.config.weather_enabled:
             await self.weather.start()
+        if self.config.memory_enabled:
+            await self.memory.start()
 
     async def stop(self) -> None:
+        if self.config.memory_enabled:
+            await self.memory.stop()
         if self.config.weather_enabled:
             await self.weather.stop()
         await self.advisors.stop()
@@ -235,7 +241,8 @@ def build_core(config: Config | None = None) -> Core:
         raw_retention_days=config.telemetry_retention_days,
         rollup_retention_days=config.telemetry_rollup_days,
     )
-    companion = Companion(router, telemetry, weather)
+    memory = TravelMemory(config, twin, weather=weather, telemetry=telemetry)
+    companion = Companion(router, telemetry, weather, memory)
     return Core(
         config=config,
         bus=bus,
@@ -250,5 +257,6 @@ def build_core(config: Config | None = None) -> Core:
         telemetry=telemetry,
         telemetry_recorder=telemetry_recorder,
         weather=weather,
+        memory=memory,
         router=router,
     )

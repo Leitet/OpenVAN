@@ -57,6 +57,18 @@ class WeatherSimBody(BaseModel):
     scenario: str = "rain"
 
 
+class NoteBody(BaseModel):
+    text: str
+
+
+class PlaceBody(BaseModel):
+    name: str
+
+
+class BookmarkBody(BaseModel):
+    note: str = ""
+
+
 class SettingsBody(BaseModel):
     ai_enabled: bool | None = None
     default_connectivity: str | None = None
@@ -276,6 +288,45 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
         if not core.config.weather_enabled:
             return {}
         return await core.weather.simulate(body.scenario)
+
+    @app.get("/api/memory/stays")
+    async def memory_stays(limit: int = 50) -> dict[str, Any]:
+        if not core.config.memory_enabled:
+            return {"stays": [], "current": None}
+        stays = await asyncio.to_thread(core.memory.list_stays, limit)
+        current = await asyncio.to_thread(core.memory.current)
+        return {"stays": stays, "current": current}
+
+    @app.post("/api/memory/bookmark")
+    async def memory_bookmark(body: BookmarkBody) -> dict[str, Any]:
+        if not core.config.memory_enabled:
+            raise HTTPException(400, "travel memory is disabled")
+        stay = await asyncio.to_thread(core.memory.bookmark, body.note)
+        return stay or {}
+
+    @app.post("/api/memory/note")
+    async def memory_note(body: NoteBody) -> dict[str, Any]:
+        if not core.config.memory_enabled:
+            raise HTTPException(400, "travel memory is disabled")
+        stay = await asyncio.to_thread(core.memory.add_note, body.text)
+        if stay is None:
+            raise HTTPException(404, "no stay to annotate")
+        return stay
+
+    @app.post("/api/memory/place")
+    async def memory_place(body: PlaceBody) -> dict[str, Any]:
+        if not core.config.memory_enabled:
+            raise HTTPException(400, "travel memory is disabled")
+        stay = await asyncio.to_thread(core.memory.set_place, body.name)
+        if stay is None:
+            raise HTTPException(404, "no stay to name")
+        return stay
+
+    @app.delete("/api/memory/stays/{stay_id}")
+    async def memory_delete(stay_id: int) -> dict[str, bool]:
+        if not core.config.memory_enabled:
+            raise HTTPException(400, "travel memory is disabled")
+        return {"deleted": await asyncio.to_thread(core.memory.delete, stay_id)}
 
     @app.get("/api/telemetry/predictions")
     async def telemetry_predictions() -> dict[str, Any]:

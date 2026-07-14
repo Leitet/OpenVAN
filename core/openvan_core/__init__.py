@@ -18,6 +18,7 @@ from .llm import (
     OllamaClient,
     OpenAICompatibleClient,
 )
+from .memory import TravelMemory
 from .notices import Advisor, AdvisorEngine, Notice
 from .personalities import Personality, PersonalityStore
 from .plugins import Plugin, PluginManager
@@ -64,6 +65,7 @@ __all__ = [
     "TelemetryStore",
     "TelemetryRecorder",
     "WeatherService",
+    "TravelMemory",
     "VanTwin",
     "__version__",
 ]

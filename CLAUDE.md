@@ -122,6 +122,15 @@ same facts: LLM-phrased when a model is available, templated otherwise (Rule 3).
 Like the intent path, the AI only rewords facts we give it — it invents nothing
 and controls nothing. New advisors: add an `Advisor` subclass to `default_advisors`.
 
+### Travel memory (`memory.py`)
+
+A living journal. `TravelMemory` auto-logs *stays*: when the van parks (ignition
+off / stopped past a dwell time) it opens a stay at the current GPS, capturing
+weather + battery; driving off closes it with duration and energy used (solar Wh
+from telemetry). Users add notes, name places, or bookmark the current spot
+instantly. Local SQLite (`data/journal.db`), surfaced to the companion for recall
+("remember that lake?"). API: `/api/memory/*`.
+
 ### Weather (`weather.py`)
 
 Location-aware, offline-first. `WeatherService` fetches the forecast for the

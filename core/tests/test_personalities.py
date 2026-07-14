@@ -11,7 +11,7 @@ from openvan_core.personalities import PersonalityStore
 
 @pytest.fixture
 async def core(tmp_path):
-    c = build_core(Config(ai_enabled=False, weather_enabled=False, data_dir=tmp_path))
+    c = build_core(Config(ai_enabled=False, weather_enabled=False, memory_enabled=False, data_dir=tmp_path))
     await c.start()
     yield c
     await c.stop()

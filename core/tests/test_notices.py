@@ -10,7 +10,7 @@ from openvan_core.config import Config
 
 @pytest.fixture
 async def core():
-    c = build_core(Config(ai_enabled=False, weather_enabled=False, telemetry_enabled=False))
+    c = build_core(Config(ai_enabled=False, weather_enabled=False, memory_enabled=False, telemetry_enabled=False))
     await c.start()
     yield c
     await c.stop()
