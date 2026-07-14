@@ -5,6 +5,7 @@ Home Assistant knows your home. OpenVan understands your journey.
 
 from __future__ import annotations
 
+from .apiclient import OpenVanClient
 from .backends import Backend, SimBackend
 from .entities import Entity
 from .events import Event, EventBus
@@ -35,6 +36,7 @@ __version__ = "0.1.0"
 __all__ = [
     "Backend",
     "SimBackend",
+    "OpenVanClient",
     "Entity",
     "Event",
     "EventBus",

@@ -225,8 +225,10 @@ openvan/
 
 **Settings live at runtime.** `Core.settings()` / `Core.apply_settings()` back the
 Admin UI (`/api/settings`, `/api/models?connectivity=…`) — offline/online model
-config, default connectivity, AI enable, sim toggle. The same surface is what an
-MCP server would expose. Changes publish `settings.changed` / `assistant.changed`
+config, default connectivity, AI enable, sim toggle. The same surface the
+**MCP server** exposes (`mcp_server.py` → `OpenVanClient` in `apiclient.py`, a
+thin httpx bridge to the running REST API — one Core, no duplicated loops; `mcp`
+is an optional extra). Changes publish `settings.changed` / `assistant.changed`
 and **persist to `data/settings.json`** (loaded via `Config.resolve()`:
 defaults < persisted < env). The **API key is never persisted** — memory/env only.
 

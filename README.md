@@ -66,6 +66,24 @@ Open the simulator. You'll see the van twin, live telemetry, and controls. Try:
 - Switch to the **Admin** tab to choose the AI model, toggle the assistant or the
   simulation, and see loaded plugins (all also available via `/api/settings`).
 
+### Optional: MCP server (control OpenVan from an AI assistant)
+
+Expose OpenVan to an MCP client (Claude Desktop/Code, etc.) so an assistant can
+read state and control the van — with parity to the REST API. It bridges to the
+running Core over HTTP, so keep `python -m openvan_core` running.
+
+```bash
+pip install -e "./core[mcp]"    # adds the mcp dependency
+openvan-mcp                     # stdio MCP server -> talks to http://127.0.0.1:8000
+```
+
+Point your MCP client at the `openvan-mcp` command (override the target with
+`OPENVAN_API_URL`). Tools include `get_state`, `control_device`, `command`
+(natural language), `briefing`, `notices`, `weather`, `predictions`,
+`telemetry`, `journal`, `bookmark_spot`, `get_settings`/`update_settings`, and
+`personalities`/`set_personality`. Device commands are still safety-checked by
+Core, and the API key is never settable over MCP.
+
 ### Optional: local AI assistant
 
 Core works fully without it, but for natural-language commands install

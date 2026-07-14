@@ -16,9 +16,13 @@ dev = [
     "pytest>=8",
     "pytest-asyncio>=0.23",
 ]
+mcp = [
+    "mcp>=1.2",
+]
 
 [project.scripts]
 openvan-core = "openvan_core.__main__:main"
+openvan-mcp = "openvan_core.mcp_server:main"
 
 [build-system]
 requires = ["setuptools>=68"]
