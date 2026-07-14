@@ -76,6 +76,15 @@ class OllamaClient:
         except Exception:
             return False
 
+    async def list_models(self) -> list[str]:
+        try:
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                resp = await client.get(f"{self.base_url}/api/tags")
+                resp.raise_for_status()
+                return [m["name"] for m in resp.json().get("models", [])]
+        except Exception:
+            return []
+
     async def chat_json(self, system: str, user: str) -> str | None:
         return await self._chat(system, user, json_format=True, temperature=0.0)
 
@@ -128,6 +137,9 @@ class LLMIntentResolver(IntentResolver):
             logger.info("AI intent resolver active (model=%s)", self.model)
         else:
             logger.info("AI resolver unavailable — using offline rule-based resolver")
+
+    def deactivate(self) -> None:
+        self._active = False
 
     async def resolve(self, text: str, entities: dict[str, Any]) -> Intent | None:
         if self._active:

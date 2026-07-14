@@ -49,6 +49,13 @@ class SignalBody(BaseModel):
     value: Any
 
 
+class SettingsBody(BaseModel):
+    ai_enabled: bool | None = None
+    llm_model: str | None = None
+    llm_base_url: str | None = None
+    simulate: bool | None = None
+
+
 class _WebSocketHub:
     """Fans every Core event out to connected simulator clients."""
 
@@ -146,6 +153,18 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
             use_llm=getattr(core.hub.resolver, "active", False),
         )
         return {"text": text}
+
+    @app.get("/api/settings")
+    async def get_settings() -> dict[str, Any]:
+        return core.settings()
+
+    @app.post("/api/settings")
+    async def update_settings(body: SettingsBody) -> dict[str, Any]:
+        return await core.apply_settings(**body.model_dump(exclude_none=True))
+
+    @app.get("/api/models")
+    async def models() -> dict[str, Any]:
+        return {"models": await core.available_models()}
 
     @app.websocket("/ws")
     async def ws_endpoint(ws: WebSocket) -> None:

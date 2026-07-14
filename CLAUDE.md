@@ -177,14 +177,22 @@ openvan/
     tests/              pytest — the AI feedback loop
     pyproject.toml
   plugins/              one package per plugin
-    battery_monitor/
-    cabin_light/
-  simulator/            React + Vite digital-twin UI
+    battery_monitor/  cabin_light/  diesel_heater/  water_system/
+  simulator/            React + Vite — digital-twin dashboard + Admin UI
   docs/
     PLUGINS.md          how to write a plugin (+ simulator support)
+  backlog.md            future ideas, deliberately not built yet
   CLAUDE.md             (this file)
   README.md
 ```
+
+**Settings live at runtime.** `Core.settings()` / `Core.apply_settings()` back the
+Admin UI (`/api/settings`, `/api/models`) — model choice, AI enable, sim toggle.
+The same surface is what an MCP server would expose. Changes publish
+`settings.changed` / `assistant.changed` on the bus.
+
+**Ideas go in [backlog.md](backlog.md)**, not lost in chat — capture, don't build,
+until scheduled.
 
 ---
 

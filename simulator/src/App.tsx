@@ -5,6 +5,7 @@ import { SignalSlider } from "./components/SignalSlider";
 import { EventLog } from "./components/EventLog";
 import { HeaterControl } from "./components/HeaterControl";
 import { Companion } from "./components/Companion";
+import { AdminPanel } from "./components/AdminPanel";
 import { VanView } from "./components/VanView";
 import { useVanState } from "./useVanState";
 
@@ -15,6 +16,7 @@ function num(v: unknown): number | undefined {
 export default function App() {
   const { entities, twin, log, assistant, notices, connected } = useVanState();
   const [text, setText] = useState("");
+  const [view, setView] = useState<"dashboard" | "admin">("dashboard");
 
   const light = entities["light.cabin"];
   const lightOn = light?.state === "on";
@@ -41,6 +43,20 @@ export default function App() {
       <header className="topbar">
         <div className="brand">
           <strong>OpenVan</strong> <span>Simulator</span>
+          <nav className="tabs">
+            <button
+              className={view === "dashboard" ? "tab active" : "tab"}
+              onClick={() => setView("dashboard")}
+            >
+              Dashboard
+            </button>
+            <button
+              className={view === "admin" ? "tab active" : "tab"}
+              onClick={() => setView("admin")}
+            >
+              Admin
+            </button>
+          </nav>
         </div>
         <div className="status">
           <span className={"conn" + (assistant.llm ? " up" : "")}>
@@ -53,6 +69,10 @@ export default function App() {
       </header>
 
       <main className="grid">
+        {view === "admin" ? (
+          <AdminPanel />
+        ) : (
+        <>
         <section className="panel span2">
           <Companion notices={notices} />
         </section>
@@ -175,6 +195,8 @@ export default function App() {
         <section className="panel">
           <EventLog log={log} />
         </section>
+        </>
+        )}
       </main>
     </div>
   );

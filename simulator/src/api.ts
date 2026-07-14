@@ -44,3 +44,27 @@ export async function getBriefing(): Promise<string> {
   const data = await res.json();
   return data.text as string;
 }
+
+import type { Settings } from "./types";
+
+export async function getSettings(): Promise<Settings> {
+  return (await fetch("/api/settings")).json();
+}
+
+export async function saveSettings(
+  patch: Partial<
+    Pick<Settings, "ai_enabled" | "llm_model" | "llm_base_url" | "simulate">
+  >,
+): Promise<Settings> {
+  const res = await fetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  return res.json();
+}
+
+export async function getModels(): Promise<string[]> {
+  const data = await (await fetch("/api/models")).json();
+  return data.models as string[];
+}

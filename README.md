@@ -63,6 +63,8 @@ Open the simulator. You'll see the van twin, live telemetry, and controls. Try:
 - Drag **Battery SoC** below 10%, toggle the light again — Core's safety layer
   refuses the non-essential load, and the log shows why.
 - Type *"turn on the cabin light"* — the offline intent resolver handles it.
+- Switch to the **Admin** tab to choose the AI model, toggle the assistant or the
+  simulation, and see loaded plugins (all also available via `/api/settings`).
 
 ### Optional: local AI assistant
 

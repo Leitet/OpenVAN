@@ -26,6 +26,25 @@ export interface Notice {
   data: Record<string, unknown>;
 }
 
+export interface PluginInfo {
+  domain: string;
+  name: string;
+  version: string;
+  categories: string[];
+}
+
+export interface Settings {
+  version: string;
+  host: string;
+  port: number;
+  ai_enabled: boolean;
+  llm_model: string;
+  llm_base_url: string;
+  llm_active: boolean;
+  simulate: boolean;
+  plugins: PluginInfo[];
+}
+
 export interface WsMessage {
   topic: string;
   data: any;

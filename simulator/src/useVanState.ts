@@ -50,6 +50,10 @@ export function useVanState() {
           setTwin((prev) => ({ ...prev, [msg.data.key]: msg.data.value }));
           break;
         }
+        case "assistant.changed": {
+          setAssistant(msg.data as Assistant);
+          break;
+        }
         case "notice.created": {
           const n = msg.data.notice as Notice;
           setNotices((prev) => ({ ...prev, [n.key]: n }));

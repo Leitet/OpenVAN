@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from typing import Any
+
 from .backends import Backend, SimBackend
 from .companion import Companion
 from .config import Config
@@ -58,6 +60,78 @@ class Core:
         await self.advisors.stop()
         await self.simulation.stop()
         await self.plugins.teardown_all()
+
+    # --- runtime settings (Admin UI / API / MCP) -------------------------
+    def settings(self) -> dict[str, Any]:
+        from . import __version__
+
+        resolver = self.hub.resolver
+        return {
+            "version": __version__,
+            "host": self.config.host,
+            "port": self.config.port,
+            "ai_enabled": self.config.ai_enabled,
+            "llm_model": self.config.llm_model,
+            "llm_base_url": self.config.llm_base_url,
+            "llm_active": getattr(resolver, "active", False),
+            "simulate": self.config.simulate,
+            "plugins": [
+                {
+                    "domain": p.domain,
+                    "name": p.name,
+                    "version": p.version,
+                    "categories": list(p.categories),
+                }
+                for p in self.plugins.plugins
+            ],
+        }
+
+    async def apply_settings(
+        self,
+        *,
+        ai_enabled: bool | None = None,
+        llm_model: str | None = None,
+        llm_base_url: str | None = None,
+        simulate: bool | None = None,
+    ) -> dict[str, Any]:
+        client = getattr(self.hub.resolver, "client", None)
+        if llm_model is not None:
+            self.config.llm_model = llm_model
+            if client is not None:
+                client.model = llm_model
+        if llm_base_url is not None:
+            self.config.llm_base_url = llm_base_url
+            if client is not None:
+                client.base_url = llm_base_url.rstrip("/")
+        if ai_enabled is not None:
+            self.config.ai_enabled = ai_enabled
+
+        # Re-probe (or deactivate) the assistant so model/url/enable take effect.
+        if self.config.ai_enabled:
+            await self.hub.resolver.startup()
+        else:
+            self.hub.resolver.deactivate()
+
+        if simulate is not None and simulate != self.config.simulate:
+            self.config.simulate = simulate
+            if simulate:
+                self.simulation.start()
+            else:
+                await self.simulation.stop()
+
+        result = self.settings()
+        await self.bus.publish("settings.changed", {"settings": result})
+        await self.bus.publish(
+            "assistant.changed",
+            {"llm": result["llm_active"], "model": result["llm_model"] if result["llm_active"] else None},
+        )
+        return result
+
+    async def available_models(self) -> list[str]:
+        client = getattr(self.hub.resolver, "client", None)
+        if client is None or not hasattr(client, "list_models"):
+            return []
+        return await client.list_models()
 
 
 def build_core(config: Config | None = None) -> Core:
