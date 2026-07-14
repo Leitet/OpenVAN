@@ -169,6 +169,12 @@ class Core:
         await self.bus.publish("assistant.changed", self.assistant_state())
         return result
 
+    def predictions(self) -> dict[str, Any]:
+        from .predictions import compute_predictions
+
+        telemetry = self.telemetry if self.config.telemetry_enabled else None
+        return compute_predictions(self.twin, telemetry)
+
     async def available_models(self, connectivity: str = "offline") -> list[str]:
         if connectivity == "online":
             if self.config.online_provider == "anthropic":

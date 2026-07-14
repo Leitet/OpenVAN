@@ -161,6 +161,20 @@ class TelemetryStore:
                 ).fetchall()
         return [(r[0], r[1], r[2]) for r in rows]
 
+    def integral(
+        self, key: str, since_ts: float, until_ts: float | None = None
+    ) -> float:
+        """Trapezoidal integral of value over time (value·seconds).
+
+        For a power signal this yields energy in watt-seconds (÷3600 → Wh).
+        """
+        points = self.series(key, since_ts, until_ts, limit=1_000_000)
+        total = 0.0
+        for a, b in zip(points, points[1:]):
+            dt = b["t"] - a["t"]
+            total += (a["v"] + b["v"]) / 2.0 * dt
+        return total
+
     def prune(self, older_than_ts: float) -> int:
         if self._conn is None:
             return 0

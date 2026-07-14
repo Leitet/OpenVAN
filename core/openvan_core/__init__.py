@@ -21,6 +21,7 @@ from .llm import (
 from .notices import Advisor, AdvisorEngine, Notice
 from .personalities import Personality, PersonalityStore
 from .plugins import Plugin, PluginManager
+from .predictions import compute_predictions
 from .runtime import Core, build_core
 from .safety import SafetyDecision, SafetyRule, SafetyValidator
 from .simulation import VanSimulation
@@ -50,6 +51,7 @@ __all__ = [
     "Notice",
     "Personality",
     "PersonalityStore",
+    "compute_predictions",
     "Plugin",
     "PluginManager",
     "Core",

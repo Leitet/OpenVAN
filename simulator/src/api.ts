@@ -52,6 +52,10 @@ export async function getSeries(
   return data.points as TelemetryPoint[];
 }
 
+export async function getPredictions(): Promise<Record<string, number>> {
+  return (await fetch("/api/telemetry/predictions")).json();
+}
+
 export async function getBriefing(): Promise<string> {
   const res = await fetch("/api/briefing", { method: "POST" });
   const data = await res.json();

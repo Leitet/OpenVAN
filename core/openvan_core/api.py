@@ -254,6 +254,10 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
             )
         return {"key": key, "points": points}
 
+    @app.get("/api/telemetry/predictions")
+    async def telemetry_predictions() -> dict[str, Any]:
+        return await asyncio.to_thread(core.predictions)
+
     @app.get("/api/telemetry/export")
     async def telemetry_export(key: str | None = None, minutes: float = 1440.0) -> Response:
         if not core.config.telemetry_enabled:

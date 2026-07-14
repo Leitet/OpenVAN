@@ -7,6 +7,7 @@ import { HeaterControl } from "./components/HeaterControl";
 import { Companion } from "./components/Companion";
 import { AdminPanel } from "./components/AdminPanel";
 import { Trends } from "./components/Trends";
+import { Predictions } from "./components/Predictions";
 import { VanView } from "./components/VanView";
 import { useVanState } from "./useVanState";
 
@@ -197,6 +198,8 @@ export default function App() {
         </section>
 
         <Trends />
+
+        <Predictions />
 
         <section className="panel">
           <EventLog log={log} />
