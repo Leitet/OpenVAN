@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Entity, LogEntry, Twin, WsMessage } from "./types";
+import type { Assistant, Entity, LogEntry, Twin, WsMessage } from "./types";
 
 const MAX_LOG = 40;
 
@@ -12,6 +12,7 @@ export function useVanState() {
   const [entities, setEntities] = useState<Record<string, Entity>>({});
   const [twin, setTwin] = useState<Twin>({});
   const [log, setLog] = useState<LogEntry[]>([]);
+  const [assistant, setAssistant] = useState<Assistant>({ llm: false, model: null });
   const [connected, setConnected] = useState(false);
   const logId = useRef(0);
 
@@ -30,6 +31,7 @@ export function useVanState() {
           for (const e of msg.data.entities as Entity[]) map[e.entity_id] = e;
           setEntities(map);
           setTwin(msg.data.twin as Twin);
+          if (msg.data.assistant) setAssistant(msg.data.assistant as Assistant);
           break;
         }
         case "entity.registered":
@@ -81,5 +83,5 @@ export function useVanState() {
     };
   }, [handle]);
 
-  return { entities, twin, log, connected };
+  return { entities, twin, log, assistant, connected };
 }

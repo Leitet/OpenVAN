@@ -22,6 +22,11 @@ class Config:
     # Run the environment simulation (thermal + water physics) that makes the
     # twin evolve over time. Sim-mode only; a real van gets these from sensors.
     simulate: bool = True
+    # Local, model-agnostic AI assistant (Ollama by default). Optional: if the
+    # model is unreachable, OpenVan falls back to the offline rule-based resolver.
+    ai_enabled: bool = True
+    llm_base_url: str = "http://127.0.0.1:11434"
+    llm_model: str = "llama3.2"
     # Seed the twin with a pleasant default van state so the simulator has
     # something to show on first load.
     seed_twin: dict[str, float | bool] = field(
@@ -50,4 +55,8 @@ class Config:
         cfg.port = int(os.environ.get("OPENVAN_PORT", cfg.port))
         if os.environ.get("OPENVAN_PLUGINS_DIR"):
             cfg.plugins_dir = Path(os.environ["OPENVAN_PLUGINS_DIR"])
+        if os.environ.get("OPENVAN_AI") is not None:
+            cfg.ai_enabled = os.environ["OPENVAN_AI"] not in ("0", "false", "False")
+        cfg.llm_base_url = os.environ.get("OPENVAN_LLM_URL", cfg.llm_base_url)
+        cfg.llm_model = os.environ.get("OPENVAN_LLM_MODEL", cfg.llm_model)
         return cfg

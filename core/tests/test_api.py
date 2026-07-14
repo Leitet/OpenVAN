@@ -5,10 +5,11 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from openvan_core.api import build_app
+from openvan_core.config import Config
 
 
 def test_state_intent_and_safety_over_http():
-    with TestClient(build_app()) as client:
+    with TestClient(build_app(Config(ai_enabled=False))) as client:
         state = client.get("/api/state").json()
         entity_ids = {e["entity_id"] for e in state["entities"]}
         assert {"light.cabin", "sensor.house_battery_soc"} <= entity_ids

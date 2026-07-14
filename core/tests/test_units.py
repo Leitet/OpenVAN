@@ -41,7 +41,7 @@ async def test_twin_only_emits_on_change():
     assert changes == [1, 2]
 
 
-def test_intent_resolver_picks_off_command():
+async def test_intent_resolver_picks_off_command():
     resolver = IntentResolver()
     entities = {
         "light.cabin": Entity(
@@ -49,7 +49,7 @@ def test_intent_resolver_picks_off_command():
             controllable=True, commands=["turn_on", "turn_off"],
         )
     }
-    intent = resolver.resolve("turn off the cabin light", entities)
+    intent = await resolver.resolve("turn off the cabin light", entities)
     assert intent is not None
     assert intent.command == "turn_off"
 

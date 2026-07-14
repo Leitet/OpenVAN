@@ -14,6 +14,7 @@ from .config import Config
 from .events import EventBus
 from .hub import Hub
 from .intents import IntentResolver
+from .llm import LLMIntentResolver, OllamaClient
 from .plugins import PluginManager
 from .safety import (
     CriticalBatteryLoadShedding,
@@ -41,6 +42,8 @@ class Core:
             await self.twin.set_signal(key, value, source="seed")
         self.plugins.discover(self.config.plugins_dir)
         await self.plugins.setup_all()
+        if self.config.ai_enabled:
+            await self.hub.resolver.startup()
         if self.config.simulate:
             self.simulation.start()
 
@@ -61,7 +64,11 @@ def build_core(config: Config | None = None) -> Core:
             PumpDryRunProtection(),
         ]
     )
-    hub = Hub(bus, twin, safety, IntentResolver())
+    resolver = LLMIntentResolver(
+        OllamaClient(config.llm_base_url, config.llm_model),
+        fallback=IntentResolver(),
+    )
+    hub = Hub(bus, twin, safety, resolver)
     plugins = PluginManager(hub, backend)
     simulation = VanSimulation(bus, twin)
     return Core(

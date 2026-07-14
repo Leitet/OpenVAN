@@ -62,6 +62,10 @@ remote access, maps), never a dependency of the core control path.
 
 Users choose their AI: local LLM, cloud LLM, or hybrid. Keep the intent-resolver
 seam (`IntentResolver`) provider-neutral. No hard dependency on any single model.
+The default `LLMIntentResolver` (`llm.py`) talks to a local Ollama server via an
+`LLMClient` interface; any client implementing `available` + `chat_json` plugs in.
+It **always** falls back to the offline rule-based resolver, so text commands work
+with no model at all — enforce this: never make the assistant a hard requirement.
 
 ---
 

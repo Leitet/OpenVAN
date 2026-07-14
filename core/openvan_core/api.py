@@ -98,9 +98,14 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
     app.state.core = core
 
     def _state_snapshot() -> dict[str, Any]:
+        resolver = core.hub.resolver
         return {
             "entities": [e.as_dict() for e in core.hub.entities.values()],
             "twin": core.twin.snapshot(),
+            "assistant": {
+                "llm": getattr(resolver, "active", False),
+                "model": getattr(resolver, "model", None),
+            },
         }
 
     @app.get("/api/health")

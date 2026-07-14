@@ -12,6 +12,11 @@ export interface Entity {
 
 export type Twin = Record<string, number | boolean | string>;
 
+export interface Assistant {
+  llm: boolean;
+  model: string | null;
+}
+
 export interface WsMessage {
   topic: string;
   data: any;

@@ -12,7 +12,7 @@ function num(v: unknown): number | undefined {
 }
 
 export default function App() {
-  const { entities, twin, log, connected } = useVanState();
+  const { entities, twin, log, assistant, connected } = useVanState();
   const [text, setText] = useState("");
 
   const light = entities["light.cabin"];
@@ -41,8 +41,13 @@ export default function App() {
         <div className="brand">
           <strong>OpenVan</strong> <span>Simulator</span>
         </div>
-        <div className={"conn" + (connected ? " up" : " down")}>
-          {connected ? "Core connected" : "Reconnecting…"}
+        <div className="status">
+          <span className={"conn" + (assistant.llm ? " up" : "")}>
+            {assistant.llm ? `AI: ${assistant.model}` : "AI: offline rules"}
+          </span>
+          <span className={"conn" + (connected ? " up" : " down")}>
+            {connected ? "Core connected" : "Reconnecting…"}
+          </span>
         </div>
       </header>
 
@@ -135,7 +140,11 @@ export default function App() {
           </button>
           <form className="text-cmd" onSubmit={runText}>
             <input
-              placeholder='Try "turn on the cabin light"'
+              placeholder={
+                assistant.llm
+                  ? 'Ask anything, e.g. "it\'s freezing, warm it up"'
+                  : 'Try "turn on the cabin light"'
+              }
               value={text}
               onChange={(e) => setText(e.target.value)}
             />

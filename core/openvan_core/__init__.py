@@ -10,6 +10,7 @@ from .entities import Entity
 from .events import Event, EventBus
 from .hub import Hub
 from .intents import Intent, IntentResolver, IntentResult
+from .llm import LLMIntentResolver, OllamaClient
 from .plugins import Plugin, PluginManager
 from .runtime import Core, build_core
 from .safety import SafetyDecision, SafetyRule, SafetyValidator
@@ -28,6 +29,8 @@ __all__ = [
     "Intent",
     "IntentResolver",
     "IntentResult",
+    "LLMIntentResolver",
+    "OllamaClient",
     "Plugin",
     "PluginManager",
     "Core",

@@ -88,7 +88,7 @@ class Hub:
         return IntentResult(True, decision.reason or "ok")
 
     async def execute_text(self, text: str) -> IntentResult:
-        intent = self.resolver.resolve(text, self.entities)
+        intent = await self.resolver.resolve(text, self.entities)
         if intent is None:
             return IntentResult(False, f"Could not understand: '{text}'")
         return await self.execute_intent(intent)

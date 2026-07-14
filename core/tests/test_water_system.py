@@ -5,12 +5,13 @@ from __future__ import annotations
 import pytest
 
 from openvan_core import build_core
+from openvan_core.config import Config
 from openvan_core.intents import Intent
 
 
 @pytest.fixture
 async def core():
-    c = build_core()
+    c = build_core(Config(ai_enabled=False))
     await c.start()
     yield c
     await c.stop()

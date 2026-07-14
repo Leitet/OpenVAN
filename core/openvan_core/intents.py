@@ -56,7 +56,10 @@ class IntentResolver:
     _OFF_WORDS = ("off", "stop", "disable", "close", "shut")
     _ON_WORDS = ("on", "start", "enable", "open", "turn up")
 
-    def resolve(self, text: str, entities: dict[str, Any]) -> Intent | None:
+    async def startup(self) -> None:
+        """Hook for resolvers that need async initialisation (no-op here)."""
+
+    async def resolve(self, text: str, entities: dict[str, Any]) -> Intent | None:
         lowered = text.lower()
         for entity in entities.values():
             if not entity.controllable:

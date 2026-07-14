@@ -43,11 +43,16 @@ body {
   margin-left: 6px;
 }
 
+.status {
+  display: flex;
+  gap: 8px;
+}
 .conn {
   font-size: 13px;
   padding: 4px 12px;
   border-radius: 999px;
   border: 1px solid var(--line);
+  color: var(--muted);
 }
 .conn.up {
   color: var(--good);

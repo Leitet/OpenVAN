@@ -22,8 +22,13 @@ Early skeleton. What works today, end-to-end and tested:
 - **Digital twin + simulator** (React) — there is no physical van yet, so we
   develop against a web-based twin: live gauges, sensor-injection sliders, van
   controls, and an activity/safety log.
-- **Two reference plugins** — `battery_monitor` (sensors) and `cabin_light`
-  (a safety-checked actuator).
+- **Reference plugins** — `battery_monitor` (sensors), `cabin_light`,
+  `diesel_heater` and `water_system` (safety-checked actuators).
+- **Environment simulation** — the twin evolves over time (heater warms the
+  cabin, cabin loses heat outside, pump moves water fresh → grey).
+- **Local, model-agnostic AI assistant** — natural-language commands resolve to
+  safety-checked intents via a local LLM (Ollama), with an offline rule-based
+  fallback so it works with no model at all.
 
 See [the vision & rules in CLAUDE.md](CLAUDE.md) and the
 [plugin guide](docs/PLUGINS.md).
@@ -58,6 +63,21 @@ Open the simulator. You'll see the van twin, live telemetry, and controls. Try:
 - Drag **Battery SoC** below 10%, toggle the light again — Core's safety layer
   refuses the non-essential load, and the log shows why.
 - Type *"turn on the cabin light"* — the offline intent resolver handles it.
+
+### Optional: local AI assistant
+
+Core works fully without it, but for natural-language commands install
+[Ollama](https://ollama.com) and pull a small model:
+
+```bash
+ollama pull llama3.2      # then Core auto-detects it on startup
+```
+
+With Ollama running, the header shows **AI: llama3.2** and you can type things
+like *"it's freezing, warm it up"* — the model proposes an intent, and Core's
+safety layer still vets it. Without Ollama, the header shows **AI: offline
+rules** and simple phrasings still work. Configure with `OPENVAN_LLM_MODEL`,
+`OPENVAN_LLM_URL`, or disable entirely with `OPENVAN_AI=0`.
 
 ---
 
