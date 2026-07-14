@@ -85,6 +85,43 @@ def test_prune_drops_old_samples(tmp_path):
     store.close()
 
 
+def test_rollup_aggregates_into_hourly_buckets(tmp_path):
+    store = _store(tmp_path)
+    # two samples in hour-bucket 0, one in hour-bucket 1
+    store.record("solar.power", 100.0, 100.0)
+    store.record("solar.power", 300.0, 200.0)  # same hour -> avg 200
+    store.record("solar.power", 500.0, 3700.0)  # next hour
+    store.rollup()
+    hourly = store.series_agg("solar.power", "hour", since_ts=0)
+    assert len(hourly) == 2
+    assert hourly[0]["v"] == pytest.approx(200.0)
+    assert hourly[0]["min"] == 100.0 and hourly[0]["max"] == 300.0
+    assert hourly[1]["v"] == pytest.approx(500.0)
+    store.close()
+
+
+def test_rollups_survive_raw_pruning(tmp_path):
+    store = _store(tmp_path)
+    store.record("house_battery.soc", 90.0, 100.0)
+    store.rollup()
+    store.prune(older_than_ts=1e9)  # drop all raw
+    assert store.series("house_battery.soc", since_ts=0) == []
+    # rollup still holds the history
+    assert store.series_agg("house_battery.soc", "hour", since_ts=0)[0]["v"] == 90.0
+    store.close()
+
+
+def test_prune_rollups(tmp_path):
+    store = _store(tmp_path)
+    store.record("solar.power", 100.0, 100.0)
+    store.record("solar.power", 200.0, 90000.0)
+    store.rollup()
+    store.prune_rollups(older_than_ts=3600.0)
+    days = store.series_agg("solar.power", "day", since_ts=0)
+    assert len(days) == 1  # only the later day-bucket survives
+    store.close()
+
+
 @pytest.fixture
 async def core(tmp_path):
     c = build_core(Config(ai_enabled=False, data_dir=tmp_path))

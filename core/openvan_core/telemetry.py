@@ -51,6 +51,14 @@ class TelemetryStore:
         self._conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_samples_key_ts ON samples(key, ts)"
         )
+        # Aggregated buckets for long retention (raw is pruned after days; these
+        # keep hourly/daily history for months without bloating the DB).
+        self._conn.execute(
+            "CREATE TABLE IF NOT EXISTS rollups ("
+            "key TEXT NOT NULL, period TEXT NOT NULL, bucket REAL NOT NULL, "
+            "count INTEGER NOT NULL, sum REAL NOT NULL, min REAL NOT NULL, "
+            "max REAL NOT NULL, PRIMARY KEY (key, period, bucket))"
+        )
         self._conn.commit()
 
     def close(self) -> None:
@@ -163,17 +171,92 @@ class TelemetryStore:
             self._conn.commit()
             return cur.rowcount
 
+    # --- rollups (write-time aggregation for long retention) -------------
+    def rollup(self) -> None:
+        """Aggregate current raw samples into hourly + daily buckets (upsert).
+
+        Runs before raw pruning, so each window is captured before its raw rows
+        expire; older buckets already computed are left untouched.
+        """
+        if self._conn is None:
+            return
+        with self._lock:
+            for period, width in (("hour", 3600.0), ("day", 86400.0)):
+                # width/period are trusted constants (safe to inline).
+                self._conn.execute(
+                    f"INSERT OR REPLACE INTO rollups"
+                    f"(key, period, bucket, count, sum, min, max) "
+                    f"SELECT key, '{period}', CAST(ts / {width} AS INT) * {width}, "
+                    f"COUNT(*), SUM(value), MIN(value), MAX(value) "
+                    f"FROM samples GROUP BY key, CAST(ts / {width} AS INT)"
+                )
+            self._conn.commit()
+
+    def series_agg(
+        self,
+        key: str,
+        period: str,
+        since_ts: float,
+        until_ts: float | None = None,
+        limit: int = 5000,
+    ) -> list[dict[str, float]]:
+        """Read averaged rollup buckets (with min/max) for a signal."""
+        if self._conn is None:
+            return []
+        until_ts = until_ts if until_ts is not None else _FAR_FUTURE
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT bucket, sum, count, min, max FROM rollups "
+                "WHERE key = ? AND period = ? AND bucket >= ? AND bucket <= ? "
+                "ORDER BY bucket LIMIT ?",
+                (key, period, since_ts, until_ts, limit),
+            ).fetchall()
+        return [
+            {
+                "t": round(r[0], 3),
+                "v": r[1] / r[2] if r[2] else 0.0,
+                "min": r[3],
+                "max": r[4],
+            }
+            for r in rows
+        ]
+
+    def prune_rollups(self, older_than_ts: float) -> int:
+        if self._conn is None:
+            return 0
+        with self._lock:
+            cur = self._conn.execute(
+                "DELETE FROM rollups WHERE bucket < ?", (older_than_ts,)
+            )
+            self._conn.commit()
+            return cur.rowcount
+
 
 class TelemetryRecorder:
-    """Subscribes to twin signal changes and writes them to the store."""
+    """Records twin signal changes and periodically rolls up + prunes."""
 
-    def __init__(self, bus: EventBus, store: TelemetryStore) -> None:
+    def __init__(
+        self,
+        bus: EventBus,
+        store: TelemetryStore,
+        *,
+        roll_interval: float = 600.0,
+        raw_retention_days: float = 7.0,
+        rollup_retention_days: float = 365.0,
+    ) -> None:
         self.bus = bus
         self.store = store
+        self.roll_interval = roll_interval
+        self.raw_retention_days = raw_retention_days
+        self.rollup_retention_days = rollup_retention_days
         self._unsubscribe = None
+        self._task = None
 
     def start(self) -> None:
+        import asyncio
+
         self._unsubscribe = self.bus.subscribe(SIGNAL_CHANGED, self._on_signal)
+        self._task = asyncio.create_task(self._maintain())
 
     async def _on_signal(self, event) -> None:
         import asyncio
@@ -185,7 +268,32 @@ class TelemetryRecorder:
             return
         await asyncio.to_thread(self.store.record, key, value, time.time())
 
+    async def _maintain(self) -> None:
+        import asyncio
+        import time
+
+        while True:
+            # Roll up first, then prune raw, then prune old rollups.
+            await asyncio.to_thread(self.store.rollup)
+            now = time.time()
+            await asyncio.to_thread(
+                self.store.prune, now - self.raw_retention_days * 86400
+            )
+            await asyncio.to_thread(
+                self.store.prune_rollups, now - self.rollup_retention_days * 86400
+            )
+            await asyncio.sleep(self.roll_interval)
+
     async def stop(self) -> None:
+        import asyncio
+
+        if self._task is not None:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+            self._task = None
         if self._unsubscribe is not None:
             self._unsubscribe()
             self._unsubscribe = None

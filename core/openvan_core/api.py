@@ -243,9 +243,15 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
         if not core.config.telemetry_enabled:
             return {"key": key, "points": []}
         since = time.time() - minutes * 60.0
-        points = await asyncio.to_thread(
-            core.telemetry.series, key, since, None, bucket
-        )
+        # Long ranges read pre-aggregated rollups; short ranges read raw.
+        if minutes > 43200:  # > 30 days -> daily buckets
+            points = await asyncio.to_thread(core.telemetry.series_agg, key, "day", since)
+        elif minutes > 1440:  # > 24 hours -> hourly buckets
+            points = await asyncio.to_thread(core.telemetry.series_agg, key, "hour", since)
+        else:
+            points = await asyncio.to_thread(
+                core.telemetry.series, key, since, None, bucket
+            )
         return {"key": key, "points": points}
 
     @app.get("/api/telemetry/export")

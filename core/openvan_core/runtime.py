@@ -7,7 +7,6 @@ non-HTTP front-ends like a voice loop) can drive a fully-formed Core directly.
 
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass
 
 from typing import Any
@@ -60,8 +59,7 @@ class Core:
         # state is captured as the first samples.
         if self.config.telemetry_enabled:
             self.telemetry.open()
-            self.telemetry.prune(time.time() - self.config.telemetry_retention_days * 86400)
-            self.telemetry_recorder.start()
+            self.telemetry_recorder.start()  # records + rolls up + prunes
         # Seed the twin first so plugins read sensible values on setup.
         for key, value in self.config.seed_twin.items():
             await self.twin.set_signal(key, value, source="seed")
@@ -213,7 +211,13 @@ def build_core(config: Config | None = None) -> Core:
     telemetry = TelemetryStore(
         config.data_dir / "telemetry.db", config.telemetry_retention_days
     )
-    telemetry_recorder = TelemetryRecorder(bus, telemetry)
+    telemetry_recorder = TelemetryRecorder(
+        bus,
+        telemetry,
+        roll_interval=config.telemetry_roll_interval_s,
+        raw_retention_days=config.telemetry_retention_days,
+        rollup_retention_days=config.telemetry_rollup_days,
+    )
     companion = Companion(router, telemetry)
     return Core(
         config=config,

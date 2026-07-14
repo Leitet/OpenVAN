@@ -20,14 +20,23 @@ const METRICS: Metric[] = [
   { key: "outside.temperature", label: "Outside", unit: "°C" },
 ];
 
+const RANGES: { label: string; minutes: number; bucket?: number }[] = [
+  { label: "1h", minutes: 60, bucket: 15 },
+  { label: "24h", minutes: 1440 },
+  { label: "7d", minutes: 10080 },
+  { label: "30d", minutes: 43200 },
+];
+
 export function Trends() {
   const [data, setData] = useState<Record<string, TelemetryPoint[]>>({});
+  const [rangeIdx, setRangeIdx] = useState(0);
+  const range = RANGES[rangeIdx];
 
   useEffect(() => {
     let active = true;
     const load = async () => {
       const results = await Promise.all(
-        METRICS.map((m) => getSeries(m.key, 60, 15)),
+        METRICS.map((m) => getSeries(m.key, range.minutes, range.bucket)),
       );
       if (!active) return;
       const map: Record<string, TelemetryPoint[]> = {};
@@ -40,15 +49,28 @@ export function Trends() {
       active = false;
       clearInterval(timer);
     };
-  }, []);
+  }, [range.minutes, range.bucket]);
 
   return (
     <section className="panel span2">
       <div className="companion-head">
-        <h2>Trends · last hour</h2>
-        <a className="mini" href="/api/telemetry/export?minutes=1440" download>
-          Export CSV (24h)
-        </a>
+        <h2>Trends</h2>
+        <div className="setting-control">
+          <div className="tabs">
+            {RANGES.map((r, i) => (
+              <button
+                key={r.label}
+                className={i === rangeIdx ? "tab active" : "tab"}
+                onClick={() => setRangeIdx(i)}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <a className="mini" href="/api/telemetry/export?minutes=1440" download>
+            Export CSV
+          </a>
+        </div>
       </div>
       <div className="spark-grid">
         {METRICS.map((m) => (

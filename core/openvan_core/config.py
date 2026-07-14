@@ -28,7 +28,9 @@ class Config:
     # Local time-series telemetry (SQLite under data_dir). Records every numeric
     # signal for graphs, trends and predictions.
     telemetry_enabled: bool = True
-    telemetry_retention_days: float = 7.0
+    telemetry_retention_days: float = 7.0  # raw samples
+    telemetry_rollup_days: float = 365.0  # hourly/daily aggregates
+    telemetry_roll_interval_s: float = 600.0  # how often to roll up + prune
     # Model-agnostic AI assistant. Optional: if the model is unreachable, OpenVan
     # falls back to the offline rule-based resolver.
     ai_enabled: bool = True
