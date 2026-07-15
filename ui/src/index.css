@@ -35,49 +35,100 @@ body {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--ov-app-accent) 45%, transparent);
 }
 
-.app {
-  max-width: var(--ov-card-max); /* 1180px */
-  margin: 0 auto;
-  padding: var(--ov-space-4); /* 16px */
-}
-
-.topbar {
+/* ---- OS shell: left icon rail + stage (status strip + tab view) ---- */
+.os {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 4px 20px;
+  height: 100vh;
 }
-
-.brand {
+.rail {
+  flex: none;
+  width: 100px;
   display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.brand strong {
-  font-size: 22px;
-}
-.brand span {
-  color: var(--muted);
-  margin-left: 6px;
-}
-.tabs {
-  display: flex;
+  flex-direction: column;
   gap: 4px;
-  margin-left: 12px;
+  padding: 12px 8px;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  transition: background-color 0.35s ease, border-color 0.35s ease;
 }
-.tab {
-  padding: 6px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
+.rail-brand {
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: var(--accent);
+  padding: 8px 0 14px;
+}
+.rail-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 13px 4px;
+  border: none;
+  border-radius: 16px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
-.tab.active {
+.rail-tab:hover {
   color: var(--text);
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+.rail-tab.active {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+.nav-ico {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.statusbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  transition: background-color 0.35s ease, border-color 0.35s ease;
+}
+.sb-vitals {
+  display: flex;
+  gap: 26px;
+}
+.sb-stat {
+  font-size: 14px;
+  color: var(--muted);
+}
+.sb-stat b {
+  font-size: 19px;
+  color: var(--text);
+  margin-right: 5px;
+}
+.sb-right {
+  display: flex;
+  gap: 8px;
+}
+.tabview {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
 }
 
 .admin {
@@ -358,17 +409,21 @@ body {
   color: var(--warn);
 }
 
-.grid {
+.tab-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+  gap: 18px;
+  align-content: start;
+}
+.tab-grid.stack {
+  grid-template-columns: 1fr;
 }
 
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: var(--ov-radius-md); /* 14px */
-  padding: var(--ov-space-4); /* 16px */
+  border-radius: 18px;
+  padding: 20px;
   /* Design-system elevation — panels float on the canvas. */
   box-shadow: var(--ov-shadow-md), var(--ov-shadow-inset);
   transition: background-color 0.35s ease, border-color 0.35s ease;
@@ -787,12 +842,13 @@ body {
 
 .toggle {
   width: 100%;
-  padding: 14px;
-  border-radius: 10px;
+  padding: 18px;
+  border-radius: 14px;
   border: 1px solid var(--line);
   background: var(--panel-2);
   color: var(--text);
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
 }
 .toggle.on {
@@ -829,49 +885,6 @@ body {
   margin: 14px 0 0;
 }
 
-.van {
-  width: 100%;
-  height: auto;
-}
-.van-body {
-  fill: #10151c;
-  stroke: var(--line);
-  stroke-width: 2;
-}
-.van-cab {
-  fill: #141b24;
-  stroke: var(--line);
-}
-.van-cabin {
-  fill: #141b24;
-  stroke: var(--line);
-  transition: fill 0.3s ease;
-}
-.van-cabin.lit {
-  fill: color-mix(in srgb, var(--warn) 24%, #141b24);
-}
-.lamp {
-  fill: #38414d;
-}
-.lamp.on {
-  fill: var(--warn);
-  filter: drop-shadow(0 0 8px var(--warn));
-}
-.van-caption {
-  fill: var(--muted);
-  font-size: 12px;
-  text-anchor: middle;
-}
-.heat {
-  fill: #38414d;
-  font-size: 22px;
-  text-anchor: middle;
-}
-.heat.on {
-  fill: var(--bad);
-  filter: drop-shadow(0 0 6px var(--bad));
-}
-
 .heater {
   margin-top: 14px;
 }
@@ -904,8 +917,79 @@ body {
   font-size: 13px;
 }
 
-@media (max-width: 720px) {
-  .grid {
+/* ---- big touch quick-action tiles ---- */
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+}
+.quick {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  min-height: 132px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.quick:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.quick:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.quick.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.quick-ico .nav-ico {
+  width: 30px;
+  height: 30px;
+}
+.quick-body {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.quick-label {
+  font-size: 15px;
+  font-weight: 600;
+}
+.quick-state {
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+/* Home vitals read bigger, as touch tiles. */
+.gauge-grid.vitals .gauge {
+  background: var(--panel-2);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.gauge-grid.vitals .gauge-value {
+  font-size: 32px;
+}
+
+/* ---- responsive: narrow / portrait falls back to a bottom-ish rail ---- */
+@media (max-width: 760px) {
+  .tab-grid {
     grid-template-columns: 1fr;
+  }
+  .rail {
+    width: 74px;
+  }
+  .rail-tab span {
+    display: none;
+  }
+  .sb-vitals {
+    gap: 16px;
   }
 }

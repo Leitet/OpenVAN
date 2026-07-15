@@ -111,8 +111,57 @@ body {
   border-radius: 6px;
   padding: 14px;
 }
-.card.wide {
-  grid-column: 1 / -1;
+.card.span-2 {
+  grid-column: span 2;
+}
+
+/* ---- digital twin (van cutaway, driven by injected signals) ---- */
+.twin-view {
+  display: flex;
+  justify-content: center;
+}
+.van {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+}
+.van-body {
+  fill: #10151c;
+  stroke: var(--line);
+  stroke-width: 2;
+}
+.van-cab {
+  fill: #141b24;
+  stroke: var(--line);
+}
+.van-cabin {
+  fill: #141b24;
+  stroke: var(--line);
+  transition: fill 0.3s ease;
+}
+.van-cabin.lit {
+  fill: color-mix(in srgb, var(--amber) 24%, #141b24);
+}
+.lamp {
+  fill: #38414d;
+}
+.lamp.on {
+  fill: var(--amber);
+  filter: drop-shadow(0 0 8px var(--amber));
+}
+.van-caption {
+  fill: var(--muted);
+  font-size: 12px;
+  text-anchor: middle;
+}
+.heat {
+  fill: #38414d;
+  font-size: 22px;
+  text-anchor: middle;
+}
+.heat.on {
+  fill: var(--bad);
+  filter: drop-shadow(0 0 6px var(--bad));
 }
 .card h2 {
   margin: 0 0 12px;

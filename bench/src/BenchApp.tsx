@@ -10,6 +10,7 @@ import {
 import type { Weather } from "@shared/types";
 import { useVanState } from "@shared/useVanState";
 import { SignalSlider } from "./components/SignalSlider";
+import { VanView } from "./components/VanView";
 
 function num(v: unknown): number | undefined {
   return typeof v === "number" ? v : undefined;
@@ -138,7 +139,23 @@ export function BenchApp() {
           <p className="note">Off = the twin holds still, for testing against fixed state.</p>
         </section>
 
-        <section className="card wide">
+        <section className="card">
+          <h2>Digital twin</h2>
+          <div className="twin-view">
+            <VanView
+              lightOn={Boolean(twin["cabin_light.on"])}
+              heaterOn={Boolean(twin["diesel_heater.on"])}
+              soc={num(twin["house_battery.soc"])}
+              cabinTemp={num(twin["cabin.temperature"])}
+            />
+          </div>
+          <p className="note">
+            The van as Core sees it right now — driven entirely by the signals
+            above. On a real van this comes from actual hardware.
+          </p>
+        </section>
+
+        <section className="card span-2">
           <h2>Signal inspector</h2>
           <div className="signal-table">
             {twinKeys.length === 0 ? (
