@@ -25,10 +25,16 @@ body {
   color: var(--text);
 }
 
+/* Product-accent focus ring (the DS --ov-ring uses the persona accent). */
+:where(button, input, select, textarea, a):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ov-app-accent) 45%, transparent);
+}
+
 .app {
-  max-width: 1100px;
+  max-width: var(--ov-card-max); /* 1180px */
   margin: 0 auto;
-  padding: 16px;
+  padding: var(--ov-space-4); /* 16px */
 }
 
 .topbar {
@@ -357,8 +363,10 @@ body {
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 16px;
+  border-radius: var(--ov-radius-md); /* 14px */
+  padding: var(--ov-space-4); /* 16px */
+  /* Design-system elevation — panels float on the dark canvas. */
+  box-shadow: var(--ov-shadow-md), var(--ov-shadow-inset);
 }
 
 .panel h2,
