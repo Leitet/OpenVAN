@@ -1,14 +1,17 @@
-/* Palette now lives in the design system (design-system/tokens/product.css).
-   These short aliases map onto the DS tokens so every var(--bg) etc. keeps
-   working. New product UI should use the --ov-app-* tokens directly. */
+/* The product UI themes to the ACTIVE persona. These short aliases map onto the
+   brand/persona tokens (--ov-*, design-system/tokens/colors.css), which change
+   per [data-theme] — set on <html> from the active personality. So choosing
+   Aurora skins the whole app in Aurora, Pulse in Pulse, etc. Status colours and
+   the font stay theme-neutral (--ov-app-*). */
 :root {
-  --bg: var(--ov-app-bg);
-  --panel: var(--ov-app-panel);
-  --panel-2: var(--ov-app-panel-2);
-  --line: var(--ov-app-line);
-  --text: var(--ov-app-text);
-  --muted: var(--ov-app-muted);
-  --accent: var(--ov-app-accent);
+  --bg: var(--ov-bg);
+  --panel: var(--ov-surface);
+  --panel-2: var(--ov-surface-2);
+  --line: var(--ov-border);
+  --text: var(--ov-text);
+  --muted: var(--ov-text-muted);
+  --accent: var(--ov-accent);
+  --on-accent: var(--ov-on-accent); /* readable text on an accent fill */
   --good: var(--ov-app-good);
   --warn: var(--ov-app-warn);
   --bad: var(--ov-app-bad);
@@ -23,6 +26,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  transition: background-color 0.35s ease, color 0.35s ease;
 }
 
 /* Product-accent focus ring (the DS --ov-ring uses the persona accent). */
@@ -224,7 +228,7 @@ body {
   top: 10px;
   right: 10px;
   background: var(--accent);
-  color: #04121b;
+  color: var(--on-accent);
   font-size: 12px;
   font-weight: 700;
   padding: 4px 10px;
@@ -365,8 +369,9 @@ body {
   border: 1px solid var(--line);
   border-radius: var(--ov-radius-md); /* 14px */
   padding: var(--ov-space-4); /* 16px */
-  /* Design-system elevation — panels float on the dark canvas. */
+  /* Design-system elevation — panels float on the canvas. */
   box-shadow: var(--ov-shadow-md), var(--ov-shadow-inset);
+  transition: background-color 0.35s ease, border-color 0.35s ease;
 }
 
 .panel h2,
@@ -813,7 +818,7 @@ body {
   border-radius: 8px;
   border: none;
   background: var(--accent);
-  color: #04121b;
+  color: var(--on-accent);
   font-weight: 600;
   cursor: pointer;
 }

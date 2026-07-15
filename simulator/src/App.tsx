@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { sendIntent, sendText } from "./api";
 import { Gauge } from "./components/Gauge";
 import { SignalSlider } from "./components/SignalSlider";
@@ -22,6 +22,14 @@ export default function App() {
   const { entities, twin, log, assistant, notices, connected } = useVanState();
   const [text, setText] = useState("");
   const [view, setView] = useState<"dashboard" | "admin">("dashboard");
+
+  // The whole UI themes to the active persona (design-system [data-theme]).
+  useEffect(() => {
+    document.documentElement.setAttribute(
+      "data-theme",
+      assistant.personality_id || "aurora",
+    );
+  }, [assistant.personality_id]);
 
   const light = entities["light.cabin"];
   const lightOn = light?.state === "on";
