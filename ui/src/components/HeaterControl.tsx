@@ -1,5 +1,5 @@
-import { sendIntent } from "../api";
-import type { Entity } from "../types";
+import { sendIntent } from "@shared/api";
+import type { Entity } from "@shared/types";
 
 /** On/off + setpoint control for the diesel heater (climate actuator). */
 export function HeaterControl({ entity }: { entity: Entity | undefined }) {

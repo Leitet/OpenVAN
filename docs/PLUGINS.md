@@ -3,8 +3,9 @@
 Everything that touches the van is a plugin: sensors, lights, heaters, water,
 batteries, connectivity. This guide shows the two patterns — a **sensor**
 (read-only) and an **actuator** (controllable, safety-checked) — and how to keep
-[Rule 1](../CLAUDE.md#rule-1--every-feature-must-work-in-the-simulator): every
-feature works in the simulator.
+[Rule 1](../CLAUDE.md#rule-1--every-feature-must-work-against-the-twin): every
+feature works against the twin — injectable from the Hardware Bench, visible in
+the product UI.
 
 ## The shape of a plugin
 
@@ -101,16 +102,16 @@ Constraints live in `core/openvan_core/safety.py` as `SafetyRule`s (return a
 `SafetyDecision`, or `None` when the rule doesn't apply). Register them in
 `build_core` (`runtime.py`). Example built-in: `CriticalBatteryLoadShedding`.
 
-## Rule 1 checklist — simulator support
+## Rule 1 checklist — bench + product support
 
 When your plugin introduces **new signal keys**, make them drivable/observable:
 
 1. **Seed** a sensible default in `Config.seed_twin` (`core/openvan_core/config.py`)
-   so the simulator has something to show on first load.
-2. **Inject** — add a `SignalSlider` (for sensors) to `simulator/src/App.tsx` so
-   you can play the physical value.
-3. **Observe** — add a `Gauge` (sensors) or a control/indicator (actuators) so
-   the effect is visible.
+   so both front-ends have something to show on first load.
+2. **Inject** — add a `SignalSlider` (for sensors) to `bench/src/BenchApp.tsx`
+   (the Hardware Bench) so you can play the physical value.
+3. **Observe** — in the **product UI** (`ui/`) add a `Gauge` (sensors) or a
+   control/indicator (actuators) so the effect is visible where users look.
 4. **Test** — add a test in `core/tests/` that drives the twin and asserts the
    entity/behaviour, mirroring `test_core.py`.
 

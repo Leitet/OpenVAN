@@ -25,25 +25,29 @@ Three core values guide every decision:
 
 ## The non-negotiable rules
 
-### RULE 1 — Every feature must work in the simulator
+### RULE 1 — Every feature must work against the twin
 
-There is **no physical van yet**. The [web simulator](simulator/) is a digital
-twin of the van and is our primary development and test surface.
+There is **no physical van yet**. We develop against a digital twin driven by two
+web front-ends: the [**product UI**](ui/) (`ui/`, the OpenVan OS — how a real
+user sees and controls the van) and the [**Hardware Bench**](bench/) (`bench/`,
+the dev stand-in that injects the raw signals a real sensor/vehicle would emit).
 
-> **When you add a feature, you add its simulator support in the same change.**
-> A plugin that cannot be exercised from the simulator is not done.
+> **When you add a feature, you add both its bench support (inject raw signals)
+> and its product-UI surface (display/control) in the same change.**
+> A plugin that cannot be exercised from the bench is not done.
 
 Concretely, a new plugin must:
 
 1. Read/write hardware **only** through a `Backend` (never touch hardware
    directly), so it runs against the simulated `VanTwin` out of the box.
-2. Expose its raw signals so the simulator can inject sensor values and observe
-   actuator effects (add sliders/controls to the simulator when introducing new
-   signal keys).
+2. Expose its raw signals so the **bench** can inject sensor values and observe
+   actuator effects (add a `SignalSlider`/scenario to `bench/` when introducing
+   new signal keys), and surface the result in the **product UI**.
 3. Ship a test in `core/tests/` proving its behaviour against the twin.
 
 This is not busywork — it is what keeps the AI feedback loop fast: change → run
-Core → drive it from the simulator (or a test) → see the result → adjust.
+Core → drive it from the bench (or a test) → see the result in the product UI →
+adjust.
 
 ### RULE 2 — The AI never controls hardware directly
 
@@ -77,8 +81,9 @@ make the assistant a hard requirement.
 ## Architecture
 
 ```
-        Simulator (React)  ── the digital twin UI / test surface
-              │  HTTP + WebSocket
+   Product UI (React, :5173)   ── the OpenVan OS (ships on the van)
+   Hardware Bench (React, :5174) ── dev stand-in: injects raw signals
+              │  HTTP + WebSocket   (both share shared/: api client, types, WS hook)
               ▼
         ┌───────────────────────────── OpenVan Core (Python) ─────────────────┐
         │  api.py        FastAPI + WebSocket (local only)                      │
@@ -164,12 +169,12 @@ simulation's. Its constants are illustrative — measure a real van before shipp
 
 ### Data flow
 
-- Sensor: simulator injects `house_battery.soc` → `VanTwin` emits
+- Sensor: the **bench** injects `house_battery.soc` → `VanTwin` emits
   `twin.signal_changed` → `battery_monitor` updates `sensor.house_battery_soc` →
-  WebSocket → simulator gauge moves.
-- Command: simulator/AI sends an `Intent` → `Hub.execute_intent` → `SafetyValidator`
+  WebSocket → the **product UI** gauge moves.
+- Command: the product UI / AI sends an `Intent` → `Hub.execute_intent` → `SafetyValidator`
   → plugin handler writes the actuator signal via `Backend` → twin updates →
-  simulator reflects it. Every evaluation emits `intent.evaluated` (shown in the
+  the product UI reflects it. Every evaluation emits `intent.evaluated` (shown in the
   simulator's activity/safety log).
 
 ---
@@ -215,9 +220,12 @@ openvan/
     pyproject.toml
   plugins/              one package per plugin
     battery_monitor/  cabin_light/  diesel_heater/  water_system/
-  simulator/            React + Vite — digital-twin dashboard + Admin UI
+  ui/                   React + Vite — the product UI (OpenVan OS, :5173)
+  bench/                React + Vite — the Hardware Bench (dev sim, :5174)
+  shared/               api client, types, WebSocket hook (used by ui + bench)
+  package.json          npm workspace root (ui + bench)
   docs/
-    PLUGINS.md          how to write a plugin (+ simulator support)
+    PLUGINS.md          how to write a plugin (+ bench/product support)
   backlog.md            future ideas, deliberately not built yet
   CLAUDE.md             (this file)
   README.md
@@ -235,7 +243,7 @@ defaults < persisted < env). The **API key is never persisted** — memory/env o
 **Personalities = voice only** (`personalities.py`): six built-ins + user forks,
 persisted to `data/` (gitignored). A personality shapes phrasing, never facts,
 intents or safety. The Admin picker shows each one's trading-card artwork
-(`simulator/public/personalities/<id>.jpg`); forks inherit their base's art. Its `connectivity` + `model` are the per-profile model binding
+(`ui/public/personalities/<id>.jpg`); forks inherit their base's art. Its `connectivity` + `model` are the per-profile model binding
 (Rule 4), not part of the character. Online API keys live in memory / env, never
 on disk.
 
@@ -253,9 +261,10 @@ pip install -e ".[dev]"
 pytest                      # must pass before every commit
 python -m openvan_core      # serves http://127.0.0.1:8000
 
-# Simulator (separate terminal)
-cd simulator && npm install
-npm run dev                 # http://localhost:5173, proxies to Core
+# Front-ends (one workspace, two apps — run at the repo root)
+npm install                 # installs both ui + bench
+npm run dev:ui              # product UI    -> http://localhost:5173
+npm run dev:bench          # hardware bench -> http://localhost:5174 (separate terminal)
 ```
 
 ### Standards

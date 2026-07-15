@@ -1,4 +1,4 @@
-import { injectSignal } from "../api";
+import { injectSignal } from "@shared/api";
 
 interface SignalSliderProps {
   label: string;

@@ -1,4 +1,4 @@
-import type { LogEntry } from "../types";
+import type { LogEntry } from "@shared/types";
 
 export function EventLog({ log }: { log: LogEntry[] }) {
   return (

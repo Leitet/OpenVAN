@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { getBriefing } from "../api";
-import type { Notice } from "../types";
+import { getBriefing } from "@shared/api";
+import type { Notice } from "@shared/types";
 
 export function Companion({ notices }: { notices: Notice[] }) {
   const [briefing, setBriefing] = useState<string | null>(null);

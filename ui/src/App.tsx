@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { sendIntent, sendText } from "./api";
+import { sendIntent, sendText } from "@shared/api";
 import { Gauge } from "./components/Gauge";
-import { SignalSlider } from "./components/SignalSlider";
 import { EventLog } from "./components/EventLog";
 import { HeaterControl } from "./components/HeaterControl";
 import { Companion } from "./components/Companion";
@@ -12,7 +11,7 @@ import { Journey } from "./components/Journey";
 import { Weather } from "./components/Weather";
 import { Journal } from "./components/Journal";
 import { VanView } from "./components/VanView";
-import { useVanState } from "./useVanState";
+import { useVanState } from "@shared/useVanState";
 
 function num(v: unknown): number | undefined {
   return typeof v === "number" ? v : undefined;
@@ -55,7 +54,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <strong>OpenVan</strong> <span>Simulator</span>
+          <strong>OpenVan</strong> <span>OS</span>
           <nav className="tabs">
             <button
               className={view === "dashboard" ? "tab active" : "tab"}
@@ -191,21 +190,6 @@ export default function App() {
             />
             <button type="submit">Send</button>
           </form>
-        </section>
-
-        <section className="panel inject">
-          <h2>Inject sensors (play the physical van)</h2>
-          <SignalSlider label="Battery SoC" signalKey="house_battery.soc" value={soc} min={0} max={100} unit="%" />
-          <SignalSlider label="Solar power" signalKey="solar.power" value={num(twin["solar.power"])} min={0} max={600} step={10} unit="W" />
-          <SignalSlider label="Fresh water" signalKey="fresh_water.level_pct" value={num(twin["fresh_water.level_pct"])} min={0} max={100} unit="%" />
-          <SignalSlider label="Outside temp" signalKey="outside.temperature" value={num(twin["outside.temperature"])} min={-20} max={40} step={0.5} unit="°C" />
-          <SignalSlider label="Diesel fuel" signalKey="diesel_tank.level_pct" value={num(twin["diesel_tank.level_pct"])} min={0} max={100} unit="%" />
-          <p className="hint">
-            Cabin temperature is simulated: set the outside temp cold, turn on the
-            heater, and watch the cabin warm toward the setpoint. Run the pump to
-            drain fresh into grey. Safety blocks: non-essential loads below 10%
-            battery, the heater without fuel, the pump when the fresh tank is empty.
-          </p>
         </section>
 
         <Journey twin={twin} />

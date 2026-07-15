@@ -10,7 +10,8 @@ dist/
 
 # Node / Vite
 node_modules/
-simulator/dist/
+ui/dist/
+bench/dist/
 *.local
 
 # Local runtime data (custom personalities, active choice, …)

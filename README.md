@@ -19,9 +19,11 @@ Early skeleton. What works today, end-to-end and tested:
 
 - **OpenVan Core** (Python) — async event bus, entity model, plugin system,
   safety layer, LLM-agnostic intent resolver, local HTTP + WebSocket API.
-- **Digital twin + simulator** (React) — there is no physical van yet, so we
-  develop against a web-based twin: live gauges, sensor-injection sliders, van
-  controls, and an activity/safety log.
+- **Two web front-ends** (React) — a persona-themed **product UI** (the OpenVan
+  OS: companion, digital twin, telemetry, controls, journey, journal, weather)
+  and a separate **Hardware Bench** that stands in for the physical van by
+  injecting raw sensor/vehicle signals. There is no real van yet, so the bench
+  plays "physical world" while the product UI is exactly what ships.
 - **Reference plugins** — `battery_monitor` (sensors), `cabin_light`,
   `diesel_heater` and `water_system` (safety-checked actuators).
 - **Environment simulation** — the twin evolves over time (heater warms the
@@ -49,22 +51,31 @@ pytest                 # verify (should be all green)
 python -m openvan_core # http://127.0.0.1:8000
 ```
 
-**2 · Simulator**
+**2 · Front-ends**
+
+Two apps share one workspace (a single `npm install` at the repo root). The
+**product UI** is the OpenVan OS; the **Hardware Bench** is the dev stand-in for
+the physical van. Each runs on its own port.
 
 ```bash
-cd simulator
-npm install
-npm run dev            # http://localhost:5173
+npm install            # installs both apps (run at the repo root)
+npm run dev:ui         # product UI    -> http://localhost:5173
+npm run dev:bench      # hardware bench -> http://localhost:5174  (separate terminal)
 ```
 
-Open the simulator. You'll see the van twin, live telemetry, and controls. Try:
+Open the **product UI** (5173): the van twin, live telemetry, controls, and the
+companion. Open the **Hardware Bench** (5174) to play the physical world:
 
-- Toggle the cabin light — watch it light up in the twin and log as allowed.
-- Drag **Battery SoC** below 10%, toggle the light again — Core's safety layer
-  refuses the non-essential load, and the log shows why.
-- Type *"turn on the cabin light"* — the offline intent resolver handles it.
-- Switch to the **Admin** tab to choose the AI model, toggle the assistant or the
-  simulation, and see loaded plugins (all also available via `/api/settings`).
+- On the bench, drag **Battery SoC** below 10%, then toggle the cabin light in
+  the product UI — Core's safety layer refuses the non-essential load, and the
+  log shows why.
+- In the product UI, type *"turn on the cabin light"* — the offline intent
+  resolver handles it; watch the twin light up.
+- Use the bench **Scenarios** (critical battery, freezing night, start driving…)
+  to jump the twin to a state, and the **Signal inspector** to see every raw
+  value Core is reading.
+- The product **Admin** tab chooses the AI model and persona; the bench owns the
+  environment-simulation toggle.
 
 ### Optional: MCP server (control OpenVan from an AI assistant)
 
@@ -111,13 +122,18 @@ UI, memory-only) and is never written to disk.
 ## Architecture in one picture
 
 ```
-Simulator (React)  ──HTTP/WebSocket──►  OpenVan Core (Python)  ──Backend──►  VanTwin
-   digital twin UI                       bus · safety · plugins            (sim hardware)
+Product UI    (React, :5173) ─┐
+                              ├─HTTP/WebSocket─►  OpenVan Core (Python) ──Backend──► VanTwin
+Hardware Bench (React, :5174) ─┘                   bus · safety · plugins          (sim hardware)
 ```
 
-Plugins read/write hardware only through a `Backend`. Today that's `SimBackend`
-(the twin); real backends (Victron, Modbus, CAN, MQTT…) implement the same
-interface later — so **every feature runs in the simulator by construction**.
+The **product UI** reads state and issues safety-checked intents — it is the
+software that ships on the van. The **Hardware Bench** injects the raw signals a
+real sensor/vehicle would emit. Plugins read/write hardware only through a
+`Backend`: today that's `SimBackend` (the twin), driven by the bench; real
+backends (Victron, Modbus, CAN, MQTT…) implement the same interface later and the
+bench simply goes away — so **every feature runs against the twin by
+construction**.
 
 Full details, data flow, and the contributor rules are in [CLAUDE.md](CLAUDE.md).
 

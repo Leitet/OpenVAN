@@ -1,0 +1,159 @@
+import { useCallback, useEffect, useState } from "react";
+import {
+  injectSignal,
+  getWeather,
+  refreshWeather,
+  simulateWeather,
+  getSettings,
+  saveSettings,
+} from "@shared/api";
+import type { Weather } from "@shared/types";
+import { useVanState } from "@shared/useVanState";
+import { SignalSlider } from "./components/SignalSlider";
+
+function num(v: unknown): number | undefined {
+  return typeof v === "number" ? v : undefined;
+}
+
+// Fire a batch of raw signals at Core — the bench's whole job.
+function apply(signals: Array<[string, number | boolean]>) {
+  for (const [key, value] of signals) injectSignal(key, value);
+}
+
+const SCENARIOS: Array<{ label: string; signals: Array<[string, number | boolean]> }> = [
+  { label: "Critical battery", signals: [["house_battery.soc", 8]] },
+  { label: "Full sun", signals: [["solar.power", 550]] },
+  { label: "Freezing night", signals: [["outside.temperature", -8], ["solar.power", 0]] },
+  { label: "Empty fresh tank", signals: [["fresh_water.level_pct", 2]] },
+  { label: "Start driving", signals: [["vehicle.ignition", true], ["vehicle.speed_kmh", 60]] },
+  { label: "Park", signals: [["vehicle.speed_kmh", 0], ["vehicle.ignition", false]] },
+];
+
+function fmt(v: number | boolean | string): string {
+  if (typeof v === "boolean") return v ? "ON" : "OFF";
+  if (typeof v === "number") return Number.isInteger(v) ? String(v) : v.toFixed(2);
+  return String(v);
+}
+
+export function BenchApp() {
+  const { twin, connected } = useVanState();
+  const [wx, setWx] = useState<Weather>({});
+  const [simulate, setSimulate] = useState<boolean | null>(null);
+
+  const loadWx = useCallback(async () => setWx(await getWeather()), []);
+
+  useEffect(() => {
+    loadWx();
+    getSettings().then((s) => setSimulate(s.simulate));
+  }, [loadWx]);
+
+  const toggleSim = async () => {
+    const next = !simulate;
+    setSimulate(next);
+    const s = await saveSettings({ simulate: next });
+    setSimulate(s.simulate);
+  };
+
+  const ignition = Boolean(twin["vehicle.ignition"]);
+  const twinKeys = Object.keys(twin).sort();
+
+  return (
+    <div className="bench">
+      <header className="bench-bar">
+        <div className="bench-title">
+          <span className="warn-chip">⚠ HARDWARE SIMULATOR</span>
+          <span className="bench-name">OpenVan Bench</span>
+          <span className="bench-sub">
+            dev stand-in for the physical van — signals injected here are what Core
+            would read from real sensors
+          </span>
+        </div>
+        <div className="bench-status">
+          <a className="ext-link" href="http://localhost:5173" target="_blank" rel="noreferrer">
+            Product UI ↗
+          </a>
+          <span className={"conn" + (connected ? " up" : " down")}>
+            {connected ? "Core connected" : "Reconnecting…"}
+          </span>
+        </div>
+      </header>
+
+      <main className="bench-grid">
+        <section className="card">
+          <h2>Signals</h2>
+          <SignalSlider label="Battery SoC" signalKey="house_battery.soc" value={num(twin["house_battery.soc"])} min={0} max={100} unit="%" />
+          <SignalSlider label="Solar power" signalKey="solar.power" value={num(twin["solar.power"])} min={0} max={600} step={10} unit="W" />
+          <SignalSlider label="Fresh water" signalKey="fresh_water.level_pct" value={num(twin["fresh_water.level_pct"])} min={0} max={100} unit="%" />
+          <SignalSlider label="Outside temp" signalKey="outside.temperature" value={num(twin["outside.temperature"])} min={-20} max={40} step={0.5} unit="°C" />
+          <SignalSlider label="Diesel fuel" signalKey="diesel_tank.level_pct" value={num(twin["diesel_tank.level_pct"])} min={0} max={100} unit="%" />
+          <p className="note">
+            Cabin temperature is <em>derived</em> by Core's thermal model, not injected —
+            set the outside temp cold and turn on the heater from the product UI to
+            watch the cabin respond.
+          </p>
+        </section>
+
+        <section className="card">
+          <h2>Drive</h2>
+          <button
+            className={"toggle" + (ignition ? " on" : "")}
+            onClick={() => injectSignal("vehicle.ignition", !ignition)}
+          >
+            {ignition ? "Ignition: ON" : "Ignition: OFF"}
+          </button>
+          <SignalSlider label="Speed" signalKey="vehicle.speed_kmh" value={num(twin["vehicle.speed_kmh"])} min={0} max={130} unit=" km/h" />
+          <SignalSlider label="Heading" signalKey="vehicle.heading" value={num(twin["vehicle.heading"])} min={0} max={359} unit="°" />
+          <p className="note">
+            Ignition on + a speed makes the van dead-reckon along its heading; the
+            odometer ticks and GPS traces on the product map.
+          </p>
+        </section>
+
+        <section className="card">
+          <h2>Scenarios</h2>
+          <div className="scenario-grid">
+            {SCENARIOS.map((s) => (
+              <button key={s.label} className="scenario" onClick={() => apply(s.signals)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          <h3>Weather</h3>
+          <div className="wx-row">
+            <span className="wx-src">
+              {wx.source === "simulated" ? "simulated" : wx.online ? "live" : wx.current ? "cached" : "—"}
+              {wx.current?.temp_c != null ? ` · ${wx.current.temp_c.toFixed(0)}°C` : ""}
+            </span>
+            <button className="mini" onClick={() => refreshWeather().then(loadWx)}>Refresh</button>
+            <button className="mini" onClick={() => simulateWeather("rain").then(loadWx)}>Rain</button>
+            <button className="mini" onClick={() => simulateWeather("clear").then(loadWx)}>Clear</button>
+          </div>
+
+          <h3>Environment physics</h3>
+          <label className="sim-toggle">
+            <input type="checkbox" checked={!!simulate} disabled={simulate === null} onChange={toggleSim} />
+            Run thermal &amp; water simulation
+          </label>
+          <p className="note">Off = the twin holds still, for testing against fixed state.</p>
+        </section>
+
+        <section className="card wide">
+          <h2>Signal inspector</h2>
+          <div className="signal-table">
+            {twinKeys.length === 0 ? (
+              <span className="note">No signals yet — waiting for Core…</span>
+            ) : (
+              twinKeys.map((k) => (
+                <div key={k} className="signal-row">
+                  <span className="sig-k">{k}</span>
+                  <span className="sig-v">{fmt(twin[k])}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}

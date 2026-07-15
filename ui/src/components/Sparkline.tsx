@@ -1,4 +1,4 @@
-import type { TelemetryPoint } from "../types";
+import type { TelemetryPoint } from "@shared/types";
 
 interface SparklineProps {
   label: string;

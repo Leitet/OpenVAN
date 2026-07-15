@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { getSeries, getStays } from "../api";
-import type { Stay } from "../types";
+import { getSeries, getStays } from "@shared/api";
+import type { Stay } from "@shared/types";
 
 const W = 320;
 const H = 190;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getPredictions } from "../api";
+import { getPredictions } from "@shared/api";
 
 function fmtHours(h: number): string {
   if (h < 1) return `${Math.round(h * 60)} min`;

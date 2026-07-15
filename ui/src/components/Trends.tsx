@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { getSeries } from "../api";
-import type { TelemetryPoint } from "../types";
+import { getSeries } from "@shared/api";
+import type { TelemetryPoint } from "@shared/types";
 import { Sparkline } from "./Sparkline";
 
 interface Metric {

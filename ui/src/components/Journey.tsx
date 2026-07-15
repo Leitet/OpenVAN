@@ -1,6 +1,4 @@
-import { injectSignal } from "../api";
-import type { Twin } from "../types";
-import { SignalSlider } from "./SignalSlider";
+import type { Twin } from "@shared/types";
 import { JourneyMap } from "./JourneyMap";
 
 function num(v: unknown): number | undefined {
@@ -8,7 +6,6 @@ function num(v: unknown): number | undefined {
 }
 
 export function Journey({ twin }: { twin: Twin }) {
-  const ignition = Boolean(twin["vehicle.ignition"]);
   const speed = num(twin["vehicle.speed_kmh"]);
   const lat = num(twin["gps.lat"]);
   const lon = num(twin["gps.lon"]);
@@ -46,33 +43,6 @@ export function Journey({ twin }: { twin: Twin }) {
                 : "—"}
             </div>
           </div>
-
-          <button
-            className={"toggle" + (ignition ? " on" : "")}
-            onClick={() => injectSignal("vehicle.ignition", !ignition)}
-          >
-            {ignition ? "Ignition: ON" : "Ignition: OFF"}
-          </button>
-          <SignalSlider
-            label="Speed"
-            signalKey="vehicle.speed_kmh"
-            value={speed}
-            min={0}
-            max={130}
-            unit=" km/h"
-          />
-          <SignalSlider
-            label="Heading"
-            signalKey="vehicle.heading"
-            value={num(twin["vehicle.heading"])}
-            min={0}
-            max={359}
-            unit="°"
-          />
-          <p className="hint">
-            Turn the ignition on and set a speed — the van dead-reckons along its
-            heading, the odometer ticks up, and the route traces on the map.
-          </p>
         </div>
       </div>
     </section>

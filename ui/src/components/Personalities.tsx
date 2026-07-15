@@ -5,8 +5,8 @@ import {
   getPersonalities,
   setActivePersonality,
   updatePersonality,
-} from "../api";
-import type { Personality } from "../types";
+} from "@shared/api";
+import type { Personality } from "@shared/types";
 
 const BUILTIN_IDS = new Set(["aurora", "ranger", "scout", "forge", "nomad", "pulse"]);
 

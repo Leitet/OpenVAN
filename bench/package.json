@@ -1,9 +1,9 @@
 {
-  "name": "openvan-simulator",
+  "name": "openvan-bench",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Web-based digital twin & simulator for OpenVan",
+  "description": "OpenVan Hardware Bench — a dev stand-in for the physical van. Injects raw signals into the digital twin. Deleted once a real van feeds Core.",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

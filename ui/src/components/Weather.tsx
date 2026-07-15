@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { getWeather, refreshWeather, simulateWeather } from "../api";
-import type { Weather as WeatherData } from "../types";
+import { getWeather, refreshWeather } from "@shared/api";
+import type { Weather as WeatherData } from "@shared/types";
 
 function hourLabel(iso: string): string {
   const m = iso.match(/T(\d{2}):/);
@@ -81,12 +81,6 @@ export function Weather() {
       <div className="wx-actions">
         <button className="mini" onClick={() => refreshWeather().then(load)}>
           Refresh
-        </button>
-        <button className="mini" onClick={() => simulateWeather("rain").then(load)}>
-          Simulate rain
-        </button>
-        <button className="mini" onClick={() => simulateWeather("clear").then(load)}>
-          Clear
         </button>
       </div>
     </section>

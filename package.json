@@ -1,0 +1,13 @@
+{
+  "name": "openvan-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "description": "OpenVan front-ends: the product OS (ui) and the hardware bench (bench).",
+  "workspaces": ["ui", "bench"],
+  "scripts": {
+    "dev": "npm run dev -w ui",
+    "dev:ui": "npm run dev -w ui",
+    "dev:bench": "npm run dev -w bench",
+    "build": "npm run build -w ui && npm run build -w bench"
+  }
+}

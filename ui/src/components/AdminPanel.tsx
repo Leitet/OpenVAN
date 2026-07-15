@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { getModels, getSettings, saveSettings } from "../api";
-import type { Settings } from "../types";
+import { getModels, getSettings, saveSettings } from "@shared/api";
+import type { Settings } from "@shared/types";
 import { Personalities } from "./Personalities";
 
 // Curated fallbacks so the dropdowns are useful before (or without) a live
@@ -206,21 +206,6 @@ export function AdminPanel() {
       </section>
 
       <Personalities />
-
-      <section className="panel span2">
-        <h2>Simulation</h2>
-        <div className="setting-row">
-          <label>Run environment simulation (thermal &amp; water physics)</label>
-          <input
-            type="checkbox"
-            checked={settings.simulate}
-            onChange={(e) => patch({ simulate: e.target.checked })}
-          />
-        </div>
-        <p className="hint">
-          When off, the twin holds still — useful for testing against fixed state.
-        </p>
-      </section>
 
       <section className="panel span2">
         <h2>System</h2>

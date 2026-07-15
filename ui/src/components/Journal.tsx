@@ -5,8 +5,8 @@ import {
   deleteStay,
   getStays,
   nameStay,
-} from "../api";
-import type { Stay } from "../types";
+} from "@shared/api";
+import type { Stay } from "@shared/types";
 
 function when(ts: number | null): string {
   if (!ts) return "";
