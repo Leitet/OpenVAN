@@ -1,0 +1,141 @@
+/* OpenVan — Color system
+   ------------------------------------------------------------------
+   OpenVan is themed by "persona": each camper-van assistant has its
+   own palette. Semantic tokens (--ov-accent, --ov-surface, --ov-text…)
+   are what components consume; six [data-theme] scopes remap them.
+   The OS backdrop (--ov-canvas) is a shared near-black on which every
+   persona card floats. :root defaults to the SCOUT house palette. */
+:root{
+  /* Shared OS backdrop — every persona card floats on this */
+  --ov-canvas:#111113;
+  --ov-canvas-2:#1b1b1e;
+
+  /* Neutral scale (theme-independent utility greys) */
+  --ov-ink-900:#16160f;
+  --ov-ink-700:#2c2c22;
+  --ov-ink-500:#5b5b4e;
+  --ov-ink-300:#9a9a8c;
+  --ov-paper-100:#f4efe2;
+  --ov-paper-200:#ece5d3;
+  --ov-paper-300:#e0d7c2;
+  --ov-white:#ffffff;
+
+  /* ---- Default semantic set = SCOUT (light, sage) ---- */
+  --ov-bg:#dcd4bf;
+  --ov-surface:#ebe5d4;
+  --ov-surface-2:#dfd7c3;
+  --ov-text:#3b4632;
+  --ov-text-muted:#6e7862;
+  --ov-text-faint:#98a088;
+  --ov-accent:#5c6e4e;
+  --ov-accent-soft:rgba(92,110,78,.12);
+  --ov-on-accent:#eeeadb;
+  --ov-tagline:#4e6b3e;
+  --ov-border:rgba(59,70,50,.16);
+  --ov-statusbar-bg:#4c5a3f;
+  --ov-statusbar-text:#ece7d7;
+}
+
+/* ============================ THEMES ============================ */
+
+/* AURORA — The Sunrise Chaser · light, lavender/violet */
+[data-theme="aurora"]{
+  --ov-bg:#ddd4c2;
+  --ov-surface:#ece4d3;
+  --ov-surface-2:#e1d8c6;
+  --ov-text:#3b3357;
+  --ov-text-muted:#6a6280;
+  --ov-text-faint:#948caa;
+  --ov-accent:#6c5c9c;
+  --ov-accent-soft:rgba(108,92,156,.13);
+  --ov-on-accent:#f4f1e8;
+  --ov-tagline:#6c5c9c;
+  --ov-border:rgba(59,51,87,.15);
+  --ov-statusbar-bg:#4b3f63;
+  --ov-statusbar-text:#ede7dc;
+}
+
+/* FORGE — The Systems Engineer · dark, amber/gold */
+[data-theme="forge"]{
+  --ov-bg:#0e0e0e;
+  --ov-surface:#1a1a19;
+  --ov-surface-2:#232320;
+  --ov-text:#ece6da;
+  --ov-text-muted:#9e988b;
+  --ov-text-faint:#726c60;
+  --ov-accent:#e0a62b;
+  --ov-accent-soft:rgba(224,166,43,.14);
+  --ov-on-accent:#171712;
+  --ov-tagline:#b6b0a4;
+  --ov-border:rgba(224,166,43,.22);
+  --ov-statusbar-bg:#16160f;
+  --ov-statusbar-text:#ece6da;
+}
+
+/* NOMAD — The Storyteller Van · light, forest green */
+[data-theme="nomad"]{
+  --ov-bg:#e0d8c6;
+  --ov-surface:#efe8d8;
+  --ov-surface-2:#e4dbc7;
+  --ov-text:#2e3a24;
+  --ov-text-muted:#63705a;
+  --ov-text-faint:#8f9982;
+  --ov-accent:#3e5230;
+  --ov-accent-soft:rgba(62,82,48,.12);
+  --ov-on-accent:#f1eddf;
+  --ov-tagline:#47632f;
+  --ov-border:rgba(46,58,36,.15);
+  --ov-statusbar-bg:#47543a;
+  --ov-statusbar-text:#ede7d6;
+}
+
+/* PULSE — The Utility Van · dark, electric lime (mono voice) */
+[data-theme="pulse"]{
+  --ov-bg:#0c0c0e;
+  --ov-surface:#141416;
+  --ov-surface-2:#1e1f1c;
+  --ov-text:#f2f2ef;
+  --ov-text-muted:#9a9a93;
+  --ov-text-faint:#6a6a63;
+  --ov-accent:#9bd62e;
+  --ov-accent-soft:rgba(155,214,46,.12);
+  --ov-on-accent:#10130a;
+  --ov-tagline:#9a9a93;
+  --ov-border:rgba(155,214,46,.20);
+  --ov-statusbar-bg:#141416;
+  --ov-statusbar-text:#f2f2ef;
+}
+
+/* RANGER — The Expedition Van · dark, military olive + orange */
+[data-theme="ranger"]{
+  --ov-bg:#121309;
+  --ov-surface:#1b1c17;
+  --ov-surface-2:#24261e;
+  --ov-text:#d9d5c4;
+  --ov-text-muted:#928e7c;
+  --ov-text-faint:#67634f;
+  --ov-accent:#9ca24b;
+  --ov-accent-soft:rgba(156,162,75,.14);
+  --ov-on-accent:#16170e;
+  --ov-tagline:#d2823c;
+  --ov-border:rgba(156,162,75,.20);
+  --ov-statusbar-bg:#191a13;
+  --ov-statusbar-text:#d9d5c4;
+}
+
+/* SCOUT — The Everyday Explorer · light, sage (house default) */
+[data-theme="scout"]{
+  --ov-bg:#dcd4bf;
+  --ov-surface:#ebe5d4;
+  --ov-surface-2:#dfd7c3;
+  --ov-text:#3b4632;
+  --ov-text-muted:#6e7862;
+  --ov-text-faint:#98a088;
+  --ov-accent:#5c6e4e;
+  --ov-accent-soft:rgba(92,110,78,.12);
+  --ov-on-accent:#eeeadb;
+  --ov-tagline:#4e6b3e;
+  --ov-border:rgba(59,70,50,.16);
+  --ov-statusbar-bg:#4c5a3f;
+  --ov-statusbar-text:#ece7d7;
+}

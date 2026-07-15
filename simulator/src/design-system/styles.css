@@ -1,0 +1,11 @@
+/* OpenVan Design System — entry point.
+   Import this once (in main.tsx) before the app's own CSS. A manifest of
+   @imports only. See design-system/README below for the two layers:
+   PRODUCT (--ov-app-*, what the simulator uses) and BRAND/persona (--ov-*).
+
+   fonts.css is offline-first (no CDN import) — see that file. */
+@import url('./tokens/fonts.css');
+@import url('./tokens/colors.css');
+@import url('./tokens/product.css');
+@import url('./tokens/typography.css');
+@import url('./tokens/spacing.css');

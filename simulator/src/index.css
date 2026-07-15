@@ -1,15 +1,18 @@
+/* Palette now lives in the design system (design-system/tokens/product.css).
+   These short aliases map onto the DS tokens so every var(--bg) etc. keeps
+   working. New product UI should use the --ov-app-* tokens directly. */
 :root {
-  --bg: #0e1116;
-  --panel: #171c24;
-  --panel-2: #1e2530;
-  --line: #2a3341;
-  --text: #e7ecf3;
-  --muted: #8b97a7;
-  --accent: #4cc2ff;
-  --good: #46d68a;
-  --warn: #ffb020;
-  --bad: #ff5d5d;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --bg: var(--ov-app-bg);
+  --panel: var(--ov-app-panel);
+  --panel-2: var(--ov-app-panel-2);
+  --line: var(--ov-app-line);
+  --text: var(--ov-app-text);
+  --muted: var(--ov-app-muted);
+  --accent: var(--ov-app-accent);
+  --good: var(--ov-app-good);
+  --warn: var(--ov-app-warn);
+  --bad: var(--ov-app-bad);
+  font-family: var(--ov-app-font);
 }
 
 * {

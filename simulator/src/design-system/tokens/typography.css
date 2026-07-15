@@ -1,0 +1,38 @@
+/* OpenVan — Typography tokens */
+:root{
+  /* Families */
+  --ov-font-display:'Archivo','Arial Narrow',system-ui,sans-serif; /* heavy poster names & headings */
+  --ov-font-body:'Mulish',system-ui,-apple-system,sans-serif;      /* UI + reading text */
+  --ov-font-script:'Caveat','Segoe Script',cursive;                /* persona taglines */
+  --ov-font-mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',monospace; /* data, metrics, Pulse voice */
+
+  /* Weights */
+  --ov-w-regular:400; /* @kind font */
+  --ov-w-medium:500; /* @kind font */
+  --ov-w-semibold:600; /* @kind font */
+  --ov-w-bold:700; /* @kind font */
+  --ov-w-heavy:800; /* @kind font */
+  --ov-w-black:900; /* @kind font */
+
+  /* Type scale (px, 1.0 base = 16px) */
+  --ov-text-2xs:11px;
+  --ov-text-xs:12px;
+  --ov-text-sm:14px;
+  --ov-text-base:16px;
+  --ov-text-lg:18px;
+  --ov-text-xl:22px;
+  --ov-text-2xl:28px;
+  --ov-text-3xl:36px;
+  --ov-text-4xl:48px;
+  --ov-text-display:72px;   /* persona name, poster scale */
+
+  /* Line heights */
+  --ov-leading-tight:1.05;
+  --ov-leading-snug:1.25;
+  --ov-leading-normal:1.5;
+
+  /* Tracking */
+  --ov-track-display:-0.02em; /* tight for heavy names */
+  --ov-track-label:0.12em;    /* uppercase section labels */
+  --ov-track-normal:0; /* @kind other */
+}

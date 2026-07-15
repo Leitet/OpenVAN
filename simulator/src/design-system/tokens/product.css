@@ -1,0 +1,34 @@
+/* OpenVan — PRODUCT / OS layer tokens
+   ------------------------------------------------------------------
+   OpenVan has TWO design layers:
+   1. The BRAND / PERSONA layer (colors.css, warm --ov-* trading-card
+      palettes) — marketing character art, one theme per persona.
+   2. The PRODUCT / OS layer (this file) — the actual simulator/dashboard
+      UI: a single dark "tech" theme. Lifted verbatim from the OpenVan
+      simulator's index.css (--bg/--panel/--accent…), namespaced --ov-app-*.
+   Use --ov-app-* when recreating the running product UI. */
+:root{
+  /* Surfaces */
+  --ov-app-bg:#0e1116;        /* app background */
+  --ov-app-panel:#171c24;     /* panel / card */
+  --ov-app-panel-2:#1e2530;   /* inset well, inputs */
+  --ov-app-line:#2a3341;      /* hairline borders */
+
+  /* Text */
+  --ov-app-text:#e7ecf3;      /* primary */
+  --ov-app-muted:#8b97a7;     /* labels, secondary */
+
+  /* Accent + status */
+  --ov-app-accent:#4cc2ff;    /* cyan — links, active tab, fills */
+  --ov-app-good:#46d68a;      /* ok / allowed */
+  --ov-app-warn:#ffb020;      /* warning / heater / low */
+  --ov-app-bad:#ff5d5d;       /* blocked / danger */
+
+  /* Type — the product uses the system UI stack (no webfont) */
+  --ov-app-font:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+
+  /* Shape */
+  --ov-app-radius-panel:14px;
+  --ov-app-radius-control:8px;
+  --ov-app-radius-pill:999px;
+}

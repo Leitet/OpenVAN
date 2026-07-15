@@ -1,0 +1,37 @@
+/* OpenVan — Spacing, radii, shadows, layout tokens */
+:root{
+  /* Spacing scale (4px base) */
+  --ov-space-1:4px;
+  --ov-space-2:8px;
+  --ov-space-3:12px;
+  --ov-space-4:16px;
+  --ov-space-5:20px;
+  --ov-space-6:24px;
+  --ov-space-8:32px;
+  --ov-space-10:40px;
+  --ov-space-12:48px;
+  --ov-space-16:64px;
+
+  /* Radii — cards are generously rounded; controls softly; pills fully */
+  --ov-radius-sm:8px;
+  --ov-radius-md:14px;
+  --ov-radius-lg:20px;
+  --ov-radius-xl:28px;   /* persona card shell */
+  --ov-radius-pill:999px;
+
+  /* Border widths */
+  --ov-border-1:1px;
+  --ov-border-2:2px;
+
+  /* Elevation — soft, warm-neutral shadows (cards float on dark canvas) */
+  --ov-shadow-sm:0 1px 2px rgba(20,18,14,.12);
+  --ov-shadow-md:0 6px 18px rgba(20,18,14,.18);
+  --ov-shadow-lg:0 18px 48px rgba(20,18,14,.34);
+  --ov-shadow-inset:inset 0 1px 0 rgba(255,255,255,.06);
+
+  /* Focus ring (uses per-theme accent) */
+  --ov-ring:0 0 0 3px color-mix(in oklch, var(--ov-accent) 40%, transparent);
+
+  /* Layout */
+  --ov-card-max:1180px;
+}
