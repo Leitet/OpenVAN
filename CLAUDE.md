@@ -155,7 +155,11 @@ captured automatically** — no wiring needed. `TelemetryStore` offers `series`
 (with read-time bucket downsampling), `rate_per_hour` (trends), and retention
 `prune`. All DB access runs off the loop via `asyncio.to_thread`. This history
 powers the simulator's sparklines (`/api/telemetry/series`) and feeds the
-companion real drain-rate trends, not just instantaneous readings.
+companion real drain-rate trends, not just instantaneous readings. `predictions.py`
+turns it into ETAs (battery/water/diesel) plus a **weather-aware solar forecast**
+(`solar_forecast_wh`: expected Wh from the forecast cloud cover × the sun's
+elevation × `Config.solar_capacity_w`) — surfaced on the Power tab and fed to the
+companion.
 
 ### Environment simulation (`simulation.py`)
 

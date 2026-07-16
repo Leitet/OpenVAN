@@ -245,7 +245,10 @@ class Core:
         from .predictions import compute_predictions
 
         telemetry = self.telemetry if self.config.telemetry_enabled else None
-        return compute_predictions(self.twin, telemetry)
+        weather = self.weather.snapshot() if self.config.weather_enabled else None
+        return compute_predictions(
+            self.twin, telemetry, weather=weather, solar_capacity_w=self.config.solar_capacity_w
+        )
 
     async def available_models(self, connectivity: str = "offline") -> list[str]:
         if connectivity == "online":

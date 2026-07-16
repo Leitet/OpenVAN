@@ -3,14 +3,16 @@
 Simple, honest forecasts built on recent trends: how long until the battery,
 fresh water or diesel run out (linear extrapolation of the last hour's rate),
 when the grey tank fills, and how much solar energy came in over the last day
-(integral of power). Deliberately conservative — a naive linear model, clearly
-labelled — rather than pretending to a weather-aware forecast (that waits on the
-weather integration). Feeds both the API and the companion's context.
+(integral of power). Plus a weather-aware **solar forecast**: expected Wh over the
+next day from the forecast cloud cover and the sun's elevation. Deliberately simple
+and clearly labelled — not a precision model. Feeds the API and the companion.
 """
 
 from __future__ import annotations
 
+import math
 import time
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -19,6 +21,9 @@ if TYPE_CHECKING:  # pragma: no cover
 
 _HOUR = 3600.0
 _DAY = 86400.0
+# How much of clear-sky output heavy cloud strips away (overcast still gives some
+# diffuse light). Illustrative — tune against a real panel before shipping.
+_CLOUD_LOSS = 0.75
 
 
 def _num(value: object) -> float | None:
@@ -28,13 +33,65 @@ def _num(value: object) -> float | None:
         return None
 
 
+def _solar_elevation_sin(lat_deg: float, day_of_year: int, solar_hour: float) -> float:
+    """sin(sun elevation) — negative at night, ~1 at high noon. Standard formula;
+    the forecast's local clock hour is used as solar time (no equation-of-time
+    correction — this is a rough forecast, not an ephemeris)."""
+    decl = math.radians(23.45) * math.sin(math.radians(360.0 * (284 + day_of_year) / 365.0))
+    lat = math.radians(lat_deg)
+    hour_angle = math.radians(15.0 * (solar_hour - 12.0))
+    return math.sin(lat) * math.sin(decl) + math.cos(lat) * math.cos(decl) * math.cos(hour_angle)
+
+
+def solar_forecast_wh(
+    weather: dict[str, Any] | None,
+    capacity_w: float,
+    horizon_hours: int = 24,
+) -> float | None:
+    """Weather-aware expected solar energy (Wh) over the next ``horizon_hours``.
+
+    For each forecast hour: clear-sky output ≈ ``capacity_w · sin(elevation)``,
+    scaled by a cloud factor (heavy cloud ≈ -75%). Night hours contribute 0.
+    Returns None if we lack a location or an hourly forecast.
+    """
+    if not weather or capacity_w <= 0:
+        return None
+    loc = weather.get("location") or {}
+    lat = loc.get("lat")
+    hourly = weather.get("hourly") or []
+    if lat is None or not hourly:
+        return None
+
+    total = 0.0
+    for h in hourly[:horizon_hours]:
+        try:
+            dt = datetime.fromisoformat(h.get("t"))
+        except (TypeError, ValueError):
+            continue
+        elev = _solar_elevation_sin(float(lat), dt.timetuple().tm_yday, dt.hour + 0.5)
+        if elev <= 0:
+            continue  # night — no generation
+        cloud_frac = (_num(h.get("cloud_pct")) or 0.0) / 100.0
+        cloud_factor = max(0.1, 1.0 - _CLOUD_LOSS * cloud_frac)
+        total += capacity_w * min(1.0, elev) * cloud_factor  # W · 1h = Wh
+    return round(total, 0)
+
+
 def compute_predictions(
     twin: "VanTwin",
     telemetry: "TelemetryStore | None",
     now: float | None = None,
+    weather: dict[str, Any] | None = None,
+    solar_capacity_w: float = 600.0,
 ) -> dict[str, Any]:
     now = now if now is not None else time.time()
     out: dict[str, Any] = {}
+
+    # Weather-aware solar forecast — needs the forecast, not telemetry history.
+    fc = solar_forecast_wh(weather, solar_capacity_w)
+    if fc is not None:
+        out["solar_forecast_wh"] = fc
+
     if telemetry is None:
         return out
 

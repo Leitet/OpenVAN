@@ -95,8 +95,13 @@ class Companion:
                 _BATTERY_CAPACITY_AH * (soc / 100.0) / abs(current) / 24.0, 1
             )
 
-        # Predictions from actual recent history, not just instantaneous readings.
-        predictions = compute_predictions(twin, self.telemetry)
+        # Predictions from actual recent history, not just instantaneous readings,
+        # plus a weather-aware solar forecast when a forecast is available.
+        predictions = compute_predictions(
+            twin,
+            self.telemetry,
+            weather=self.weather.snapshot() if self.weather is not None else None,
+        )
         battery_trend = predictions.get("battery_rate_pct_per_hour")
 
         weather = self.weather.snapshot() if self.weather is not None else {}

@@ -37,6 +37,8 @@ export function Predictions() {
     rows.push({ label: t("predictions.dieselEmpty"), value: fmtHours(p.diesel_empty_hours, t) });
   if (p.solar_wh_24h !== undefined)
     rows.push({ label: t("predictions.solar24h"), value: `${p.solar_wh_24h.toFixed(0)} Wh` });
+  if (p.solar_forecast_wh !== undefined)
+    rows.push({ label: t("predictions.solarForecast"), value: `${p.solar_forecast_wh.toFixed(0)} Wh` });
 
   return (
     <section className="panel">

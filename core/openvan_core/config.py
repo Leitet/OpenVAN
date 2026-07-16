@@ -84,6 +84,9 @@ class Config:
     weather_enabled: bool = True
     weather_base_url: str = "https://api.open-meteo.com/v1/forecast"
     weather_refresh_s: float = 600.0
+    # Rated peak of the solar array (W) — powers the weather-aware solar forecast.
+    # Illustrative; measure a real install before shipping.
+    solar_capacity_w: float = 600.0
     # Travel memory — auto-logs "stays" when parked. Offline-first, SQLite.
     memory_enabled: bool = True
     memory_dwell_s: float = 90.0  # parked this long before a stay is logged

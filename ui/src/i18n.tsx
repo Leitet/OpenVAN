@@ -118,6 +118,11 @@ const T: Record<string, Entry> = {
     sv: "Solel (senaste 24h)",
     de: "Solar (letzte 24h)",
   },
+  "predictions.solarForecast": {
+    en: "Solar forecast (24h)",
+    sv: "Solprognos (24h)",
+    de: "Solarprognose (24h)",
+  },
   "predictions.notEnough": {
     en: "Not enough history yet — trends appear as signals change.",
     sv: "Inte tillräcklig historik än — trender visas när värden ändras.",
