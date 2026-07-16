@@ -68,11 +68,12 @@ Users choose their AI: local LLM, cloud LLM, or hybrid. `llm.py` has three clien
 behind one `LLMClient` interface — `OllamaClient` (offline) and, for online, either
 `OpenAICompatibleClient` (any OpenAI-compatible endpoint) or `AnthropicClient`
 (Claude Messages API), selected by `online_provider`. All are raw-httpx, no vendor
-SDKs, to keep the edge runtime small. A `ModelRouter`
-picks the effective client from the **active profile's** binding (each profile is
-`online` / `offline` / `inherit`, with a global default), falling back to the other
-connectivity if the preferred one isn't reachable. Model choice is **separate from
-personality** — voice and model are orthogonal. It **always** falls back to the
+SDKs, to keep the edge runtime small. A `ModelRouter` picks the effective client
+from a **single global connectivity mode** (`Config.connectivity`: `offline` =
+local Ollama, `online` = the configured cloud provider), falling back to the other
+connectivity if the preferred one isn't reachable. Connectivity is **not** a
+property of the personality — voice and model are fully orthogonal, and every
+personality runs under whichever mode is active. It **always** falls back to the
 offline rule-based resolver, so text commands work with no model at all — never
 make the assistant a hard requirement.
 
@@ -233,7 +234,7 @@ openvan/
 
 **Settings live at runtime.** `Core.settings()` / `Core.apply_settings()` back the
 Admin UI (`/api/settings`, `/api/models?connectivity=…`) — offline/online model
-config, default connectivity, AI enable, sim toggle. The same surface the
+config, the global `connectivity` mode, AI enable, sim toggle. The same surface the
 **MCP server** exposes (`mcp_server.py` → `OpenVanClient` in `apiclient.py`, a
 thin httpx bridge to the running REST API — one Core, no duplicated loops; `mcp`
 is an optional extra). Changes publish `settings.changed` / `assistant.changed`
@@ -243,9 +244,18 @@ defaults < persisted < env). The **API key is never persisted** — memory/env o
 **Personalities = voice only** (`personalities.py`): six built-ins + user forks,
 persisted to `data/` (gitignored). A personality shapes phrasing, never facts,
 intents or safety. The Admin picker shows each one's trading-card artwork
-(`ui/public/personalities/<id>.jpg`); forks inherit their base's art. Its `connectivity` + `model` are the per-profile model binding
-(Rule 4), not part of the character. Online API keys live in memory / env, never
-on disk.
+(`ui/public/personalities/<id>.jpg`); forks inherit their base's art. A personality
+carries **no** model/connectivity binding — which model answers (local or cloud) is
+a single global setting (`Config.connectivity`, Rule 4), independent of the chosen
+voice. Online API keys live in memory / env, never on disk.
+
+**Language.** The **product UI** is localised (English / Svenska / Deutsch) via a
+tiny in-house i18n (`ui/src/i18n.tsx`: a key→`{en,sv,de}` dict, `useT()`, choice
+persisted client-side); the **bench stays English**. The **model** reply language
+is a separate global setting (`Config.language`, in `/api/settings`) injected into
+every LLM system prompt via `llm.with_language()` — it defaults to the app language
+but is overridable, and the directive still lets the model honour a one-off request
+("say it in German"). Advisory/notice text is still English (backend) for now.
 
 **Ideas go in [backlog.md](backlog.md)**, not lost in chat — capture, don't build,
 until scheduled.

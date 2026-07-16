@@ -71,7 +71,8 @@ class BookmarkBody(BaseModel):
 
 class SettingsBody(BaseModel):
     ai_enabled: bool | None = None
-    default_connectivity: str | None = None
+    connectivity: str | None = None
+    language: str | None = None
     offline_model: str | None = None
     offline_base_url: str | None = None
     online_provider: str | None = None
@@ -97,8 +98,6 @@ class PersonalityUpdateBody(BaseModel):
     traits: list[str] | None = None
     inspiration: list[str] | None = None
     style: str | None = None
-    connectivity: str | None = None
-    model: str | None = None
     examples: list[str] | None = None
 
 
@@ -178,6 +177,11 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
         result = await core.hub.execute_text(body.text)
         return result.as_dict()
 
+    @app.post("/api/chat")
+    async def chat(body: TextBody) -> dict[str, Any]:
+        # Conversational: runs a command (safety-checked) or answers from state.
+        return await core.chat(body.text)
+
     @app.post("/api/sim/signal")
     async def sim_signal(body: SignalBody) -> dict[str, str]:
         await core.twin.set_signal(body.key, body.value, source="sim")
@@ -194,6 +198,7 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
             core.advisors.active_notices(),
             use_llm=getattr(core.hub.resolver, "active", False),
             persona=core.personalities.get_active().style,
+            language=core.config.language,
         )
         return {"text": text}
 

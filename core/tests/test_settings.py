@@ -2,10 +2,33 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from openvan_core import build_core
-from openvan_core.config import Config
+from openvan_core.config import Config, _load_dotenv
+
+
+def test_load_dotenv_sets_and_never_overrides(tmp_path, monkeypatch):
+    env = tmp_path / ".env"
+    env.write_text(
+        "# a comment\n"
+        "\n"
+        "OPENVAN_TEST_KEY=sk-from-file\n"
+        'OPENVAN_TEST_QUOTED="quoted-value"\n'
+        "OPENVAN_TEST_EXISTING=from-file\n"
+    )
+    monkeypatch.delenv("OPENVAN_TEST_KEY", raising=False)
+    monkeypatch.delenv("OPENVAN_TEST_QUOTED", raising=False)
+    monkeypatch.setenv("OPENVAN_TEST_EXISTING", "from-real-env")
+
+    _load_dotenv(env)
+
+    assert os.environ["OPENVAN_TEST_KEY"] == "sk-from-file"
+    assert os.environ["OPENVAN_TEST_QUOTED"] == "quoted-value"
+    # A var already present in the real environment is never overridden by .env.
+    assert os.environ["OPENVAN_TEST_EXISTING"] == "from-real-env"
 
 
 @pytest.fixture
@@ -59,7 +82,7 @@ async def test_settings_reports_state_and_plugins(core):
     assert s["ai_enabled"] is False
     assert s["assistant"]["llm"] is False
     assert s["simulate"] is True
-    assert s["default_connectivity"] == "offline"
+    assert s["connectivity"] == "offline"
     assert "has_key" in s["online"]
     domains = {p["domain"] for p in s["plugins"]}
     assert {"battery_monitor", "cabin_light", "diesel_heater", "water_system"} <= domains

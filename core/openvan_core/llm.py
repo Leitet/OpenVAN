@@ -25,6 +25,47 @@ from .intents import Intent, IntentResolver
 
 logger = logging.getLogger(__name__)
 
+# The canonical OpenAI endpoint. Provider "openai" pins to this (no base URL to
+# configure); "openai_compatible" lets the user point anywhere.
+OPENAI_URL = "https://api.openai.com/v1"
+
+# Model ids that a chat assistant can't use (embeddings, audio, image, …). A
+# provider's /models lists everything the key can access; we keep only chat-capable
+# ones. Heuristic and OpenAI-oriented — an exclusion list so unknown/self-hosted
+# chat models still show through.
+_NON_CHAT_TOKENS = (
+    "embedding", "embed", "whisper", "tts", "audio", "transcribe", "dall-e",
+    "dalle", "image", "moderation", "rerank", "realtime", "guard",
+)
+
+
+def filter_chat_models(ids: list[str]) -> list[str]:
+    """Drop non-chat model ids (embeddings, audio, image generation, …)."""
+    return [m for m in ids if not any(tok in m.lower() for tok in _NON_CHAT_TOKENS)]
+
+
+LANG_NAMES = {"en": "English", "sv": "Swedish", "de": "German"}
+
+
+def language_directive(lang: str) -> str:
+    """A system-prompt line telling the model which language to reply in — while
+    still honouring an explicit one-off request for another language."""
+    name = LANG_NAMES.get(lang, "English")
+    return (
+        f"Respond in {name}. Keep every reply in {name}, UNLESS the traveller "
+        f"explicitly asks for a specific other language (for example asking how to "
+        f"say or translate something) — then answer that particular request in the "
+        f"language they asked for."
+    )
+
+
+def with_language(system: str, lang: str, persona: str | None = None) -> str:
+    parts = [system, language_directive(lang)]
+    if persona:
+        parts.append(f"Voice & personality — speak in character:\n{persona}")
+    return "\n\n".join(parts)
+
+
 SYSTEM_PROMPT = """\
 You are OpenVan's in-vehicle assistant. Convert the user's request into ONE
 control action for a single device.
@@ -47,6 +88,27 @@ Rules:
 - For a temperature setpoint, use command "set_temperature" with
   params {"temperature": <number in Celsius>}.
 - Choose the single best action. Never invent devices or commands.
+"""
+
+CHAT_SYSTEM = """\
+You are OpenVan, the camper van's in-vehicle assistant. Decide whether the
+traveller's message is a request to CONTROL a device, or a QUESTION / chat.
+
+You are given `message`, `devices` (controllable — each lists its `commands`) and
+`status` (live readings + notices). Respond with JSON ONLY, exactly one of:
+
+  {"action": {"entity_id": "<id>", "command": "<cmd>", "params": {}}}
+      — ONLY for an explicit control request. Use a device + command from `devices`.
+        For a setpoint use command "set_temperature", params {"temperature": <°C>}.
+
+  {"reply": "<a short, friendly spoken answer, 1-3 sentences>"}
+      — for questions, status checks, chit-chat, or anything that is NOT a direct
+        control request. Answer using only facts from `status`; if it isn't there,
+        say you don't have it.
+
+Questions like "how's the van?", "what's the battery?", "anything to worry about?",
+"what can you do?" are NOT actions — use "reply". When in doubt, use "reply" (never
+control a device unless clearly asked). Never invent data. No markdown.
 """
 
 
@@ -291,17 +353,17 @@ class ModelBinding:
 
 
 class ModelRouter:
-    """Resolves which model client to use — per active profile, with global defaults.
+    """Resolves which model client to use from the global connectivity setting.
 
-    Connectivity and model are properties of the *profile* (which can each be
-    online or offline), falling back to global defaults. If a profile asks for a
-    connectivity that isn't configured/reachable, the router gracefully falls back
-    to the other connectivity's default so the assistant keeps working.
+    Connectivity (local/offline vs cloud/online) is a single global mode — it is
+    NOT a property of the personality (personalities are voice only). If the
+    selected connectivity isn't configured/reachable, the router gracefully falls
+    back to the other connectivity so the assistant keeps working; failing that,
+    the offline rule-based resolver takes over.
     """
 
-    def __init__(self, config: Any, personalities: Any, client_factory=None) -> None:
+    def __init__(self, config: Any, client_factory=None) -> None:
         self.config = config
-        self.personalities = personalities
         self._client_factory = client_factory or self._default_factory
         self._active = False
         self._binding: ModelBinding | None = None
@@ -313,29 +375,40 @@ class ModelRouter:
     def binding(self) -> ModelBinding:
         return self._binding or self.effective_binding()
 
+    def _online_base_url(self) -> str:
+        """Effective base URL for the online provider. 'openai' pins to the
+        canonical endpoint; 'anthropic' uses its own (handled by the client);
+        'openai_compatible' uses whatever the user configured."""
+        provider = getattr(self.config, "online_provider", "openai")
+        if provider == "openai":
+            return OPENAI_URL
+        if provider == "anthropic":
+            return ""
+        return self.config.online_base_url
+
     def _default_binding(self, connectivity: str) -> ModelBinding | None:
         if connectivity == "online":
-            if not self.config.online_base_url:
+            provider = getattr(self.config, "online_provider", "openai")
+            base = self._online_base_url()
+            if provider == "anthropic":
+                if not self.config.online_api_key:
+                    return None
+            elif not base:
                 return None
             return ModelBinding(
-                "online", self.config.online_model,
-                self.config.online_base_url, self.config.online_api_key,
+                "online", self.config.online_model, base, self.config.online_api_key
             )
         return ModelBinding("offline", self.config.llm_model, self.config.llm_base_url, None)
 
     def effective_binding(self) -> ModelBinding:
-        profile = self.personalities.get_active()
-        connectivity = profile.connectivity
-        if connectivity not in ("online", "offline"):
-            connectivity = self.config.default_connectivity
-        override = profile.model if profile.model not in (None, "", "inherit") else None
-        if connectivity == "online":
-            model = override or self.config.online_model
+        if self.config.connectivity == "online":
             return ModelBinding(
-                "online", model, self.config.online_base_url, self.config.online_api_key
+                "online",
+                self.config.online_model,
+                self._online_base_url(),
+                self.config.online_api_key,
             )
-        model = override or self.config.llm_model
-        return ModelBinding("offline", model, self.config.llm_base_url, None)
+        return ModelBinding("offline", self.config.llm_model, self.config.llm_base_url, None)
 
     def _default_factory(self, binding: ModelBinding) -> LLMClient:
         if binding.connectivity == "online":
@@ -396,13 +469,13 @@ class LLMIntentResolver(IntentResolver):
                 return intent
         return await self.fallback.resolve(text, entities)
 
-    async def _llm_resolve(
-        self, client: LLMClient, text: str, entities: dict[str, Entity]
-    ) -> Intent | None:
-        controllable = {eid: e for eid, e in entities.items() if e.controllable}
-        if not controllable:
-            return None
-        devices = [
+    @staticmethod
+    def _controllable(entities: dict[str, Entity]) -> dict[str, Entity]:
+        return {eid: e for eid, e in entities.items() if e.controllable}
+
+    @staticmethod
+    def _devices(controllable: dict[str, Entity]) -> list[dict[str, Any]]:
+        return [
             {
                 "entity_id": e.entity_id,
                 "name": e.name,
@@ -412,26 +485,71 @@ class LLMIntentResolver(IntentResolver):
             }
             for e in controllable.values()
         ]
+
+    async def _llm_resolve(
+        self, client: LLMClient, text: str, entities: dict[str, Entity]
+    ) -> Intent | None:
+        controllable = self._controllable(entities)
+        if not controllable:
+            return None
         context = [
             {"entity_id": e.entity_id, "name": e.name, "state": e.state, "unit": e.unit}
             for e in entities.values()
             if not e.controllable
         ]
-        user = json.dumps({"request": text, "devices": devices, "context": context})
+        user = json.dumps(
+            {"request": text, "devices": self._devices(controllable), "context": context}
+        )
         raw = await client.chat_json(SYSTEM_PROMPT, user)
         if not raw:
             return None
-        return self._parse(raw, text, controllable)
-
-    def _parse(
-        self, raw: str, text: str, controllable: dict[str, Entity]
-    ) -> Intent | None:
         try:
             data = json.loads(raw)
         except (ValueError, TypeError):
             return None
+        return self._intent_from(data, text, controllable)
+
+    async def converse(
+        self,
+        text: str,
+        entities: dict[str, Entity],
+        status: dict[str, Any],
+        persona: str | None = None,
+        language: str = "en",
+    ) -> tuple[Intent | None, str | None]:
+        """One LLM call that decides between a device action and a chat reply.
+        Returns (intent, None) for a command, (None, reply) for an answer, or
+        (None, None) if the model is unavailable/unparseable. This is what keeps a
+        *question* from being mistaken for a *command*."""
+        if not self.router.active:
+            return None, None
+        controllable = self._controllable(entities)
+        system = with_language(CHAT_SYSTEM, language, persona)
+        user = json.dumps(
+            {"message": text, "devices": self._devices(controllable), "status": status}
+        )
+        raw = await self.router.build_client().chat_json(system, user)
+        if not raw:
+            return None, None
+        try:
+            data = json.loads(raw)
+        except (ValueError, TypeError):
+            return None, None
         if not isinstance(data, dict):
-            return None
+            return None, None
+        action = data.get("action")
+        if isinstance(action, dict):
+            intent = self._intent_from(action, text, controllable)
+            if intent is not None:
+                return intent, None
+        reply = data.get("reply")
+        if isinstance(reply, str) and reply.strip():
+            return None, reply.strip()
+        return None, None
+
+    def _intent_from(
+        self, data: dict[str, Any], text: str, controllable: dict[str, Entity]
+    ) -> Intent | None:
         entity_id = data.get("entity_id")
         command = data.get("command")
         if not entity_id or entity_id not in controllable:

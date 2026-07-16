@@ -20,7 +20,9 @@ export interface Assistant {
   personality_id?: string;
 }
 
-export type Connectivity = "online" | "offline" | "inherit";
+// The single global connectivity mode — which model answers, local or cloud.
+// It is NOT a property of a personality (personalities are voice only).
+export type Connectivity = "online" | "offline";
 
 export interface Personality {
   id: string;
@@ -30,8 +32,6 @@ export interface Personality {
   traits: string[];
   inspiration: string[];
   style: string;
-  connectivity: Connectivity;
-  model: string;
   examples: string[];
   builtin: boolean;
   based_on: string | null;
@@ -42,10 +42,11 @@ export interface Settings {
   host: string;
   port: number;
   ai_enabled: boolean;
-  default_connectivity: "online" | "offline";
+  connectivity: Connectivity;
+  language: "en" | "sv" | "de";
   offline: { base_url: string; model: string };
   online: {
-    provider: "openai" | "anthropic";
+    provider: "openai" | "openai_compatible" | "anthropic";
     base_url: string;
     model: string;
     has_key: boolean;

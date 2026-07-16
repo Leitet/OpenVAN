@@ -1,11 +1,13 @@
 import { sendIntent } from "@shared/api";
 import { useVan, num } from "../state";
+import { useT } from "../i18n";
 import { Gauge } from "../components/Gauge";
 import { QuickToggle } from "../components/QuickToggle";
 import { Companion } from "../components/Companion";
 
 export function HomeTab() {
   const { entities, twin, notices } = useVan();
+  const t = useT();
   const soc = num(twin["house_battery.soc"]);
   const light = entities["light.cabin"];
   const lightOn = light?.state === "on";
@@ -17,30 +19,30 @@ export function HomeTab() {
   return (
     <div className="tab-grid home">
       <section className="panel">
-        <h2>Vitals</h2>
+        <h2>{t("home.vitals")}</h2>
         <div className="gauge-grid vitals">
-          <Gauge label="Battery" value={soc} unit="%" warnBelow={20} />
-          <Gauge label="Fresh water" value={num(twin["fresh_water.level_pct"])} unit="%" warnBelow={15} />
-          <Gauge label="Cabin" value={num(twin["cabin.temperature"])} unit="°C" min={-5} max={35} />
-          <Gauge label="Solar" value={num(twin["solar.power"])} unit="W" min={0} max={600} />
+          <Gauge label={t("label.battery")} value={soc} unit="%" warnBelow={20} />
+          <Gauge label={t("label.freshWater")} value={num(twin["fresh_water.level_pct"])} unit="%" warnBelow={15} />
+          <Gauge label={t("label.cabin")} value={num(twin["cabin.temperature"])} unit="°C" min={-5} max={35} />
+          <Gauge label={t("label.solar")} value={num(twin["solar.power"])} unit="W" min={0} max={600} />
         </div>
       </section>
 
       <section className="panel">
-        <h2>Quick actions</h2>
+        <h2>{t("home.quickActions")}</h2>
         <div className="quick-grid">
           <QuickToggle
             icon="bulb"
-            label="Cabin light"
-            state={lightOn ? "On" : "Off"}
+            label={t("device.cabinLight")}
+            state={lightOn ? t("common.on") : t("common.off")}
             on={lightOn}
             disabled={!light}
             onClick={() => sendIntent("light.cabin", lightOn ? "turn_off" : "turn_on")}
           />
           <QuickToggle
             icon="flame"
-            label="Diesel heater"
-            state={heaterOn ? "Heating" : "Off"}
+            label={t("device.dieselHeater")}
+            state={heaterOn ? t("common.heating") : t("common.off")}
             on={heaterOn}
             disabled={!heater}
             onClick={() =>
@@ -49,8 +51,8 @@ export function HomeTab() {
           />
           <QuickToggle
             icon="drop"
-            label="Water pump"
-            state={pumpOn ? "Running" : "Off"}
+            label={t("device.waterPump")}
+            state={pumpOn ? t("common.running") : t("common.off")}
             on={pumpOn}
             disabled={!pump}
             onClick={() => sendIntent("switch.water_pump", pumpOn ? "turn_off" : "turn_on")}

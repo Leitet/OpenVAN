@@ -17,13 +17,15 @@ from .companion import Companion
 from .config import Config
 from .events import EventBus
 from .hub import Hub
-from .intents import IntentResolver
+from .intents import Intent, IntentResolver
 from .llm import (
+    OPENAI_URL,
     AnthropicClient,
     LLMIntentResolver,
     ModelRouter,
     OllamaClient,
     OpenAICompatibleClient,
+    filter_chat_models,
 )
 from .memory import TravelMemory
 from .notices import AdvisorEngine, RainSoon, default_advisors
@@ -103,6 +105,51 @@ class Core:
             "personality_id": self.personalities.active_id(),
         }
 
+    async def chat(self, text: str) -> dict[str, Any]:
+        """Conversational assistant entry point. A message is either a device command
+        (runs through the safety-checked intent path) or a question (answered from live
+        van state, read-only). The AI never controls hardware except via an intent the
+        safety layer has approved (Rule 2), and a *question* is never mistaken for a
+        command — with a model that decision is made explicitly in one call."""
+        resolver = self.hub.resolver
+        entities = self.hub.entities
+        notices = self.advisors.active_notices()
+        persona = self.personalities.get_active().style
+
+        language = self.config.language
+
+        if getattr(resolver, "active", False):
+            status = self.companion.build_context(self.hub, notices)
+            intent, reply = await resolver.converse(text, entities, status, persona, language)
+            if intent is not None:
+                return await self._chat_action(intent)
+            if reply is not None:
+                return {"reply": reply, "action": False, "ok": True, "blocked_by_safety": False}
+            # Model gave nothing usable — answer from state, don't guess a command.
+            answer = await self.companion.answer(
+                self.hub, notices, text, use_llm=True, persona=persona, language=language
+            )
+            return {"reply": answer, "action": False, "ok": True, "blocked_by_safety": False}
+
+        # Offline: the rule resolver is conservative (only known command phrases);
+        # everything else gets a templated status answer.
+        intent = await resolver.resolve(text, entities)
+        if intent is not None:
+            return await self._chat_action(intent)
+        answer = await self.companion.answer(
+            self.hub, notices, text, use_llm=False, persona=persona, language=language
+        )
+        return {"reply": answer, "action": False, "ok": True, "blocked_by_safety": False}
+
+    async def _chat_action(self, intent: Intent) -> dict[str, Any]:
+        result = await self.hub.execute_intent(intent)
+        return {
+            "reply": result.reason or ("Done." if result.ok else "I couldn't do that."),
+            "action": True,
+            "ok": result.ok,
+            "blocked_by_safety": result.blocked_by_safety,
+        }
+
     # --- runtime settings (Admin UI / API / MCP) -------------------------
     def settings(self) -> dict[str, Any]:
         from . import __version__
@@ -112,7 +159,8 @@ class Core:
             "host": self.config.host,
             "port": self.config.port,
             "ai_enabled": self.config.ai_enabled,
-            "default_connectivity": self.config.default_connectivity,
+            "connectivity": self.config.connectivity,
+            "language": self.config.language,
             "offline": {
                 "base_url": self.config.llm_base_url,
                 "model": self.config.llm_model,
@@ -141,7 +189,8 @@ class Core:
         self,
         *,
         ai_enabled: bool | None = None,
-        default_connectivity: str | None = None,
+        connectivity: str | None = None,
+        language: str | None = None,
         offline_model: str | None = None,
         offline_base_url: str | None = None,
         online_provider: str | None = None,
@@ -152,8 +201,10 @@ class Core:
     ) -> dict[str, Any]:
         if ai_enabled is not None:
             self.config.ai_enabled = ai_enabled
-        if default_connectivity is not None:
-            self.config.default_connectivity = default_connectivity
+        if connectivity is not None:
+            self.config.connectivity = connectivity
+        if language is not None:
+            self.config.language = language
         if offline_model is not None:
             self.config.llm_model = offline_model
         if offline_base_url is not None:
@@ -198,21 +249,19 @@ class Core:
 
     async def available_models(self, connectivity: str = "offline") -> list[str]:
         if connectivity == "online":
-            if self.config.online_provider == "anthropic":
-                client = AnthropicClient(
-                    self.config.online_api_key,
-                    self.config.online_model,
-                )
-            elif self.config.online_base_url:
-                client = OpenAICompatibleClient(
-                    self.config.online_base_url,
-                    self.config.online_model,
-                    self.config.online_api_key,
-                )
+            provider = self.config.online_provider
+            if provider == "anthropic":
+                client = AnthropicClient(self.config.online_api_key, self.config.online_model)
             else:
-                return []
-        else:
-            client = OllamaClient(self.config.llm_base_url, self.config.llm_model)
+                base = OPENAI_URL if provider == "openai" else self.config.online_base_url
+                if not base:
+                    return []
+                client = OpenAICompatibleClient(
+                    base, self.config.online_model, self.config.online_api_key
+                )
+            # Only chat-capable models — drop embeddings, audio, image, etc.
+            return filter_chat_models(await client.list_models())
+        client = OllamaClient(self.config.llm_base_url, self.config.llm_model)
         return await client.list_models()
 
 
@@ -229,7 +278,7 @@ def build_core(config: Config | None = None) -> Core:
         ]
     )
     personalities = PersonalityStore(config.data_dir / "personalities.json")
-    router = ModelRouter(config, personalities)
+    router = ModelRouter(config)
     resolver = LLMIntentResolver(router, fallback=IntentResolver())
     hub = Hub(bus, twin, safety, resolver)
     plugins = PluginManager(hub, backend)

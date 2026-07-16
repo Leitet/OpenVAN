@@ -1,10 +1,12 @@
 import type { LogEntry } from "@shared/types";
+import { useT } from "../i18n";
 
 export function EventLog({ log }: { log: LogEntry[] }) {
+  const t = useT();
   return (
     <div className="log">
-      <h3>Activity &amp; safety</h3>
-      {log.length === 0 && <p className="log-empty">No commands yet.</p>}
+      <h3>{t("log.title")}</h3>
+      {log.length === 0 && <p className="log-empty">{t("log.empty")}</p>}
       <ul>
         {log.map((entry) => (
           <li

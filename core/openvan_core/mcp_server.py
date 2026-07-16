@@ -127,7 +127,8 @@ async def get_settings() -> dict:
 @mcp.tool()
 async def update_settings(
     ai_enabled: bool | None = None,
-    default_connectivity: str | None = None,
+    connectivity: str | None = None,
+    language: str | None = None,
     offline_model: str | None = None,
     online_provider: str | None = None,
     online_model: str | None = None,
@@ -136,7 +137,8 @@ async def update_settings(
     """Change runtime settings (persisted; the API key is never set over MCP)."""
     return await _client.update_settings(
         ai_enabled=ai_enabled,
-        default_connectivity=default_connectivity,
+        connectivity=connectivity,
+        language=language,
         offline_model=offline_model,
         online_provider=online_provider,
         online_model=online_model,

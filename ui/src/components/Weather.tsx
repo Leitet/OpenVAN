@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getWeather, refreshWeather } from "@shared/api";
 import type { Weather as WeatherData } from "@shared/types";
+import { useT } from "../i18n";
 
 function hourLabel(iso: string): string {
   const m = iso.match(/T(\d{2}):/);
@@ -8,6 +9,7 @@ function hourLabel(iso: string): string {
 }
 
 export function Weather() {
+  const t = useT();
   const [w, setW] = useState<WeatherData>({});
 
   const load = useCallback(async () => {
@@ -28,20 +30,20 @@ export function Weather() {
   return (
     <section className="panel">
       <div className="companion-head">
-        <h2>Weather</h2>
+        <h2>{t("weather.title")}</h2>
         <span className="pill">
           {w.source === "simulated"
-            ? "simulated"
+            ? t("weather.simulated")
             : w.online
-              ? "live"
+              ? t("weather.live")
               : hasData
-                ? "cached"
+                ? t("weather.cached")
                 : "—"}
         </span>
       </div>
 
       {!hasData ? (
-        <p className="companion-quiet">No forecast yet.</p>
+        <p className="companion-quiet">{t("weather.none")}</p>
       ) : (
         <>
           <div className="wx-current">
@@ -56,7 +58,7 @@ export function Weather() {
 
           {rain !== null && rain !== undefined && (
             <div className="wx-rain">
-              🌧 Rain expected {rain < 0.5 ? "shortly" : `in about ${rain}h`}
+              {rain < 0.5 ? t("weather.rainShortly") : t("weather.rainIn", { h: rain })}
             </div>
           )}
 
@@ -80,7 +82,7 @@ export function Weather() {
 
       <div className="wx-actions">
         <button className="mini" onClick={() => refreshWeather().then(load)}>
-          Refresh
+          {t("common.refresh")}
         </button>
       </div>
     </section>

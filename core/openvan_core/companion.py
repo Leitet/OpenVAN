@@ -16,6 +16,7 @@ import json
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from .llm import with_language
 from .predictions import compute_predictions
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -31,6 +32,27 @@ Given the current status as JSON, write a short, friendly spoken briefing of
 2-4 sentences. Greet by time of day. Mention only what is relevant or
 noteworthy (especially anything in `notices`). Never invent data beyond what is
 given. Plain natural speech — no lists, no markdown, no headings.
+"""
+
+# Localised deterministic reply for when no model can generate (offline, or the
+# configured model failed). Follows the assistant language (Config.language).
+_ANSWER_FALLBACK = {
+    "en": 'I can report status and run direct commands like "turn on the cabin light", '
+    "but I can't reach a model to chat freely right now.",
+    "sv": 'Jag kan visa status och köra direkta kommandon som "tänd kupébelysningen", '
+    "men jag når ingen modell för att chatta fritt just nu.",
+    "de": "Ich kann den Status anzeigen und direkte Befehle wie „Kabinenlicht "
+    "einschalten“ ausführen, aber ich erreiche gerade kein Modell zum freien Chatten.",
+}
+
+ANSWER_SYSTEM = """\
+You are OpenVan, the camper van's in-vehicle assistant, chatting with the traveller.
+You are given the current van status as JSON and the traveller's message. Answer
+directly and briefly (1-3 sentences), using only facts from the status — if it isn't
+there, say you don't have that. You explain the van's state and give friendly,
+practical suggestions. You do NOT control anything in this reply; if they want an
+action, tell them to ask for it directly (e.g. "turn on the cabin light"). Plain
+natural speech — no lists, no markdown.
 """
 
 _BATTERY_CAPACITY_AH = 200.0
@@ -127,16 +149,38 @@ class Companion:
         *,
         use_llm: bool,
         persona: str | None = None,
+        language: str = "en",
     ) -> str:
         context = self.build_context(hub, notices)
         if use_llm and self.router.active:
-            system = BRIEFING_SYSTEM
-            if persona:
-                system = f"{BRIEFING_SYSTEM}\n\nVoice & personality — speak in character:\n{persona}"
+            system = with_language(BRIEFING_SYSTEM, language, persona)
             text = await self.router.build_client().chat_text(system, json.dumps(context))
             if text:
                 return text.strip()
         return self.render_template(context)
+
+    async def answer(
+        self,
+        hub: "Hub",
+        notices: list[dict[str, Any]],
+        question: str,
+        *,
+        use_llm: bool,
+        persona: str | None = None,
+        language: str = "en",
+    ) -> str:
+        """Answer a free-form question from live van state. Read-only: it never
+        controls anything — actions go through the intent path (Rule 2)."""
+        context = self.build_context(hub, notices)
+        if use_llm and self.router.active:
+            system = with_language(ANSWER_SYSTEM, language, persona)
+            payload = json.dumps({"status": context, "question": question})
+            text = await self.router.build_client().chat_text(system, payload)
+            if text:
+                return text.strip()
+        # No model could answer (offline, or the configured model failed) — a short
+        # localised line, in the assistant's language (never invents data).
+        return _ANSWER_FALLBACK.get(language, _ANSWER_FALLBACK["en"])
 
     def render_template(self, ctx: dict[str, Any]) -> str:
         parts = [f"{ctx['greeting']}."]

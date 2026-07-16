@@ -7,6 +7,7 @@ import {
   nameStay,
 } from "@shared/api";
 import type { Stay } from "@shared/types";
+import { useT, type TFn } from "../i18n";
 
 function when(ts: number | null): string {
   if (!ts) return "";
@@ -25,13 +26,14 @@ function duration(h: number | null): string {
   return `${(h / 24).toFixed(1)} days`;
 }
 
-function coords(s: Stay): string {
+function coords(s: Stay, t: TFn): string {
   return s.lat !== null && s.lon !== null
     ? `${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}`
-    : "unknown";
+    : t("journal.unknown");
 }
 
 export function Journal() {
+  const t = useT();
   const [stays, setStays] = useState<Stay[]>([]);
   const [current, setCurrent] = useState<Stay | null>(null);
   const [note, setNote] = useState("");
@@ -65,15 +67,15 @@ export function Journal() {
   return (
     <section className="panel span2">
       <div className="companion-head">
-        <h2>Travel journal</h2>
+        <h2>{t("journal.title")}</h2>
         <button className="mini" onClick={() => bookmarkHere("").then(load)}>
-          Bookmark this spot
+          {t("journal.bookmark")}
         </button>
       </div>
 
       {current && (
         <div className="stay-current">
-          <strong>{current.place || "Here"}</strong> — camped since{" "}
+          <strong>{current.place || t("journal.here")}</strong> — {t("journal.campedSince")}{" "}
           {when(current.started_at)} · {duration(current.duration_hours)}
           {current.condition ? ` · ${current.condition}` : ""}
         </div>
@@ -82,46 +84,43 @@ export function Journal() {
       {stays.length > 0 && (
         <div className="stay-annotate">
           <span className="stay-annotate-label">
-            Annotate latest · {stays[0].place || coords(stays[0])}
+            {t("journal.annotateLatest")} · {stays[0].place || coords(stays[0], t)}
           </span>
           <div className="stay-forms">
             <input
-              placeholder="Name this place…"
+              placeholder={t("journal.namePlace")}
               value={place}
               onChange={(e) => setPlace(e.target.value)}
             />
             <button className="mini" onClick={savePlace}>
-              Name
+              {t("journal.nameBtn")}
             </button>
             <input
-              placeholder="Add a note…"
+              placeholder={t("journal.addNote")}
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
             <button className="mini" onClick={saveNote}>
-              Note
+              {t("journal.noteBtn")}
             </button>
           </div>
         </div>
       )}
 
       {stays.length === 0 ? (
-        <p className="companion-quiet">
-          No stays yet — park up (ignition off) and one logs automatically, or
-          bookmark this spot.
-        </p>
+        <p className="companion-quiet">{t("journal.none")}</p>
       ) : (
         <ul className="stay-list">
           {stays.map((s) => (
             <li key={s.id} className={"stay" + (s.open ? " open" : "")}>
               <div className="stay-main">
-                <strong>{s.place || coords(s)}</strong>
+                <strong>{s.place || coords(s, t)}</strong>
                 <span className="stay-meta">
                   {when(s.started_at)}
-                  {s.open ? " · here now" : ` · ${duration(s.duration_hours)}`}
+                  {s.open ? ` · ${t("journal.hereNow")}` : ` · ${duration(s.duration_hours)}`}
                   {s.condition ? ` · ${s.condition}` : ""}
-                  {s.soc_used_pct !== null ? ` · ${s.soc_used_pct}% used` : ""}
-                  {s.solar_wh ? ` · ${s.solar_wh.toFixed(0)} Wh solar` : ""}
+                  {s.soc_used_pct !== null ? ` · ${t("journal.used", { n: s.soc_used_pct })}` : ""}
+                  {s.solar_wh ? ` · ${t("journal.solar", { n: s.solar_wh.toFixed(0) })}` : ""}
                 </span>
                 {s.notes && <div className="stay-notes">{s.notes}</div>}
               </div>

@@ -115,7 +115,13 @@ tab or via env. Two providers: any OpenAI-compatible endpoint
 (`OPENVAN_ONLINE_PROVIDER=openai`, `OPENVAN_ONLINE_URL`, `OPENVAN_ONLINE_MODEL`) or
 Anthropic/Claude (`OPENVAN_ONLINE_PROVIDER=anthropic`, `OPENVAN_ONLINE_MODEL`,
 e.g. `claude-opus-4-8`). The key comes from `OPENVAN_ONLINE_API_KEY` (or the Admin
-UI, memory-only) and is never written to disk.
+UI, memory-only) and is never written to disk. To avoid re-typing it each restart,
+copy `.env.example` to **`.env`** (gitignored) and put your key there — Core loads
+it on startup:
+
+```bash
+cp .env.example .env      # then edit .env: OPENVAN_ONLINE_API_KEY=sk-…
+```
 
 ---
 

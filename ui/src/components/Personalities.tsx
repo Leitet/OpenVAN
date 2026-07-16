@@ -7,6 +7,7 @@ import {
   updatePersonality,
 } from "@shared/api";
 import type { Personality } from "@shared/types";
+import { useT } from "../i18n";
 
 const BUILTIN_IDS = new Set(["aurora", "ranger", "scout", "forge", "nomad", "pulse"]);
 
@@ -18,6 +19,7 @@ function imageFor(p: Personality): string | null {
 }
 
 export function Personalities() {
+  const t = useT();
   const [list, setList] = useState<Personality[]>([]);
   const [active, setActive] = useState<string>("");
   const [forking, setForking] = useState<string | null>(null);
@@ -56,11 +58,8 @@ export function Personalities() {
 
   return (
     <section className="panel span2">
-      <h2>Personalities</h2>
-      <p className="hint">
-        The companion's voice — how it phrases briefings, never what it decides.
-        Pick one, or fork it to make your own.
-      </p>
+      <h2>{t("personalities.title")}</h2>
+      <p className="hint">{t("personalities.subtitle")}</p>
 
       <div className="persona-grid">
         {list.map((p) => {
@@ -74,7 +73,7 @@ export function Personalities() {
               <button
                 className="persona-art"
                 onClick={() => choose(p.id)}
-                title={`Use ${p.name}`}
+                title={t("personalities.use", { name: p.name })}
               >
                 {img ? (
                   <img src={img} alt={p.name} loading="lazy" />
@@ -87,25 +86,24 @@ export function Personalities() {
                 {!p.builtin && (
                   <span className="persona-custom-tag">{p.name}</span>
                 )}
-                {isActive && <span className="persona-active-badge">✓ Active</span>}
+                {isActive && (
+                  <span className="persona-active-badge">{t("personalities.active")}</span>
+                )}
               </button>
 
               <div className="persona-bar">
-                <span className={"pill hint-pill " + p.connectivity}>
-                  {p.connectivity}
-                  {p.model !== "inherit" ? ` · ${p.model}` : ""}
-                </span>
+                <span className="persona-tag">{p.category}</span>
                 <div className="persona-bar-actions">
                   <button className="mini" onClick={() => setForking(p.id)}>
-                    Fork
+                    {t("common.fork")}
                   </button>
                   {!p.builtin && (
                     <>
                       <button className="mini" onClick={() => setEditing(p)}>
-                        Edit
+                        {t("common.edit")}
                       </button>
                       <button className="mini danger" onClick={() => remove(p.id)}>
-                        Delete
+                        {t("common.delete")}
                       </button>
                     </>
                   )}
@@ -116,15 +114,15 @@ export function Personalities() {
                 <div className="fork-row">
                   <input
                     autoFocus
-                    placeholder="Name your fork"
+                    placeholder={t("personalities.nameFork")}
                     value={forkName}
                     onChange={(e) => setForkName(e.target.value)}
                   />
                   <button className="mini" onClick={() => doFork(p.id)}>
-                    Create
+                    {t("common.create")}
                   </button>
                   <button className="mini" onClick={() => setForking(null)}>
-                    Cancel
+                    {t("common.cancel")}
                   </button>
                 </div>
               )}
@@ -156,6 +154,7 @@ function PersonalityEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useT();
   const [draft, setDraft] = useState(personality);
   const [saving, setSaving] = useState(false);
 
@@ -171,8 +170,6 @@ function PersonalityEditor({
         tagline: draft.tagline,
         traits: draft.traits,
         style: draft.style,
-        connectivity: draft.connectivity,
-        model: draft.model,
         examples: draft.examples,
       });
       await onSaved();
@@ -183,24 +180,26 @@ function PersonalityEditor({
 
   return (
     <div className="editor">
-      <h3>Edit “{personality.name}”</h3>
+      <h3>
+        {t("common.edit")} “{personality.name}”
+      </h3>
       <label className="field">
-        <span>Name</span>
+        <span>{t("field.name")}</span>
         <input value={draft.name} onChange={(e) => set({ name: e.target.value })} />
       </label>
       <label className="field">
-        <span>Category</span>
+        <span>{t("field.category")}</span>
         <input
           value={draft.category}
           onChange={(e) => set({ category: e.target.value })}
         />
       </label>
       <label className="field">
-        <span>Signature line</span>
+        <span>{t("field.signature")}</span>
         <input value={draft.tagline} onChange={(e) => set({ tagline: e.target.value })} />
       </label>
       <label className="field">
-        <span>Traits (comma-separated)</span>
+        <span>{t("field.traits")}</span>
         <input
           value={draft.traits.join(", ")}
           onChange={(e) =>
@@ -209,24 +208,7 @@ function PersonalityEditor({
         />
       </label>
       <label className="field">
-        <span>Connectivity</span>
-        <select
-          value={draft.connectivity}
-          onChange={(e) =>
-            set({ connectivity: e.target.value as Personality["connectivity"] })
-          }
-        >
-          <option value="inherit">inherit (use default)</option>
-          <option value="offline">offline</option>
-          <option value="online">online</option>
-        </select>
-      </label>
-      <label className="field">
-        <span>Model (or “inherit”)</span>
-        <input value={draft.model} onChange={(e) => set({ model: e.target.value })} />
-      </label>
-      <label className="field">
-        <span>Voice / persona (how it speaks)</span>
+        <span>{t("field.voice")}</span>
         <textarea
           rows={5}
           value={draft.style}
@@ -235,10 +217,10 @@ function PersonalityEditor({
       </label>
       <div className="editor-actions">
         <button className="mini" onClick={onClose}>
-          Cancel
+          {t("common.cancel")}
         </button>
         <button className="briefing-btn" onClick={save} disabled={saving}>
-          {saving ? "Saving…" : "Save"}
+          {saving ? t("common.saving") : t("common.save")}
         </button>
       </div>
     </div>

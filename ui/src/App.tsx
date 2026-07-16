@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useVanState } from "@shared/useVanState";
 import { VanProvider, useVan, num } from "./state";
+import { useT } from "./i18n";
 import { NavIcon } from "./components/NavIcon";
 import { HomeTab } from "./tabs/HomeTab";
 import { PowerTab } from "./tabs/PowerTab";
@@ -11,41 +12,43 @@ import { SettingsTab } from "./tabs/SettingsTab";
 
 type TabId = "home" | "power" | "comfort" | "journey" | "assistant" | "settings";
 
-const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: "home", label: "Home", icon: "home" },
-  { id: "power", label: "Power", icon: "power" },
-  { id: "comfort", label: "Comfort", icon: "comfort" },
-  { id: "journey", label: "Journey", icon: "journey" },
-  { id: "assistant", label: "Assistant", icon: "assistant" },
-  { id: "settings", label: "Settings", icon: "settings" },
+const TABS: { id: TabId; labelKey: string; icon: string }[] = [
+  { id: "home", labelKey: "nav.home", icon: "home" },
+  { id: "power", labelKey: "nav.power", icon: "power" },
+  { id: "comfort", labelKey: "nav.comfort", icon: "comfort" },
+  { id: "journey", labelKey: "nav.journey", icon: "journey" },
+  { id: "assistant", labelKey: "nav.assistant", icon: "assistant" },
+  { id: "settings", labelKey: "nav.settings", icon: "settings" },
 ];
 
 function StatusBar() {
   const { twin, assistant, connected } = useVan();
+  const t = useT();
   const soc = num(twin["house_battery.soc"]);
   const water = num(twin["fresh_water.level_pct"]);
   const cabin = num(twin["cabin.temperature"]);
+  const aiLabel =
+    (assistant.llm
+      ? `${t("ai.prefix")} · ${assistant.connectivity === "online" ? t("ai.cloud") : t("ai.local")} · ${assistant.model}`
+      : `${t("ai.prefix")} · ${t("ai.rulesOnly")}`) +
+    (assistant.personality ? ` · ${assistant.personality}` : "");
   return (
     <header className="statusbar">
       <div className="sb-vitals">
         <span className="sb-stat">
-          <b>{soc?.toFixed(0) ?? "—"}%</b> battery
+          <b>{soc?.toFixed(0) ?? "—"}%</b> {t("status.battery")}
         </span>
         <span className="sb-stat">
-          <b>{water?.toFixed(0) ?? "—"}%</b> water
+          <b>{water?.toFixed(0) ?? "—"}%</b> {t("status.water")}
         </span>
         <span className="sb-stat">
-          <b>{cabin?.toFixed(0) ?? "—"}°</b> cabin
+          <b>{cabin?.toFixed(0) ?? "—"}°</b> {t("status.cabin")}
         </span>
       </div>
       <div className="sb-right">
-        <span className={"conn" + (assistant.llm ? " up" : "")}>
-          {(assistant.llm
-            ? `AI ${assistant.connectivity ?? ""} · ${assistant.model}`
-            : "AI offline") + (assistant.personality ? ` · ${assistant.personality}` : "")}
-        </span>
+        <span className={"conn" + (assistant.llm ? " up" : "")}>{aiLabel}</span>
         <span className={"conn" + (connected ? " up" : " down")}>
-          {connected ? "Core" : "Reconnecting…"}
+          {connected ? t("status.core") : t("status.reconnecting")}
         </span>
       </div>
     </header>
@@ -71,6 +74,7 @@ function TabView({ tab }: { tab: TabId }) {
 
 export default function App() {
   const van = useVanState();
+  const t = useT();
   const [tab, setTab] = useState<TabId>("home");
 
   // The whole UI themes to the active persona (design-system [data-theme]).
@@ -86,14 +90,14 @@ export default function App() {
       <div className="os">
         <nav className="rail">
           <div className="rail-brand">OV</div>
-          {TABS.map((t) => (
+          {TABS.map((item) => (
             <button
-              key={t.id}
-              className={"rail-tab" + (tab === t.id ? " active" : "")}
-              onClick={() => setTab(t.id)}
+              key={item.id}
+              className={"rail-tab" + (tab === item.id ? " active" : "")}
+              onClick={() => setTab(item.id)}
             >
-              <NavIcon name={t.icon} />
-              <span>{t.label}</span>
+              <NavIcon name={item.icon} />
+              <span>{t(item.labelKey)}</span>
             </button>
           ))}
         </nav>

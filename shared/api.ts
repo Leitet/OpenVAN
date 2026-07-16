@@ -39,6 +39,23 @@ export async function sendText(text: string): Promise<IntentResult> {
   return res.json();
 }
 
+export interface ChatReply {
+  reply: string;
+  action: boolean; // true if a device command ran (vs a conversational answer)
+  ok: boolean;
+  blocked_by_safety: boolean;
+}
+
+// Conversational assistant: runs a command (safety-checked) or answers from state.
+export async function sendChat(text: string): Promise<ChatReply> {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  return res.json();
+}
+
 import type { TelemetryPoint } from "./types";
 
 export async function getSeries(
@@ -109,10 +126,11 @@ import type { Settings } from "./types";
 
 export interface SettingsPatch {
   ai_enabled?: boolean;
-  default_connectivity?: "online" | "offline";
+  connectivity?: "online" | "offline";
+  language?: "en" | "sv" | "de";
   offline_model?: string;
   offline_base_url?: string;
-  online_provider?: "openai" | "anthropic";
+  online_provider?: "openai" | "openai_compatible" | "anthropic";
   online_model?: string;
   online_base_url?: string;
   online_api_key?: string;

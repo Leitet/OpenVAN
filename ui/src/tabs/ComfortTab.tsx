@@ -1,11 +1,13 @@
 import { sendIntent } from "@shared/api";
 import { useVan, num } from "../state";
+import { useT } from "../i18n";
 import { Gauge } from "../components/Gauge";
 import { HeaterControl } from "../components/HeaterControl";
 import { QuickToggle } from "../components/QuickToggle";
 
 export function ComfortTab() {
   const { entities, twin } = useVan();
+  const t = useT();
   const heater = entities["climate.diesel_heater"];
   const pump = entities["switch.water_pump"];
   const pumpOn = pump?.state === "on";
@@ -13,24 +15,24 @@ export function ComfortTab() {
   return (
     <div className="tab-grid comfort">
       <section className="panel">
-        <h2>Climate</h2>
+        <h2>{t("comfort.climate")}</h2>
         <div className="gauge-grid">
-          <Gauge label="Cabin" value={num(twin["cabin.temperature"])} unit="°C" min={-5} max={35} />
-          <Gauge label="Outside" value={num(twin["outside.temperature"])} unit="°C" min={-20} max={40} />
+          <Gauge label={t("label.cabin")} value={num(twin["cabin.temperature"])} unit="°C" min={-5} max={35} />
+          <Gauge label={t("label.outside")} value={num(twin["outside.temperature"])} unit="°C" min={-20} max={40} />
         </div>
         <HeaterControl entity={heater} />
       </section>
 
       <section className="panel">
-        <h2>Water</h2>
+        <h2>{t("comfort.water")}</h2>
         <div className="gauge-grid">
-          <Gauge label="Fresh water" value={num(twin["fresh_water.level_pct"])} unit="%" warnBelow={15} />
-          <Gauge label="Grey water" value={num(twin["grey_water.level_pct"])} unit="%" />
+          <Gauge label={t("label.freshWater")} value={num(twin["fresh_water.level_pct"])} unit="%" warnBelow={15} />
+          <Gauge label={t("label.greyWater")} value={num(twin["grey_water.level_pct"])} unit="%" />
         </div>
         <QuickToggle
           icon="drop"
-          label="Water pump"
-          state={pumpOn ? "Running" : "Off"}
+          label={t("device.waterPump")}
+          state={pumpOn ? t("common.running") : t("common.off")}
           on={pumpOn}
           disabled={!pump}
           onClick={() => sendIntent("switch.water_pump", pumpOn ? "turn_off" : "turn_on")}

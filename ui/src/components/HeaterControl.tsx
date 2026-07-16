@@ -1,8 +1,10 @@
 import { sendIntent } from "@shared/api";
 import type { Entity } from "@shared/types";
+import { useT } from "../i18n";
 
 /** On/off + setpoint control for the diesel heater (climate actuator). */
 export function HeaterControl({ entity }: { entity: Entity | undefined }) {
+  const t = useT();
   const on = entity?.state === "heating";
   const setpoint =
     typeof entity?.attributes?.setpoint === "number"
@@ -22,11 +24,11 @@ export function HeaterControl({ entity }: { entity: Entity | undefined }) {
         onClick={toggle}
         disabled={!entity}
       >
-        {on ? "Diesel heater: HEATING" : "Diesel heater: OFF"}
+        {on ? t("heater.heating") : t("heater.off")}
       </button>
       <label className="slider">
         <span className="slider-label">
-          Setpoint
+          {t("comfort.setpoint")}
           <em>{setpoint}°C</em>
         </span>
         <input

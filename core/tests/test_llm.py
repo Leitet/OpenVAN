@@ -9,8 +9,24 @@ from openvan_core.llm import (
     LLMIntentResolver,
     ModelRouter,
     OpenAICompatibleClient,
+    filter_chat_models,
 )
-from openvan_core.personalities import PersonalityStore
+
+
+def test_language_directive_names_the_language():
+    from openvan_core.llm import language_directive
+
+    assert "Swedish" in language_directive("sv")
+    assert "German" in language_directive("de")
+    assert "English" in language_directive("xx")  # unknown -> English fallback
+
+
+def test_filter_chat_models_drops_non_chat():
+    ids = [
+        "gpt-4o", "gpt-4o-mini", "o3-mini", "text-embedding-3-small",
+        "whisper-1", "tts-1", "dall-e-3", "gpt-4o-realtime-preview",
+    ]
+    assert filter_chat_models(ids) == ["gpt-4o", "gpt-4o-mini", "o3-mini"]
 
 
 class FakeClient:
@@ -48,12 +64,33 @@ def _entities() -> dict[str, Entity]:
 
 def _resolver(tmp_path, client):
     config = Config(ai_enabled=True, data_dir=tmp_path)
-    store = PersonalityStore(tmp_path / "p.json")
-    router = ModelRouter(config, store, client_factory=lambda _b: client)
+    router = ModelRouter(config, client_factory=lambda _b: client)
     return LLMIntentResolver(router), router
 
 
 # --- resolver behaviour ------------------------------------------------
+
+
+async def test_converse_returns_reply_for_a_question(tmp_path):
+    client = FakeClient('{"reply": "The battery is at 82%."}', available=True)
+    resolver, _ = _resolver(tmp_path, client)
+    await resolver.startup()
+    intent, reply = await resolver.converse("how is the battery?", _entities(), {"soc": 82})
+    assert intent is None
+    assert reply == "The battery is at 82%."
+
+
+async def test_converse_returns_action_for_a_command(tmp_path):
+    client = FakeClient(
+        '{"action": {"entity_id": "light.cabin", "command": "turn_on"}}', available=True
+    )
+    resolver, _ = _resolver(tmp_path, client)
+    await resolver.startup()
+    intent, reply = await resolver.converse("turn on the cabin light", _entities(), {})
+    assert reply is None
+    assert intent is not None
+    assert intent.entity_id == "light.cabin"
+    assert intent.command == "turn_on"
 
 
 async def test_valid_llm_json_becomes_intent(tmp_path):
@@ -89,55 +126,58 @@ async def test_inactive_client_skips_llm(tmp_path):
 # --- router binding resolution ----------------------------------------
 
 
-def test_offline_profile_binding(tmp_path):
+def test_offline_is_the_default_binding(tmp_path):
     config = Config(data_dir=tmp_path)
-    store = PersonalityStore(tmp_path / "p.json")
-    store.set_active("scout")  # offline
-    binding = ModelRouter(config, store).effective_binding()
+    binding = ModelRouter(config).effective_binding()
     assert binding.connectivity == "offline"
     assert binding.model == "llama3.2"
 
 
-def test_online_profile_uses_online_config(tmp_path):
+def test_online_binding_uses_online_config(tmp_path):
     config = Config(
         data_dir=tmp_path,
+        connectivity="online",
+        online_provider="openai_compatible",
         online_base_url="https://api.example/v1",
         online_model="gpt-x",
         online_api_key="k",
     )
-    store = PersonalityStore(tmp_path / "p.json")
-    store.set_active("aurora")  # online
-    binding = ModelRouter(config, store).effective_binding()
+    binding = ModelRouter(config).effective_binding()
     assert binding.connectivity == "online"
     assert binding.model == "gpt-x"
     assert binding.base_url == "https://api.example/v1"
 
 
-def test_profile_model_override(tmp_path):
-    config = Config(data_dir=tmp_path)
-    store = PersonalityStore(tmp_path / "p.json")
-    forked = store.fork("scout", "My Scout")
-    store.update(forked.id, model="llama3.1:8b")
-    store.set_active(forked.id)
-    binding = ModelRouter(config, store).effective_binding()
-    assert binding.model == "llama3.1:8b"
+def test_openai_provider_pins_to_canonical_endpoint(tmp_path):
+    # Provider "openai" ignores any configured base_url and uses api.openai.com.
+    config = Config(
+        data_dir=tmp_path,
+        connectivity="online",
+        online_provider="openai",
+        online_base_url="https://ignored.example/v1",
+        online_model="gpt-4o-mini",
+        online_api_key="k",
+    )
+    binding = ModelRouter(config).effective_binding()
+    assert binding.base_url == "https://api.openai.com/v1"
 
 
 def test_online_provider_selects_client(tmp_path):
-    store = PersonalityStore(tmp_path / "p.json")
-    store.set_active("aurora")  # online profile
-
-    openai_cfg = Config(data_dir=tmp_path, online_base_url="https://x/v1", online_model="gpt-x")
-    openai_client = ModelRouter(openai_cfg, store).build_client()
+    openai_cfg = Config(
+        data_dir=tmp_path, connectivity="online",
+        online_base_url="https://x/v1", online_model="gpt-x",
+    )
+    openai_client = ModelRouter(openai_cfg).build_client()
     assert isinstance(openai_client, OpenAICompatibleClient)
 
     claude_cfg = Config(
         data_dir=tmp_path,
+        connectivity="online",
         online_provider="anthropic",
         online_model="claude-opus-4-8",
         online_api_key="k",
     )
-    claude_client = ModelRouter(claude_cfg, store).build_client()
+    claude_client = ModelRouter(claude_cfg).build_client()
     assert isinstance(claude_client, AnthropicClient)
     assert claude_client.base_url == "https://api.anthropic.com"  # default endpoint
 
@@ -147,14 +187,12 @@ async def test_anthropic_client_unavailable_without_key():
 
 
 async def test_online_unconfigured_gracefully_falls_back_to_offline(tmp_path):
-    config = Config(data_dir=tmp_path)  # online not configured
-    store = PersonalityStore(tmp_path / "p.json")
-    store.set_active("aurora")  # prefers online
+    config = Config(data_dir=tmp_path, connectivity="online", online_base_url="")
 
     def factory(binding):
         return FakeClient(available=(binding.connectivity == "offline"))
 
-    router = ModelRouter(config, store, client_factory=factory)
+    router = ModelRouter(config, client_factory=factory)
     await router.refresh()
     assert router.active is True
     assert router.binding().connectivity == "offline"

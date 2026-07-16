@@ -21,7 +21,8 @@ _REPO_ROOT = _CORE_DIR.parent  # repo root
 # key is deliberately NOT here — it stays in memory / env only, never on disk.
 _PERSISTED_FIELDS = (
     "ai_enabled",
-    "default_connectivity",
+    "connectivity",
+    "language",
     "llm_base_url",
     "llm_model",
     "online_provider",
@@ -33,6 +34,32 @@ _PERSISTED_FIELDS = (
 
 def settings_path(data_dir: Path) -> Path:
     return Path(data_dir) / "settings.json"
+
+
+def _load_dotenv(path: Path) -> None:
+    """Minimal ``.env`` loader — stdlib only (offline-first, no dependency).
+
+    Loads ``KEY=VALUE`` lines into the environment so secrets like
+    ``OPENVAN_ONLINE_API_KEY`` survive restarts without being typed each time.
+    Never overrides a variable already set in the real environment, and the file
+    is gitignored so the key never lands in git.
+    """
+    if not path.exists():
+        return
+    try:
+        for raw in path.read_text().splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            # Empty value (e.g. a blank placeholder key) = not set; and never
+            # override a variable already set in the real environment.
+            if key and value and key not in os.environ:
+                os.environ[key] = value
+    except OSError:
+        logger.warning("could not read .env file %s", path)
 
 
 @dataclass
@@ -64,8 +91,12 @@ class Config:
     # Model-agnostic AI assistant. Optional: if the model is unreachable, OpenVan
     # falls back to the offline rule-based resolver.
     ai_enabled: bool = True
-    # Which connectivity a profile uses when it doesn't specify one.
-    default_connectivity: str = "offline"  # "offline" | "online"
+    # The single global connectivity mode: which model answers, local or cloud.
+    # Independent of the chosen personality (voice). "offline" | "online".
+    connectivity: str = "offline"
+    # Language the assistant (model) replies in: "en" | "sv" | "de". Normally the
+    # UI sets this to match its own language; the user can override it.
+    language: str = "en"
     # Offline models: a local Ollama server.
     llm_base_url: str = "http://127.0.0.1:11434"
     llm_model: str = "llama3.2"
@@ -73,7 +104,9 @@ class Config:
     # (base_url must serve /chat/completions and /models); provider "anthropic"
     # targets the Claude Messages API (base_url defaults to api.anthropic.com).
     # The API key comes from the environment and is kept in memory, never on disk.
-    online_provider: str = "openai"  # "openai" | "anthropic"
+    # "openai" (pinned to api.openai.com) | "openai_compatible" (custom base_url)
+    # | "anthropic" (Claude Messages API, own endpoint).
+    online_provider: str = "openai"
     online_base_url: str = "https://api.openai.com/v1"
     online_model: str = ""
     online_api_key: str | None = None
@@ -119,6 +152,10 @@ class Config:
     @classmethod
     def resolve(cls) -> "Config":
         """Build the effective config: defaults < persisted file < environment."""
+        # Populate env from .env before reading it. OPENVAN_ENV_FILE overrides the
+        # path (tests point it away from the repo's real .env).
+        env_file = os.environ.get("OPENVAN_ENV_FILE")
+        _load_dotenv(Path(env_file) if env_file else _REPO_ROOT / ".env")
         cfg = cls()
         if os.environ.get("OPENVAN_DATA_DIR"):
             cfg.data_dir = Path(os.environ["OPENVAN_DATA_DIR"])
@@ -151,9 +188,11 @@ class Config:
             cfg.weather_enabled = os.environ["OPENVAN_WEATHER"] not in ("0", "false", "False")
         if os.environ.get("OPENVAN_MEMORY") is not None:
             cfg.memory_enabled = os.environ["OPENVAN_MEMORY"] not in ("0", "false", "False")
-        cfg.default_connectivity = os.environ.get(
-            "OPENVAN_DEFAULT_CONNECTIVITY", cfg.default_connectivity
+        cfg.connectivity = os.environ.get(
+            "OPENVAN_CONNECTIVITY",
+            os.environ.get("OPENVAN_DEFAULT_CONNECTIVITY", cfg.connectivity),
         )
+        cfg.language = os.environ.get("OPENVAN_LANGUAGE", cfg.language)
         cfg.llm_base_url = os.environ.get("OPENVAN_LLM_URL", cfg.llm_base_url)
         cfg.llm_model = os.environ.get("OPENVAN_LLM_MODEL", cfg.llm_model)
         cfg.online_provider = os.environ.get("OPENVAN_ONLINE_PROVIDER", cfg.online_provider)

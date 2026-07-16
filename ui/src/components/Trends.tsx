@@ -1,23 +1,24 @@
 import { useEffect, useState } from "react";
 import { getSeries } from "@shared/api";
 import type { TelemetryPoint } from "@shared/types";
+import { useT } from "../i18n";
 import { Sparkline } from "./Sparkline";
 
 interface Metric {
   key: string;
-  label: string;
+  labelKey: string;
   unit?: string;
   min?: number;
   max?: number;
 }
 
 const METRICS: Metric[] = [
-  { key: "house_battery.soc", label: "Battery", unit: "%", min: 0, max: 100 },
-  { key: "solar.power", label: "Solar", unit: "W" },
-  { key: "fresh_water.level_pct", label: "Fresh water", unit: "%", min: 0, max: 100 },
-  { key: "grey_water.level_pct", label: "Grey water", unit: "%", min: 0, max: 100 },
-  { key: "cabin.temperature", label: "Cabin", unit: "°C" },
-  { key: "outside.temperature", label: "Outside", unit: "°C" },
+  { key: "house_battery.soc", labelKey: "label.battery", unit: "%", min: 0, max: 100 },
+  { key: "solar.power", labelKey: "label.solar", unit: "W" },
+  { key: "fresh_water.level_pct", labelKey: "label.freshWater", unit: "%", min: 0, max: 100 },
+  { key: "grey_water.level_pct", labelKey: "label.greyWater", unit: "%", min: 0, max: 100 },
+  { key: "cabin.temperature", labelKey: "label.cabin", unit: "°C" },
+  { key: "outside.temperature", labelKey: "label.outside", unit: "°C" },
 ];
 
 const RANGES: { label: string; minutes: number; bucket?: number }[] = [
@@ -28,6 +29,7 @@ const RANGES: { label: string; minutes: number; bucket?: number }[] = [
 ];
 
 export function Trends() {
+  const t = useT();
   const [data, setData] = useState<Record<string, TelemetryPoint[]>>({});
   const [rangeIdx, setRangeIdx] = useState(0);
   const range = RANGES[rangeIdx];
@@ -54,7 +56,7 @@ export function Trends() {
   return (
     <section className="panel span2">
       <div className="companion-head">
-        <h2>Trends</h2>
+        <h2>{t("trends.title")}</h2>
         <div className="setting-control">
           <div className="tabs">
             {RANGES.map((r, i) => (
@@ -68,7 +70,7 @@ export function Trends() {
             ))}
           </div>
           <a className="mini" href="/api/telemetry/export?minutes=1440" download>
-            Export CSV
+            {t("trends.exportCsv")}
           </a>
         </div>
       </div>
@@ -76,7 +78,7 @@ export function Trends() {
         {METRICS.map((m) => (
           <Sparkline
             key={m.key}
-            label={m.label}
+            label={t(m.labelKey)}
             unit={m.unit}
             min={m.min}
             max={m.max}

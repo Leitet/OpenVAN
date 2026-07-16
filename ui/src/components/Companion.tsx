@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { getBriefing } from "@shared/api";
 import type { Notice } from "@shared/types";
+import { useT } from "../i18n";
 
 export function Companion({ notices }: { notices: Notice[] }) {
+  const t = useT();
   const [briefing, setBriefing] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -18,16 +20,16 @@ export function Companion({ notices }: { notices: Notice[] }) {
   return (
     <div className="companion">
       <div className="companion-head">
-        <h2>Companion</h2>
+        <h2>{t("companion.title")}</h2>
         <button className="briefing-btn" onClick={ask} disabled={loading}>
-          {loading ? "Thinking…" : "Ask for a briefing"}
+          {loading ? t("companion.thinking") : t("companion.briefing")}
         </button>
       </div>
 
       {briefing && <p className="briefing">{briefing}</p>}
 
       {notices.length === 0 ? (
-        <p className="companion-quiet">All good — nothing needs your attention.</p>
+        <p className="companion-quiet">{t("companion.allGood")}</p>
       ) : (
         <ul className="notices">
           {notices.map((n) => (

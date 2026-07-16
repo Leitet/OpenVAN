@@ -1,47 +1,42 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getModels, getSettings, saveSettings } from "@shared/api";
 import type { Settings } from "@shared/types";
+import { useI18n, useT, LANGS, LANG_NATIVE, type Lang } from "../i18n";
 import { Personalities } from "./Personalities";
 
-// Curated fallbacks so the dropdowns are useful before (or without) a live
-// /models fetch. Merged with fetched models + the current value.
-const KNOWN_ONLINE_MODELS: Record<"openai" | "anthropic", string[]> = {
-  openai: [
-    "gpt-4o",
-    "gpt-4o-mini",
-    "gpt-4.1",
-    "gpt-4.1-mini",
-    "gpt-4-turbo",
-    "o3",
-    "o4-mini",
-    "gpt-3.5-turbo",
-  ],
-  anthropic: [
-    "claude-opus-4-8",
-    "claude-sonnet-4-6",
-    "claude-haiku-4-5",
-    "claude-fable-5",
-    "claude-opus-4-7",
-    "claude-opus-4-6",
-  ],
-};
+const ASST_OVERRIDE_KEY = "openvan.assistantLangOverride";
 
 export function AdminPanel() {
+  const t = useT();
+  const { lang, setLang } = useI18n();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [offlineModels, setOfflineModels] = useState<string[]>([]);
   const [onlineModels, setOnlineModels] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  // The assistant (model) language defaults to the app language; the user can
+  // override it. We remember whether they did so it isn't re-synced away.
+  const [asstOverride, setAsstOverride] = useState(
+    () => localStorage.getItem(ASST_OVERRIDE_KEY) === "1",
+  );
+
+  // Ask Core to list the models each endpoint actually serves. Online uses the
+  // configured key, so this returns only the models that key has access to.
+  const refreshModels = async () => {
+    setLoadingModels(true);
+    try {
+      const [off, on] = await Promise.all([getModels("offline"), getModels("online")]);
+      setOfflineModels(off);
+      setOnlineModels(on);
+    } finally {
+      setLoadingModels(false);
+    }
+  };
 
   const load = async () => {
-    const [s, off, on] = await Promise.all([
-      getSettings(),
-      getModels("offline"),
-      getModels("online"),
-    ]);
-    setSettings(s);
-    setOfflineModels(off);
-    setOnlineModels(on);
+    setSettings(await getSettings());
+    await refreshModels();
   };
 
   useEffect(() => {
@@ -52,174 +47,275 @@ export function AdminPanel() {
     setSaving(true);
     setSaved(false);
     try {
-      const updated = await saveSettings(p);
-      setSettings(updated);
+      setSettings(await saveSettings(p));
       // Provider / URL / key changes affect which models are reachable.
-      const [off, on] = await Promise.all([
-        getModels("offline"),
-        getModels("online"),
-      ]);
-      setOfflineModels(off);
-      setOnlineModels(on);
+      await refreshModels();
       setSaved(true);
     } finally {
       setSaving(false);
     }
   };
 
-  if (!settings) return <div className="panel span2">Loading settings…</div>;
+  // Once, on first load, bring the assistant language in line with the app
+  // language — unless the user has explicitly chosen a different one.
+  const synced = useRef(false);
+  useEffect(() => {
+    if (settings && !synced.current) {
+      synced.current = true;
+      if (!asstOverride && settings.language !== lang) patch({ language: lang });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings]);
 
-  // Always keep the currently-configured model selectable, even if the server
-  // reports it under a different tag ("llama3.2" vs "llama3.2:latest").
+  const changeAppLang = (l: Lang) => {
+    setLang(l);
+    if (!asstOverride) patch({ language: l });
+  };
+
+  const changeAsstLang = (v: string) => {
+    if (v === "auto") {
+      setAsstOverride(false);
+      localStorage.removeItem(ASST_OVERRIDE_KEY);
+      patch({ language: lang });
+    } else {
+      setAsstOverride(true);
+      localStorage.setItem(ASST_OVERRIDE_KEY, "1");
+      patch({ language: v as Lang });
+    }
+  };
+
+  if (!settings) return <div className="panel span2">{t("settings.loadingSettings")}</div>;
+
+  // Keep the current value selectable even if the server tags it differently.
   const offlineOptions = Array.from(
     new Set([...offlineModels, settings.offline.model].filter(Boolean)),
   );
+  // Only the models the configured key can access (live /models fetch), plus
+  // whatever is currently selected so it always shows.
   const onlineOptions = Array.from(
-    new Set(
-      [
-        ...(KNOWN_ONLINE_MODELS[settings.online.provider] ?? []),
-        ...onlineModels,
-        settings.online.model,
-      ].filter(Boolean),
-    ),
-  );
+    new Set([...onlineModels, settings.online.model].filter(Boolean)),
+  ).sort();
   const a = settings.assistant;
 
   return (
     <div className="admin">
       <section className="panel span2">
-        <h2>Assistant</h2>
+        <h2>{t("settings.language")}</h2>
         <div className="setting-row">
-          <label>Enable AI assistant</label>
+          <label>{t("settings.appLanguage")}</label>
+          <select value={lang} onChange={(e) => changeAppLang(e.target.value as Lang)}>
+            {LANGS.map((l) => (
+              <option key={l} value={l}>
+                {LANG_NATIVE[l]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="setting-row">
+          <label>{t("settings.assistantLanguage")}</label>
+          <select
+            value={asstOverride ? settings.language : "auto"}
+            onChange={(e) => changeAsstLang(e.target.value)}
+          >
+            <option value="auto">{t("settings.sameAsApp")}</option>
+            {LANGS.map((l) => (
+              <option key={l} value={l}>
+                {LANG_NATIVE[l]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="hint">{t("settings.languageNote")}</p>
+      </section>
+
+      <section className="panel span2">
+        <h2>{t("settings.assistant")}</h2>
+        <div className="setting-row">
+          <label>{t("settings.enableAi")}</label>
           <input
             type="checkbox"
             checked={settings.ai_enabled}
             onChange={(e) => patch({ ai_enabled: e.target.checked })}
           />
         </div>
-        <div className="setting-row">
-          <label>Default connectivity (for profiles set to “inherit”)</label>
-          <select
-            value={settings.default_connectivity}
-            onChange={(e) =>
-              patch({
-                default_connectivity: e.target.value as "online" | "offline",
-              })
-            }
+        <h3 className="sub">{t("settings.connectivityHeading")}</h3>
+        <div className="mode-switch">
+          <button
+            className={"mode-btn" + (settings.connectivity === "offline" ? " active" : "")}
+            onClick={() => patch({ connectivity: "offline" })}
           >
-            <option value="offline">offline</option>
-            <option value="online">online</option>
-          </select>
+            <strong>{t("settings.offline")}</strong>
+            <span>{t("settings.offlineDesc")}</span>
+          </button>
+          <button
+            className={"mode-btn" + (settings.connectivity === "online" ? " active" : "")}
+            onClick={() => patch({ connectivity: "online" })}
+          >
+            <strong>{t("settings.online")}</strong>
+            <span>{t("settings.onlineDesc")}</span>
+          </button>
         </div>
         <p className="hint">
-          Effective now: <strong>{a.connectivity}</strong> / {a.model}{" "}
+          {t("settings.talkingTo")}{" "}
+          <strong>
+            {a.connectivity === "online" ? t("ai.cloud") : t("ai.local")} · {a.model}
+          </strong>{" "}
           <span className={"pill" + (a.llm ? " on" : "")}>
-            {a.llm ? "active" : "offline / rules"}
-          </span>{" "}
-          — voice: {a.personality}
+            {a.llm ? t("settings.active") : t("ai.rulesOnly")}
+          </span>
+          {settings.connectivity === "online" && a.connectivity !== "online"
+            ? a.llm
+              ? t("settings.cloudFellBackLocal")
+              : t("settings.cloudFellBackRules")
+            : ""}{" "}
+          · {t("settings.voice")}: {a.personality}. {t("settings.connectivityGlobal")}
         </p>
 
-        <h3 className="sub">Offline model (local Ollama)</h3>
-        <div className="setting-row">
-          <label>Model</label>
-          <select
-            value={settings.offline.model}
-            onChange={(e) => patch({ offline_model: e.target.value })}
-          >
-            {offlineOptions.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="setting-row">
-          <label>Server URL</label>
-          <input
-            className="text-setting"
-            defaultValue={settings.offline.base_url}
-            onBlur={(e) =>
-              e.target.value !== settings.offline.base_url &&
-              patch({ offline_base_url: e.target.value })
-            }
-          />
-        </div>
-
-        <h3 className="sub">Online model</h3>
-        <div className="setting-row">
-          <label>Provider</label>
-          <select
-            value={settings.online.provider}
-            onChange={(e) =>
-              patch({ online_provider: e.target.value as "openai" | "anthropic" })
-            }
-          >
-            <option value="openai">OpenAI-compatible</option>
-            <option value="anthropic">Anthropic (Claude)</option>
-          </select>
-        </div>
-        {settings.online.provider === "openai" && (
+        <div className={"model-card" + (settings.connectivity === "offline" ? " in-use" : "")}>
+          <div className="model-card-head">
+            <h3 className="sub">{t("settings.localModel")}</h3>
+            {settings.connectivity === "offline" && (
+              <span className="pill on">{t("settings.inUse")}</span>
+            )}
+          </div>
           <div className="setting-row">
-            <label>API base URL</label>
+            <label>{t("settings.model")}</label>
+            <select
+              value={settings.offline.model}
+              onChange={(e) => patch({ offline_model: e.target.value })}
+            >
+              {offlineOptions.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="setting-row">
+            <label>{t("settings.serverUrl")}</label>
             <input
               className="text-setting"
-              placeholder="https://api.openai.com/v1"
-              defaultValue={settings.online.base_url}
+              defaultValue={settings.offline.base_url}
               onBlur={(e) =>
-                e.target.value !== settings.online.base_url &&
-                patch({ online_base_url: e.target.value })
+                e.target.value !== settings.offline.base_url &&
+                patch({ offline_base_url: e.target.value })
               }
             />
           </div>
-        )}
-        <div className="setting-row">
-          <label>Model</label>
-          <select
-            value={settings.online.model}
-            onChange={(e) => patch({ online_model: e.target.value })}
-          >
-            {!settings.online.model && <option value="">— choose a model —</option>}
-            {onlineOptions.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
         </div>
-        <div className="setting-row">
-          <label>
-            API key {settings.online.has_key && <span className="pill on">set</span>}
-          </label>
-          <input
-            className="text-setting"
-            type="password"
-            placeholder={settings.online.has_key ? "•••••• (stored in memory)" : "paste key"}
-            onBlur={(e) =>
-              e.target.value && patch({ online_api_key: e.target.value })
-            }
-          />
+
+        <div className={"model-card" + (settings.connectivity === "online" ? " in-use" : "")}>
+          <div className="model-card-head">
+            <h3 className="sub">{t("settings.cloudModel")}</h3>
+            {settings.connectivity === "online" && (
+              <span className="pill on">{t("settings.inUse")}</span>
+            )}
+          </div>
+          <div className="setting-row">
+            <label>{t("settings.provider")}</label>
+            <select
+              value={settings.online.provider}
+              onChange={(e) =>
+                patch({
+                  online_provider: e.target.value as
+                    | "openai"
+                    | "openai_compatible"
+                    | "anthropic",
+                })
+              }
+            >
+              <option value="openai">OpenAI</option>
+              <option value="openai_compatible">OpenAI-compatible</option>
+              <option value="anthropic">Anthropic (Claude)</option>
+            </select>
+          </div>
+          {settings.online.provider === "openai_compatible" && (
+            <div className="setting-row">
+              <label>{t("settings.apiBaseUrl")}</label>
+              <input
+                className="text-setting"
+                placeholder="https://api.openai.com/v1"
+                defaultValue={settings.online.base_url}
+                onBlur={(e) =>
+                  e.target.value !== settings.online.base_url &&
+                  patch({ online_base_url: e.target.value })
+                }
+              />
+            </div>
+          )}
+          <div className="setting-row">
+            <label>{t("settings.model")}</label>
+            <div className="model-picker">
+              <select
+                value={settings.online.model}
+                onChange={(e) => patch({ online_model: e.target.value })}
+                disabled={loadingModels}
+              >
+                {!settings.online.model && (
+                  <option value="">
+                    {loadingModels
+                      ? t("settings.loadingModels")
+                      : onlineModels.length
+                        ? t("settings.chooseModel")
+                        : settings.online.has_key
+                          ? t("settings.noModels")
+                          : t("settings.pasteKeyToLoad")}
+                  </option>
+                )}
+                {onlineOptions.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+              <button
+                className="mini"
+                onClick={refreshModels}
+                disabled={loadingModels}
+                title={t("common.refresh")}
+              >
+                {loadingModels ? "…" : t("common.refresh")}
+              </button>
+            </div>
+          </div>
+          {onlineModels.length > 0 && (
+            <p className="hint">
+              {onlineModels.length === 1
+                ? t("settings.modelsAvailable1", { n: onlineModels.length })
+                : t("settings.modelsAvailable", { n: onlineModels.length })}
+            </p>
+          )}
+          <div className="setting-row">
+            <label>
+              {t("settings.apiKey")}{" "}
+              {settings.online.has_key && <span className="pill on">{t("settings.set")}</span>}
+            </label>
+            <input
+              className="text-setting"
+              type="password"
+              placeholder={settings.online.has_key ? t("settings.keyStored") : t("settings.pasteKey")}
+              onBlur={(e) => e.target.value && patch({ online_api_key: e.target.value })}
+            />
+          </div>
+          <p className="hint">{t("settings.keyNote")}</p>
         </div>
-        <p className="hint">
-          The key is held in memory only (never written to disk). Set it here, or
-          via the <code>OPENVAN_ONLINE_API_KEY</code> environment variable.
-        </p>
       </section>
 
       <Personalities />
 
       <section className="panel span2">
-        <h2>System</h2>
+        <h2>{t("settings.system")}</h2>
         <div className="sys-grid">
           <div>
-            <span className="sys-k">Version</span>
+            <span className="sys-k">{t("settings.version")}</span>
             {settings.version}
           </div>
           <div>
-            <span className="sys-k">Core</span>
+            <span className="sys-k">{t("status.core")}</span>
             {settings.host}:{settings.port}
           </div>
           <div>
-            <span className="sys-k">Plugins</span>
+            <span className="sys-k">{t("settings.plugins")}</span>
             {settings.plugins.length}
           </div>
         </div>
@@ -231,14 +327,11 @@ export function AdminPanel() {
             </li>
           ))}
         </ul>
-        <p className="hint">
-          Settings persist across restarts (saved locally). The API key is the
-          exception — it stays in memory only and is never written to disk.
-        </p>
+        <p className="hint">{t("settings.persistNote")}</p>
       </section>
 
       <div className="save-status">
-        {saving ? "Saving…" : saved ? "Saved ✓" : ""}
+        {saving ? t("common.saving") : saved ? t("settings.saved") : ""}
       </div>
     </div>
   );

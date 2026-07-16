@@ -11,6 +11,26 @@ an issue/branch and delete it here.
 
 ## Assistant / AI
 
+### Voice chat — offline-first STT/TTS ⭐
+A first pass ships in the UI: the Assistant tab has **mic dictation** and **spoken
+replies** via the browser Web Speech API (`ui/src/voice.ts`), feature-detected and
+gated so text always works with no mic. Dictation just fills the text box, so voice
+still goes through the safety-checked text-intent path — it never gets its own
+control channel.
+
+Next, make it genuinely offline-first and van-grade (browser STT can fall back to a
+cloud service and is patchy on iPad Safari):
+- **Local STT** — whisper.cpp / faster-whisper / vosk running on the Zap/edge, exposed
+  by Core (e.g. `POST /api/voice/transcribe`, or a WS mic stream). The front-end seam
+  in `voice.ts` swaps to this.
+- **Local TTS** — piper (or similar) for a warm on-device voice; pick the voice per
+  personality (voice ≠ model, Rule 4).
+- **Wake word** (optional) — "Hey Van" via a small local model.
+- **Cloud option** — an OpenAI/Anthropic realtime/audio model as an *enhancement*
+  when online, never a dependency (Rule 3).
+- Bench support: a way to feed a canned audio clip / transcript so the pipeline is
+  testable without a real mic (Rule 1).
+
 ### Personalities (selectable companion character) ⭐
 The companion should have a **personality** that shapes the tone and voice of its
 briefings and replies — the *how it says it*, never the *what* (facts, safety and

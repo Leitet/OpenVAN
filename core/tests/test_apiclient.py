@@ -48,10 +48,10 @@ async def test_control_and_safety(tmp_path):
 async def test_settings_and_personalities(tmp_path):
     async with _client(tmp_path) as client:
         settings = await client.get_settings()
-        assert "default_connectivity" in settings
+        assert "connectivity" in settings
 
-        updated = await client.update_settings(default_connectivity="online")
-        assert updated["default_connectivity"] == "online"
+        updated = await client.update_settings(connectivity="online")
+        assert updated["connectivity"] == "online"
 
         result = await client.set_personality("ranger")
         assert result["active"] == "ranger"
