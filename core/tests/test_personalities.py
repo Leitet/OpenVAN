@@ -89,4 +89,8 @@ async def test_briefing_uses_active_persona(core):
     await core.companion.briefing(
         core.hub, [], use_llm=True, persona=core.personalities.get_active().style
     )
-    assert "Pulse" in seen["system"]  # active persona injected into the prompt
+    system = seen["system"]
+    # The system prompt is now two parts: general (van identity) + personality.
+    text = system if isinstance(system, str) else "\n\n".join(system)
+    assert "Pulse" in text  # active persona injected into the prompt
+    assert "first person" in text.lower()  # general prompt = van speaks as itself

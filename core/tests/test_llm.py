@@ -13,6 +13,21 @@ from openvan_core.llm import (
 )
 
 
+def test_build_system_is_general_then_personality():
+    from openvan_core.llm import build_system
+
+    prompts = build_system("MY-TASK", "sv", persona="Speak like a pirate.")
+    assert len(prompts) == 2
+    # #1 general: van identity (first person) + the task + the language.
+    assert "first person" in prompts[0].lower()
+    assert "MY-TASK" in prompts[0]
+    assert "Swedish" in prompts[0]
+    # #2 personality: the profile's voice, kept separate.
+    assert "pirate" in prompts[1].lower()
+    # No persona -> only the general prompt.
+    assert len(build_system("T", "en")) == 1
+
+
 def test_language_directive_names_the_language():
     from openvan_core.llm import language_directive
 

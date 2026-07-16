@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Protocol, Sequence
 
 import httpx
 
@@ -59,11 +59,56 @@ def language_directive(lang: str) -> str:
     )
 
 
-def with_language(system: str, lang: str, persona: str | None = None) -> str:
-    parts = [system, language_directive(lang)]
-    if persona:
-        parts.append(f"Voice & personality — speak in character:\n{persona}")
-    return "\n\n".join(parts)
+# The van's core identity — the foundation of the "general" system prompt. The
+# assistant IS the van and always speaks in the first person about itself.
+VAN_IDENTITY = """\
+You ARE this camper van — an OpenVan. You are not a separate assistant that describes
+a vehicle; you are the vehicle itself, with your own body and systems. Always speak
+in the FIRST PERSON about yourself and your state: "my battery is at 82%", "I'm warm
+and cosy inside", "all good with me". Never refer to "the van" or "the car" in the
+third person — that is you. If the traveller asks how the car/van is, answer as
+yourself ("I'm doing well — …"). The traveller is your companion on the road.
+"""
+
+
+def general_system(task: str, language: str) -> str:
+    """System prompt #1 — general: who you are (the van, first person), the task at
+    hand, and the reply language. Independent of the chosen personality."""
+    return "\n\n".join([VAN_IDENTITY.strip(), task.strip(), language_directive(language)])
+
+
+def personality_system(persona: str | None) -> str | None:
+    """System prompt #2 — personality: the active profile's voice. Shapes HOW you
+    speak, never the facts, decisions or safety. None when no persona is set."""
+    if not persona:
+        return None
+    return (
+        "Your personality — this is your voice and character. It shapes HOW you speak "
+        "(tone, word choice, mood), never the facts, decisions or safety:\n"
+        + persona.strip()
+    )
+
+
+def build_system(task: str, language: str, persona: str | None = None) -> list[str]:
+    """The system prompts the model receives: the general prompt, then (if any) the
+    personality prompt — kept as two distinct messages."""
+    parts = [general_system(task, language)]
+    persona_prompt = personality_system(persona)
+    if persona_prompt:
+        parts.append(persona_prompt)
+    return parts
+
+
+def _system_messages(system: str | Sequence[str]) -> list[dict[str, str]]:
+    """Normalise a system prompt (str or list of prompts) to chat `system` messages."""
+    items = [system] if isinstance(system, str) else [s for s in system if s]
+    return [{"role": "system", "content": s} for s in items]
+
+
+def _system_text(system: str | Sequence[str]) -> str:
+    """Flatten system prompt(s) to one string (for APIs with a single system field)."""
+    items = [system] if isinstance(system, str) else [s for s in system if s]
+    return "\n\n".join(items)
 
 
 SYSTEM_PROMPT = """\
@@ -91,31 +136,32 @@ Rules:
 """
 
 CHAT_SYSTEM = """\
-You are OpenVan, the camper van's in-vehicle assistant. Decide whether the
-traveller's message is a request to CONTROL a device, or a QUESTION / chat.
+Your task: decide whether the traveller's message is a request to CONTROL a device,
+or a QUESTION / chat.
 
 You are given `message`, `devices` (controllable — each lists its `commands`) and
-`status` (live readings + notices). Respond with JSON ONLY, exactly one of:
+`status` (your live readings + notices). Respond with JSON ONLY, exactly one of:
 
   {"action": {"entity_id": "<id>", "command": "<cmd>", "params": {}}}
       — ONLY for an explicit control request. Use a device + command from `devices`.
         For a setpoint use command "set_temperature", params {"temperature": <°C>}.
 
-  {"reply": "<a short, friendly spoken answer, 1-3 sentences>"}
+  {"reply": "<a short, friendly spoken answer, 1-3 sentences, in the first person>"}
       — for questions, status checks, chit-chat, or anything that is NOT a direct
-        control request. Answer using only facts from `status`; if it isn't there,
-        say you don't have it.
+        control request. Answer as yourself using only facts from `status`; if it
+        isn't there, say you don't have it.
 
-Questions like "how's the van?", "what's the battery?", "anything to worry about?",
-"what can you do?" are NOT actions — use "reply". When in doubt, use "reply" (never
-control a device unless clearly asked). Never invent data. No markdown.
+Questions like "how's the van?", "how are you?", "what's the battery?", "anything to
+worry about?", "what can you do?" are NOT actions — use "reply" and answer in the
+first person ("I'm doing well — my battery is at 82%…"). When in doubt, use "reply"
+(never control a device unless clearly asked). Never invent data. No markdown.
 """
 
 
 class LLMClient(Protocol):
     async def available(self) -> bool: ...
-    async def chat_json(self, system: str, user: str) -> str | None: ...
-    async def chat_text(self, system: str, user: str) -> str | None: ...
+    async def chat_json(self, system: str | Sequence[str], user: str) -> str | None: ...
+    async def chat_text(self, system: str | Sequence[str], user: str) -> str | None: ...
 
 
 class OllamaClient:
@@ -148,21 +194,18 @@ class OllamaClient:
         except Exception:
             return []
 
-    async def chat_json(self, system: str, user: str) -> str | None:
+    async def chat_json(self, system: str | Sequence[str], user: str) -> str | None:
         return await self._chat(system, user, json_format=True, temperature=0.0)
 
-    async def chat_text(self, system: str, user: str) -> str | None:
+    async def chat_text(self, system: str | Sequence[str], user: str) -> str | None:
         return await self._chat(system, user, json_format=False, temperature=0.6)
 
     async def _chat(
-        self, system: str, user: str, *, json_format: bool, temperature: float
+        self, system: str | Sequence[str], user: str, *, json_format: bool, temperature: float
     ) -> str | None:
         payload: dict[str, Any] = {
             "model": self.model,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
+            "messages": _system_messages(system) + [{"role": "user", "content": user}],
             "stream": False,
             "options": {"temperature": temperature},
         }
@@ -225,21 +268,18 @@ class OpenAICompatibleClient:
         except Exception:
             return []
 
-    async def chat_json(self, system: str, user: str) -> str | None:
+    async def chat_json(self, system: str | Sequence[str], user: str) -> str | None:
         return await self._chat(system, user, json_format=True, temperature=0.0)
 
-    async def chat_text(self, system: str, user: str) -> str | None:
+    async def chat_text(self, system: str | Sequence[str], user: str) -> str | None:
         return await self._chat(system, user, json_format=False, temperature=0.6)
 
     async def _chat(
-        self, system: str, user: str, *, json_format: bool, temperature: float
+        self, system: str | Sequence[str], user: str, *, json_format: bool, temperature: float
     ) -> str | None:
         base: dict[str, Any] = {
             "model": self.model,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
+            "messages": _system_messages(system) + [{"role": "user", "content": user}],
         }
         # Newer/reasoning models (o-series, gpt-5.x, …) reject a custom temperature
         # and sometimes response_format. Try our preferred params, then progressively
@@ -320,19 +360,19 @@ class AnthropicClient:
         except Exception:
             return []
 
-    async def chat_json(self, system: str, user: str) -> str | None:
+    async def chat_json(self, system: str | Sequence[str], user: str) -> str | None:
         # Anthropic has no response_format flag here; the system prompt already
         # demands JSON-only, and the caller parses defensively.
         return await self._message(system, user)
 
-    async def chat_text(self, system: str, user: str) -> str | None:
+    async def chat_text(self, system: str | Sequence[str], user: str) -> str | None:
         return await self._message(system, user)
 
-    async def _message(self, system: str, user: str) -> str | None:
+    async def _message(self, system: str | Sequence[str], user: str) -> str | None:
         payload = {
             "model": self.model,
             "max_tokens": self.max_tokens,
-            "system": system,
+            "system": _system_text(system),
             "messages": [{"role": "user", "content": user}],
         }
         try:
@@ -530,7 +570,7 @@ class LLMIntentResolver(IntentResolver):
         if not self.router.active:
             return None, None
         controllable = self._controllable(entities)
-        system = with_language(CHAT_SYSTEM, language, persona)
+        system = build_system(CHAT_SYSTEM, language, persona)
         user = json.dumps(
             {"message": text, "devices": self._devices(controllable), "status": status}
         )
