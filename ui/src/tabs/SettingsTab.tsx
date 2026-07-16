@@ -1,15 +1,59 @@
-import { useVan } from "../state";
-import { AdminPanel } from "../components/AdminPanel";
-import { EventLog } from "../components/EventLog";
+import { useState } from "react";
+import { useT } from "../i18n";
+import { SettingsProvider, useSettings } from "../settings/SettingsProvider";
+import { GeneralSettings } from "../settings/GeneralSettings";
+import { AssistantSettings } from "../settings/AssistantSettings";
+import { SystemSettings } from "../settings/SystemSettings";
+import { Personalities } from "../components/Personalities";
+
+type Category = "general" | "assistant" | "personalities" | "system";
+
+// Settings is split into categories, selected by the sub-tab bar. Adding a category
+// = one entry here + one panel. Shared state lives in SettingsProvider.
+const CATEGORIES: { id: Category; labelKey: string }[] = [
+  { id: "general", labelKey: "settings.catGeneral" },
+  { id: "assistant", labelKey: "settings.assistant" },
+  { id: "personalities", labelKey: "personalities.title" },
+  { id: "system", labelKey: "settings.system" },
+];
 
 export function SettingsTab() {
-  const { log } = useVan();
   return (
-    <div className="tab-grid stack">
-      <AdminPanel />
-      <section className="panel">
-        <EventLog log={log} />
-      </section>
+    <SettingsProvider>
+      <SettingsCategories />
+    </SettingsProvider>
+  );
+}
+
+function SettingsCategories() {
+  const t = useT();
+  const { saving, saved } = useSettings();
+  const [cat, setCat] = useState<Category>("general");
+
+  return (
+    <div className="settings-view">
+      <nav className="subtabs">
+        {CATEGORIES.map((c) => (
+          <button
+            key={c.id}
+            className={"subtab" + (cat === c.id ? " active" : "")}
+            onClick={() => setCat(c.id)}
+          >
+            {t(c.labelKey)}
+          </button>
+        ))}
+      </nav>
+
+      <div className="settings-body">
+        {cat === "general" && <GeneralSettings />}
+        {cat === "assistant" && <AssistantSettings />}
+        {cat === "personalities" && <Personalities />}
+        {cat === "system" && <SystemSettings />}
+      </div>
+
+      <div className="save-status">
+        {saving ? t("common.saving") : saved ? t("settings.saved") : ""}
+      </div>
     </div>
   );
 }

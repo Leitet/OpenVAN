@@ -260,6 +260,7 @@ const T: Record<string, Entry> = {
   },
 
   // --- settings / assistant config ---
+  "settings.catGeneral": { en: "General", sv: "Allmänt", de: "Allgemein" },
   "settings.assistant": { en: "Assistant", sv: "Assistent", de: "Assistent" },
   "settings.enableAi": {
     en: "Enable AI assistant",

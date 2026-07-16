@@ -212,6 +212,42 @@ body {
   min-height: 18px;
 }
 
+/* ---- Settings category sub-tabs ---- */
+.settings-view {
+  display: flex;
+  flex-direction: column;
+}
+.subtabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+.subtab {
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.subtab:hover {
+  color: var(--text);
+}
+.subtab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.settings-body {
+  display: grid;
+  gap: 18px;
+}
+
 /* ---- connectivity mode switch + local/cloud model cards (Admin) ---- */
 .mode-switch {
   display: grid;
