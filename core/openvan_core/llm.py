@@ -234,31 +234,37 @@ class OpenAICompatibleClient:
     async def _chat(
         self, system: str, user: str, *, json_format: bool, temperature: float
     ) -> str | None:
-        payload: dict[str, Any] = {
+        base: dict[str, Any] = {
             "model": self.model,
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            "temperature": temperature,
         }
+        # Newer/reasoning models (o-series, gpt-5.x, …) reject a custom temperature
+        # and sometimes response_format. Try our preferred params, then progressively
+        # drop the non-standard ones on a 400 so any model still answers.
+        variants: list[dict[str, Any]] = [dict(base, temperature=temperature)]
         if json_format:
-            payload["response_format"] = {"type": "json_object"}
+            variants[0]["response_format"] = {"type": "json_object"}
+            variants.append(dict(base, response_format={"type": "json_object"}))
+        variants.append(base)
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                resp = await client.post(
-                    f"{self.base_url}/chat/completions",
-                    json=payload,
-                    headers=self._headers(),
-                )
-                resp.raise_for_status()
-                choices = resp.json().get("choices", [])
-                if not choices:
-                    return None
-                return choices[0].get("message", {}).get("content")
+                for i, payload in enumerate(variants):
+                    resp = await client.post(
+                        f"{self.base_url}/chat/completions",
+                        json=payload,
+                        headers=self._headers(),
+                    )
+                    if resp.status_code == 400 and i < len(variants) - 1:
+                        continue  # model rejected a param — retry more minimally
+                    resp.raise_for_status()
+                    choices = resp.json().get("choices", [])
+                    return choices[0].get("message", {}).get("content") if choices else None
         except Exception as exc:
             logger.warning("online LLM call failed: %r", exc)
-            return None
+        return None
 
 
 class AnthropicClient:
