@@ -20,6 +20,7 @@ export function ComfortTab() {
         <div className="gauge-grid">
           <Gauge label={t("label.cabin")} value={num(twin["cabin.temperature"])} unit="°C" min={-5} max={35} />
           <Gauge label={t("label.outside")} value={num(twin["outside.temperature"])} unit="°C" min={-20} max={40} />
+          <Gauge label={t("label.propane")} value={num(twin["propane.level_pct"])} unit="%" warnBelow={20} />
         </div>
         <HeaterControl entity={heater} />
       </section>

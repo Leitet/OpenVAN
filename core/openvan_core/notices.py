@@ -119,6 +119,24 @@ class LowDiesel(Advisor):
         )
 
 
+class LowPropane(Advisor):
+    key = "propane_low"
+
+    def __init__(self, threshold: float = 20.0) -> None:
+        self.threshold = threshold
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        level = _entity_value(hub, "sensor.propane_level")
+        if level is None or level > self.threshold:
+            return None
+        return Notice(
+            self.key, "suggestion", "climate", "Propane getting low",
+            f"The gas bottle is at {level:.0f}%. Plan a swap or refill before it's "
+            f"empty mid-meal.",
+            {"level": level},
+        )
+
+
 class BatteryRuntime(Advisor):
     """Warn when the house battery is unlikely to last much longer at current draw."""
 
@@ -418,6 +436,7 @@ def default_advisors() -> list[Advisor]:
         LowFreshWater(),
         GreyWaterFull(),
         LowDiesel(),
+        LowPropane(),
         BatteryRuntime(),
         LongDrive(),
         # Air & safety (life-critical → most-common)

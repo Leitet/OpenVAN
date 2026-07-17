@@ -90,6 +90,7 @@ export function BenchApp() {
           <SignalSlider label="Fresh water" signalKey="fresh_water.level_pct" value={num(twin["fresh_water.level_pct"])} min={0} max={100} unit="%" />
           <SignalSlider label="Outside temp" signalKey="outside.temperature" value={num(twin["outside.temperature"])} min={-20} max={40} step={0.5} unit="°C" />
           <SignalSlider label="Diesel fuel" signalKey="diesel_tank.level_pct" value={num(twin["diesel_tank.level_pct"])} min={0} max={100} unit="%" />
+          <SignalSlider label="Propane" signalKey="propane.level_pct" value={num(twin["propane.level_pct"])} min={0} max={100} unit="%" />
           <p className="note">
             Cabin temperature is <em>derived</em> by Core's thermal model, not injected —
             set the outside temp cold and turn on the heater from the product UI to

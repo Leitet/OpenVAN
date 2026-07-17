@@ -165,6 +165,7 @@ const T: Record<string, Entry> = {
   "label.lpg": { en: "Propane", sv: "Gasol", de: "Propan" },
   "label.co2": { en: "CO₂", sv: "CO₂", de: "CO₂" },
   "label.humidity": { en: "Humidity", sv: "Luftfuktighet", de: "Luftfeuchtigkeit" },
+  "label.propane": { en: "Propane", sv: "Gasol", de: "Propan" },
   "safety.allClear": { en: "All clear", sv: "Allt lugnt", de: "Alles in Ordnung" },
   "safety.smoke": { en: "Smoke", sv: "Rök", de: "Rauch" },
   "memory.title": { en: "What I've learned", sv: "Vad jag har lärt mig", de: "Was ich gelernt habe" },

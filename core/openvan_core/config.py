@@ -154,6 +154,7 @@ class Config:
             "diesel_heater.setpoint": 20.0,
             "diesel_heater.power": 0.0,
             "diesel_tank.level_pct": 70.0,
+            "propane.level_pct": 60.0,
             # Vehicle / GPS — starting parked in the Dolomites.
             "gps.lat": 46.5405,
             "gps.lon": 11.6553,
