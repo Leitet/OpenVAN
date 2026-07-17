@@ -60,16 +60,21 @@ Your task: recommend where to spend the night, choosing from the `spots` I found
 nearby. Each spot has name, kind, distance_km, amenities and a description. You also
 get `weather` (wind_from = the direction the wind blows FROM, wind_kmh, cloud,
 condition, rain_eta_hours), `sun` (the hour now; the sun sets in the WEST),
-`status` (my battery + fresh water) and `wants` (their stated preferences).
+`status` (my resources: battery %, fresh water %, grey water %, diesel %, and the
+estimated hours until each runs out or fills up), `needs` (the resources running
+low right now — each names the `amenity` that would solve it), `notices` (active
+alerts) and `wants` (their stated preferences).
 
-Honour their `request` and `wants`. Pick the best 1-2 spots and say why, in the
-FIRST PERSON, warm and brief (2-4 sentences). Weigh distance, amenities (prefer
-water/toilets if my fresh water is low), rain and comfort. Where you can, add a
-short MICRO-SITING tip for the pitch:
+Honour their `request` and `wants`, and FACTOR IN MY `needs`: when a resource is
+low, prefer a spot whose `amenities` meet it (water / power / toilets for a grey
+dump) and say so — e.g. "since we're low on water, Lakeside has a tap". If no
+nearby spot covers a need, suggest topping up on the way — e.g. "fill up at services
+on the way to Z" or "grab diesel en route". Pick the best 1-2 spots and say why, in
+the FIRST PERSON, warm and brief (2-4 sentences). Weigh distance, amenities, my
+needs, rain and comfort. Where you can, add a short MICRO-SITING tip for the pitch:
 for evening sun, face/park open to the WEST; for shelter, keep the side facing the
 wind (`wind_from`) blocked by trees, walls or terrain, and avoid exposed ridges when
-it's windy. Use only the facts given (spot descriptions + weather). No lists, no
-markdown.
+it's windy. Use only the facts given (spots, status, weather). No lists, no markdown.
 """
 
 # Localised offline lines when no model can phrase a recommendation.
@@ -82,6 +87,22 @@ _CAMP_NONE = {
     "en": "I couldn't find any spots nearby right now.",
     "sv": "Jag hittade inga platser i närheten just nu.",
     "de": "Ich habe gerade keine Plätze in der Nähe gefunden.",
+}
+# Offline need hint: surface a nearby spot that covers a low resource.
+_CAMP_NEED_HINT = {
+    "en": " We're low on {resource} — {spot} has {amenity}.",
+    "sv": " Vi har ont om {resource} — {spot} har {amenity}.",
+    "de": " Wir haben wenig {resource} — {spot} bietet {amenity}.",
+}
+_NEED_WORD = {
+    "en": {"fresh_water": "water", "battery": "power", "grey_water": "tank space", "diesel": "fuel"},
+    "sv": {"fresh_water": "vatten", "battery": "ström", "grey_water": "tankutrymme", "diesel": "bränsle"},
+    "de": {"fresh_water": "Wasser", "battery": "Strom", "grey_water": "Tankplatz", "diesel": "Kraftstoff"},
+}
+_AMENITY_WORD = {
+    "en": {"water": "water", "power": "power", "toilets": "a dump/toilets"},
+    "sv": {"water": "vatten", "power": "ström", "toilets": "toalett/tömning"},
+    "de": {"water": "Wasser", "power": "Strom", "toilets": "Toiletten/Entsorgung"},
 }
 
 _BATTERY_CAPACITY_AH = 200.0
@@ -234,6 +255,7 @@ class Companion:
             return _CAMP_NONE.get(language, _CAMP_NONE["en"])
         if use_llm and self.router.active:
             context = self.build_context(hub, notices)
+            preds = context.get("predictions") or {}
             current = (self.weather.snapshot().get("current") if self.weather else {}) or {}
             payload = json.dumps(
                 {
@@ -248,19 +270,55 @@ class Companion:
                         "rain_eta_hours": self.weather.rain_eta_hours() if self.weather else None,
                     },
                     "sun": {"hour_now": datetime.now().hour, "note": "the sun sets in the west"},
+                    # The full resource picture, so the model can weave low battery /
+                    # water / grey / diesel into where it sends us.
                     "status": {
                         "battery_soc_pct": context.get("battery_soc_pct"),
+                        "battery_days_left": context.get("battery_days_left"),
+                        "battery_empty_hours": preds.get("battery_empty_hours"),
                         "fresh_water_pct": context.get("fresh_water_pct"),
+                        "fresh_water_empty_hours": preds.get("fresh_water_empty_hours"),
+                        "grey_water_pct": context.get("grey_water_pct"),
+                        "grey_water_full_hours": preds.get("grey_water_full_hours"),
+                        "diesel_pct": context.get("diesel_pct"),
+                        "diesel_empty_hours": preds.get("diesel_empty_hours"),
                     },
+                    "needs": _camp_needs(context),
+                    "notices": context.get("notices", []),
                 }
             )
             system = build_system(CAMP_SYSTEM, language, persona)
             text = await self.router.build_client().chat_text(system, payload)
             if text:
                 return text.strip()
-        # Offline: a short localised list of the closest options.
+        # Offline: the closest options, and — if a resource is low — surface one that
+        # covers it and flag the need (still a plain localised line, invents nothing).
+        return self._camp_fallback(hub, notices, spots, language)
+
+    def _camp_fallback(
+        self,
+        hub: "Hub",
+        notices: list[dict[str, Any]],
+        spots: list[dict[str, Any]],
+        language: str,
+    ) -> str:
+        lang = language if language in _CAMP_FALLBACK else "en"
         names = ", ".join(f"{s.get('name')} ({s.get('distance_km')} km)" for s in spots[:3])
-        return _CAMP_FALLBACK.get(language, _CAMP_FALLBACK["en"]).format(spots=names)
+        line = _CAMP_FALLBACK[lang].format(spots=names)
+        # Surface the first low resource that a nearby spot can cover.
+        for need in _camp_needs(self.build_context(hub, notices)):
+            amenity = need.get("amenity")
+            if not amenity:
+                continue
+            match = next((s for s in spots if amenity in (s.get("amenities") or [])), None)
+            if match:
+                line += _CAMP_NEED_HINT[lang].format(
+                    resource=_NEED_WORD[lang].get(need["resource"], need["resource"]),
+                    spot=match.get("name"),
+                    amenity=_AMENITY_WORD[lang].get(amenity, amenity),
+                )
+                break
+        return line
 
     def render_template(self, ctx: dict[str, Any]) -> str:
         parts = [f"{ctx['greeting']}."]
@@ -299,6 +357,46 @@ class Companion:
         if len(parts) == 1:
             parts.append("Everything looks good — enjoy the journey.")
         return " ".join(parts)
+
+
+def _camp_needs(ctx: dict[str, Any]) -> list[dict[str, Any]]:
+    """Resources that are running low right now, each tagged with the camp
+    `amenity` that would relieve it. Drives both the LLM recommendation and the
+    offline fallback so 'we're low on water' shapes where we're sent."""
+    preds = ctx.get("predictions") or {}
+    needs: list[dict[str, Any]] = []
+
+    fw = ctx.get("fresh_water_pct")
+    fw_eta = preds.get("fresh_water_empty_hours")
+    if (fw is not None and fw < 25) or (fw_eta is not None and fw_eta < 24):
+        needs.append(
+            {"resource": "fresh_water", "amenity": "water", "level_pct": fw, "runs_out_in_hours": fw_eta}
+        )
+
+    soc = ctx.get("battery_soc_pct")
+    days = ctx.get("battery_days_left")
+    batt_eta = preds.get("battery_empty_hours")
+    if (soc is not None and soc < 30) or (days is not None and days < 1) or (
+        batt_eta is not None and batt_eta < 24
+    ):
+        needs.append(
+            {"resource": "battery", "amenity": "power", "level_pct": soc, "days_left": days}
+        )
+
+    grey = ctx.get("grey_water_pct")
+    grey_eta = preds.get("grey_water_full_hours")
+    if (grey is not None and grey > 80) or (grey_eta is not None and grey_eta < 12):
+        needs.append(
+            {"resource": "grey_water", "amenity": "toilets", "level_pct": grey, "note": "needs dumping"}
+        )
+
+    diesel = ctx.get("diesel_pct")
+    if diesel is not None and diesel < 20:
+        needs.append(
+            {"resource": "diesel", "amenity": None, "level_pct": diesel, "note": "refuel en route"}
+        )
+
+    return needs
 
 
 def _num(value: object) -> float | None:

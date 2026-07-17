@@ -16,6 +16,7 @@ class FakeClient:
         self._available = available
         self.calls = 0
         self.last_system: str | None = None
+        self.last_user: str | None = None
 
     async def available(self) -> bool:
         return self._available
@@ -26,6 +27,7 @@ class FakeClient:
     async def chat_text(self, system, user):
         self.calls += 1
         self.last_system = system
+        self.last_user = user
         return self._text
 
 
@@ -83,3 +85,68 @@ def test_template_starts_with_greeting():
 
     rendered = Companion(None).render_template({"greeting": "Good morning", "notices": []})
     assert rendered.startswith("Good morning.")
+
+
+# --- resource-aware camp recommendation -------------------------------------
+
+def test_camp_needs_flags_low_resources():
+    from openvan_core.companion import _camp_needs
+
+    ctx = {
+        "fresh_water_pct": 12.0,
+        "battery_soc_pct": 22.0,
+        "grey_water_pct": 90.0,
+        "diesel_pct": 15.0,
+        "predictions": {},
+    }
+    needs = {n["resource"]: n for n in _camp_needs(ctx)}
+    assert needs["fresh_water"]["amenity"] == "water"
+    assert needs["battery"]["amenity"] == "power"
+    assert needs["grey_water"]["amenity"] == "toilets"
+    assert "diesel" in needs  # low fuel flagged even without an amenity to fix it
+
+
+def test_camp_needs_quiet_when_healthy():
+    from openvan_core.companion import _camp_needs
+
+    ctx = {
+        "fresh_water_pct": 80.0,
+        "battery_soc_pct": 85.0,
+        "grey_water_pct": 20.0,
+        "diesel_pct": 70.0,
+        "predictions": {},
+    }
+    assert _camp_needs(ctx) == []
+
+
+_SPOTS = [
+    {"name": "Dry Ridge", "distance_km": 1.0, "amenities": ["view"]},
+    {"name": "Lakeside", "distance_km": 4.0, "amenities": ["water", "toilets"]},
+]
+
+
+async def test_camp_recommendation_feeds_low_water_to_the_model(core):
+    import json
+
+    client = _force_llm(core, "Since we're low on water, Lakeside has a tap.")
+    await core.twin.set_signal("fresh_water.level_pct", 12.0)
+    reply = await core.companion.recommend_camp(
+        core.hub, core.advisors.active_notices(), _SPOTS, wants=[], use_llm=True
+    )
+    assert reply  # the model's phrasing is returned
+    payload = json.loads(client.last_user)
+    # The model was actually told water is low and given the full resource status.
+    resources = {n["resource"] for n in payload["needs"]}
+    assert "fresh_water" in resources
+    assert payload["status"]["fresh_water_pct"] == 12.0
+    assert "grey_water_pct" in payload["status"]
+
+
+async def test_camp_offline_fallback_surfaces_a_spot_that_covers_the_need(core):
+    await core.twin.set_signal("fresh_water.level_pct", 12.0)
+    reply = await core.companion.recommend_camp(
+        core.hub, core.advisors.active_notices(), _SPOTS, wants=[], use_llm=False
+    )
+    # Offline, still points at the spot with water and flags the need.
+    assert "Lakeside" in reply
+    assert "water" in reply.lower()
