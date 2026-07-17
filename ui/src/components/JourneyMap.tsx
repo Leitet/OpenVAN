@@ -31,14 +31,13 @@ export function JourneyMap() {
   // init the map once
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
-    const map = L.map(elRef.current, { zoomControl: true, attributionControl: true }).setView(
+    // Attribution shown as our own caption below the map (see JSX) instead of the
+    // floating in-map box, so it blends with the card.
+    const map = L.map(elRef.current, { zoomControl: true, attributionControl: false }).setView(
       [46.5, 11.3],
       13,
     );
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap contributors",
-    }).addTo(map);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
     // Only a *user* pan/zoom drops follow — programmatic moves (fit, follow) don't.
     map.on("movestart zoomstart", () => {
       if (!programmaticRef.current) followRef.current = false;

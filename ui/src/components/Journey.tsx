@@ -50,7 +50,16 @@ export function Journey({ twin }: { twin: Twin }) {
 
   return (
     <section className="panel span2 journey-panel">
-      <h2>{t("journey.title")}</h2>
+      <div className="journey-head">
+        <h2>{t("journey.title")}</h2>
+        <span className="journey-attrib">
+          ©{" "}
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
+            OpenStreetMap
+          </a>{" "}
+          contributors
+        </span>
+      </div>
       <JourneyMap />
       <div className="journey-legend">
         <span><i className="dot here" /> {t("journey.position")}</span>
