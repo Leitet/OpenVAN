@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import type { Entity } from "@shared/types";
 import { useVan } from "../state";
 import { useT } from "../i18n";
+import { CameraScene } from "./CameraScene";
 
-const LOC_ICON: Record<string, string> = { rear: "🛣️", cabin: "🛋️", door: "🚪", awning: "⛺" };
 const CONN: Record<string, string> = { wired: "WIRED", wifi: "WI-FI", "4g": "4G LTE" };
 
 // A camera tile. In the simulator the "feed" is a stylised placeholder (there's no
@@ -38,8 +38,8 @@ export function CameraTile({ entity }: { entity: Entity }) {
   return (
     <div className={"cam-tile" + (offline ? " offline" : "") + (motion ? " motion" : "")}>
       <div className={"cam-feed loc-" + loc + " ph-" + phase + (nightVision ? " nightvision" : "")}>
+        {!offline && <CameraScene location={loc} motion={motion} />}
         <div className="cam-scan" />
-        <span className="cam-wm">{LOC_ICON[loc] ?? "📷"}</span>
         {offline ? (
           <div className="cam-nosignal">{t("cam.nosignal")}</div>
         ) : (
