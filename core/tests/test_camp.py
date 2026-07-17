@@ -42,6 +42,17 @@ async def test_sim_source_returns_ranked_spots_near_location(tmp_path):
     assert any(s["description"] for s in spots)
 
 
+async def test_sim_spots_stay_put_while_driving_within_a_cell(tmp_path):
+    # Two nearby query points in the same grid cell must return spots at identical
+    # coordinates — otherwise the map markers slide along with the van.
+    import sim
+
+    src = sim.SimCampSource()
+    a = await src.search(46.52, 11.31, 30)
+    b = await src.search(46.54, 11.34, 30)  # ~3 km away, same ~0.1° cell
+    assert [(s.lat, s.lon) for s in a] == [(s.lat, s.lon) for s in b]
+
+
 async def test_no_enabled_source_yields_no_spots(tmp_path):
     svc, _ = _service(tmp_path, sources=())
     res = await svc.search()
