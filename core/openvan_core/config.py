@@ -29,6 +29,8 @@ _PERSISTED_FIELDS = (
     "online_base_url",
     "online_model",
     "simulate",
+    "camp_sources",
+    "camp_search_radius_km",
 )
 
 
@@ -87,6 +89,13 @@ class Config:
     # Rated peak of the solar array (W) — powers the weather-aware solar forecast.
     # Illustrative; measure a real install before shipping.
     solar_capacity_w: float = 600.0
+    # Camp spots — external providers of places to stay (campsources/). Enabled
+    # source ids; the "sim" source is always safe (offline). Others (e.g. keyless
+    # OSM "overpass") are opt-in in the Admin UI.
+    camp_enabled: bool = True
+    camp_sources: list[str] = field(default_factory=lambda: ["sim"])
+    camp_search_radius_km: float = 30.0
+    camp_sources_dir: Path = field(default_factory=lambda: _REPO_ROOT / "campsources")
     # Travel memory — auto-logs "stays" when parked. Offline-first, SQLite.
     memory_enabled: bool = True
     memory_dwell_s: float = 90.0  # parked this long before a stay is logged

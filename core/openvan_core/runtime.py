@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .backends import Backend, SimBackend
+from .camp import CampService
 from .companion import Companion
 from .config import Config
 from .events import EventBus
@@ -60,6 +61,7 @@ class Core:
     telemetry_recorder: TelemetryRecorder
     weather: WeatherService
     memory: TravelMemory
+    camp: CampService
 
     async def start(self) -> None:
         # Open telemetry and start recording before seeding, so the initial
@@ -82,6 +84,8 @@ class Core:
             await self.weather.start()
         if self.config.memory_enabled:
             await self.memory.start()
+        if self.config.camp_enabled:
+            self.camp.discover()
 
     async def stop(self) -> None:
         if self.config.memory_enabled:
@@ -234,6 +238,13 @@ class Core:
         await self.bus.publish("assistant.changed", self.assistant_state())
         return result
 
+    async def set_camp_source(self, source_id: str, enabled: bool) -> bool:
+        if not self.camp.set_enabled(source_id, enabled):
+            return False
+        self._save_settings()
+        await self.bus.publish("settings.changed", {"settings": self.settings()})
+        return True
+
     def _save_settings(self) -> None:
         from .config import settings_path
 
@@ -304,6 +315,9 @@ def build_core(config: Config | None = None) -> Core:
     )
     memory = TravelMemory(config, twin, weather=weather, telemetry=telemetry)
     companion = Companion(router, telemetry, weather, memory)
+    camp = CampService(
+        config, get_location=lambda: (twin.get("gps.lat"), twin.get("gps.lon"))
+    )
     return Core(
         config=config,
         bus=bus,
@@ -319,5 +333,6 @@ def build_core(config: Config | None = None) -> Core:
         telemetry_recorder=telemetry_recorder,
         weather=weather,
         memory=memory,
+        camp=camp,
         router=router,
     )

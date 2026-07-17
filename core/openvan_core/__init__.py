@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from .apiclient import OpenVanClient
 from .backends import Backend, SimBackend
+from .camp import CampService
+from .campsources import CampSource, CampSpot
 from .entities import Entity
 from .events import Event, EventBus
 from .hub import Hub
@@ -58,6 +60,9 @@ __all__ = [
     "compute_predictions",
     "Plugin",
     "PluginManager",
+    "CampSource",
+    "CampSpot",
+    "CampService",
     "Core",
     "build_core",
     "SafetyDecision",

@@ -82,6 +82,11 @@ class SettingsBody(BaseModel):
     simulate: bool | None = None
 
 
+class CampSourceBody(BaseModel):
+    id: str
+    enabled: bool
+
+
 class ActivePersonalityBody(BaseModel):
     id: str
 
@@ -181,6 +186,22 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
     async def chat(body: TextBody) -> dict[str, Any]:
         # Conversational: runs a command (safety-checked) or answers from state.
         return await core.chat(body.text)
+
+    @app.get("/api/camp/search")
+    async def camp_search(radius: float | None = None) -> dict[str, Any]:
+        if not core.config.camp_enabled:
+            return {"location": None, "spots": []}
+        return await core.camp.search(radius)
+
+    @app.get("/api/camp/sources")
+    async def camp_sources() -> dict[str, Any]:
+        return {"sources": core.camp.source_infos()}
+
+    @app.post("/api/camp/sources")
+    async def set_camp_source(body: CampSourceBody) -> dict[str, Any]:
+        if not await core.set_camp_source(body.id, body.enabled):
+            raise HTTPException(404, f"unknown camp source '{body.id}'")
+        return {"sources": core.camp.source_infos()}
 
     @app.post("/api/sim/signal")
     async def sim_signal(body: SignalBody) -> dict[str, str]:
