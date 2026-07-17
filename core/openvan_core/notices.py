@@ -119,6 +119,37 @@ class LowDiesel(Advisor):
         )
 
 
+class FridgeWarm(Advisor):
+    key = "fridge_warm"
+
+    def __init__(self, threshold_c: float = 8.0) -> None:
+        self.threshold_c = threshold_c
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        temp = _twin_float(hub, "fridge.temp_c")
+        if temp is None or temp < self.threshold_c:
+            return None
+        return Notice(
+            self.key, "warning", "energy", "Fridge warming up",
+            f"The fridge is at {temp:.0f}°C — above the food-safe range. Check the "
+            f"door, the power, or the setting.",
+            {"temp_c": temp},
+        )
+
+
+class FridgeDoorOpen(Advisor):
+    key = "fridge_door_open"
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        if not hub.twin.get("fridge.door_open"):
+            return None
+        return Notice(
+            self.key, "suggestion", "energy", "Fridge door open",
+            "The fridge door is open — close it to save the cold and the battery.",
+            {},
+        )
+
+
 class LowPropane(Advisor):
     key = "propane_low"
 
@@ -460,6 +491,8 @@ def default_advisors() -> list[Advisor]:
         GreyWaterFull(),
         LowDiesel(),
         LowPropane(),
+        FridgeWarm(),
+        FridgeDoorOpen(),
         BatteryRuntime(),
         LongDrive(),
         # Air & safety (life-critical → most-common)

@@ -17,6 +17,8 @@ export function PowerTab() {
           <Gauge label={t("label.voltage")} value={num(twin["house_battery.voltage"])} unit="V" min={10} max={15} />
           <Gauge label={t("label.solar")} value={num(twin["solar.power"])} unit="W" min={0} max={600} />
           <Gauge label={t("label.heaterDraw")} value={num(twin["diesel_heater.power"])} unit="W" min={0} max={120} />
+          <Gauge label={t("label.fridge")} value={num(twin["fridge.temp_c"])} unit="°C" min={-5} max={20} />
+          <Gauge label={t("label.fridgeDraw")} value={num(twin["fridge.power"])} unit="W" min={0} max={120} />
         </div>
       </section>
 
