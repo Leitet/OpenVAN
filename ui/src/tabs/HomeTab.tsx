@@ -4,6 +4,7 @@ import { useT } from "../i18n";
 import { Gauge } from "../components/Gauge";
 import { QuickToggle } from "../components/QuickToggle";
 import { Companion } from "../components/Companion";
+import { Scenes } from "../components/Scenes";
 
 export function HomeTab() {
   const { entities, twin, notices } = useVan();
@@ -59,6 +60,8 @@ export function HomeTab() {
           />
         </div>
       </section>
+
+      <Scenes />
 
       <section className="panel span2">
         <Companion notices={notices} />

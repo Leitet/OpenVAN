@@ -92,6 +92,10 @@ class CampSourceConfigBody(BaseModel):
     config: dict[str, Any]
 
 
+class SceneBody(BaseModel):
+    id: str
+
+
 class ActivePersonalityBody(BaseModel):
     id: str
 
@@ -213,6 +217,17 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
         if not await core.set_camp_source_config(body.id, body.config):
             raise HTTPException(404, f"unknown camp source '{body.id}'")
         return {"sources": core.camp.source_infos()}
+
+    @app.get("/api/scenes")
+    async def scenes() -> dict[str, Any]:
+        return {"scenes": core.scenes.list()}
+
+    @app.post("/api/scenes/run")
+    async def run_scene(body: SceneBody) -> dict[str, Any]:
+        result = await core.run_scene(body.id)
+        if result is None:
+            raise HTTPException(404, f"unknown scene '{body.id}'")
+        return result
 
     @app.post("/api/sim/signal")
     async def sim_signal(body: SignalBody) -> dict[str, str]:

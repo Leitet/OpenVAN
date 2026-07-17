@@ -692,6 +692,45 @@ body {
   margin-top: 4px;
 }
 
+/* Scenes / routines */
+.scene-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+}
+.scene-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.08s, border-color 0.15s, background 0.15s;
+}
+.scene-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.scene-btn:active {
+  transform: translateY(1px);
+}
+.scene-btn.done {
+  border-color: var(--good);
+  background: color-mix(in srgb, var(--good) 14%, var(--panel-2));
+  color: var(--good);
+}
+.scene-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+.scene-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* Air & safety */
 .safety-alarm {
   display: flex;

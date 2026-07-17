@@ -41,6 +41,7 @@ from .safety import (
     SafetyValidator,
 )
 from .roads import RoadNetwork
+from .scenes import SceneEngine
 from .simulation import VanSimulation
 from .store import ConfigStore
 from .telemetry import TelemetryRecorder, TelemetryStore
@@ -70,6 +71,23 @@ def _looks_like_camp_query(text: str) -> bool:
     return bool(_CAMP_RE.search(text))
 
 
+# Explicit spoken triggers for scenes. Kept fairly specific so a stray "let's go"
+# doesn't switch the van off — running a scene actuates devices (via safety).
+_SCENE_PATTERNS = [
+    ("goodnight", re.compile(r"\bgood ?night\b|\bnight night\b|going to (bed|sleep)|\bbed ?time\b", re.I)),
+    ("morning", re.compile(r"\bgood morning\b|\bmorning routine\b|time to (wake|get up)", re.I)),
+    ("setup_camp", re.compile(r"\bset ?up camp\b|\bmake camp\b|\bwe'?re here\b|\bwe'?ve arrived\b|\barrived\b", re.I)),
+    ("leaving", re.compile(r"\b(leaving|heading out|packing up|pack up|hit the road)\b|time to (go|drive|leave)", re.I)),
+]
+
+
+def _match_scene(text: str) -> str | None:
+    for scene_id, rx in _SCENE_PATTERNS:
+        if rx.search(text):
+            return scene_id
+    return None
+
+
 @dataclass
 class Core:
     config: Config
@@ -90,6 +108,7 @@ class Core:
     camp: CampService
     store: ConfigStore
     memory_chat: ChatMemory
+    scenes: SceneEngine
     roads: RoadNetwork | None = None
 
     async def start(self) -> None:
@@ -176,6 +195,12 @@ class Core:
         notices = self.advisors.active_notices()
         preferences = self.memory_chat.preferences
 
+        # A spoken routine ("goodnight", "we're leaving") runs a whole scene — the
+        # safety layer still vets every step. Checked first, deterministically.
+        scene_id = _match_scene(text)
+        if scene_id is not None:
+            return await self._run_scene_reply(scene_id)
+
         # Camp queries route to a camp search regardless of model strength, so a weak
         # or offline model can't mistake "where should we sleep?" for a device command.
         if self.config.camp_enabled and _looks_like_camp_query(text):
@@ -219,6 +244,24 @@ class Core:
             language=language, preferences=preferences,
         )
         return {"reply": answer, "action": False, "ok": True, "blocked_by_safety": False}
+
+    async def run_scene(self, scene_id: str) -> dict[str, Any] | None:
+        """Run a scene's steps through the safety-checked intent path."""
+        return await self.scenes.run(scene_id)
+
+    async def _run_scene_reply(self, scene_id: str) -> dict[str, Any]:
+        result = await self.scenes.run(scene_id)
+        if result is None:
+            return {"reply": "I don't know that routine.", "action": False,
+                    "ok": False, "blocked_by_safety": False}
+        name = result["scene"]["name"]
+        blocked = [r for r in result["steps"] if r.get("blocked_by_safety")]
+        if blocked:
+            reply = f"{name}: done — but I held back {len(blocked)} step(s) for safety."
+        else:
+            reply = f"{name}: all set. {result['scene']['description']}"
+        return {"reply": reply, "action": True, "ok": result["ok"],
+                "blocked_by_safety": bool(blocked), "scene": result["scene"]["id"]}
 
     async def _chat_action(self, intent: Intent) -> dict[str, Any]:
         result = await self.hub.execute_intent(intent)
@@ -434,6 +477,7 @@ def build_core(config: Config | None = None) -> Core:
         store=store,
     )
     memory_chat = ChatMemory(store, router)
+    scenes = SceneEngine(hub)
     return Core(
         config=config,
         bus=bus,
@@ -452,6 +496,7 @@ def build_core(config: Config | None = None) -> Core:
         camp=camp,
         store=store,
         memory_chat=memory_chat,
+        scenes=scenes,
         router=router,
         roads=roads,
     )

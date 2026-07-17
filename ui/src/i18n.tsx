@@ -150,6 +150,7 @@ const T: Record<string, Entry> = {
   },
 
   // --- journey ---
+  "home.routines": { en: "Routines", sv: "Rutiner", de: "Routinen" },
   "comfort.airSafety": { en: "Air & Safety", sv: "Luft & säkerhet", de: "Luft & Sicherheit" },
   "label.co": { en: "Carbon monoxide", sv: "Kolmonoxid", de: "Kohlenmonoxid" },
   "label.lpg": { en: "Propane", sv: "Gasol", de: "Propan" },

@@ -138,6 +138,13 @@ export interface AssistantMemory {
   preferences: string[];
 }
 
+export interface SceneInfo {
+  id: string;
+  name: string;
+  icon: string; // "moon" | "sun" | "door" | "tent"
+  description: string;
+}
+
 export interface Notice {
   key: string;
   level: "info" | "suggestion" | "warning";
