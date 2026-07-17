@@ -54,6 +54,9 @@ export interface Settings {
   assistant: Assistant;
   simulate: boolean;
   personality: string;
+  tuning: Record<string, number>;
+  tuning_defaults: Record<string, number>;
+  maintenance_intervals: Record<string, number>;
   plugins: PluginInfo[];
 }
 

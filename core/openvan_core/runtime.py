@@ -16,7 +16,7 @@ from typing import Any
 from .backends import Backend, SimBackend
 from .camp import CampService
 from .companion import Companion
-from .config import Config
+from .config import DEFAULT_TUNING, Config
 from .conversation import ChatMemory
 from .events import EventBus
 from .hub import Hub
@@ -42,7 +42,7 @@ from .safety import (
     SafetyValidator,
 )
 from .roads import RoadNetwork
-from .scenes import SceneEngine
+from .scenes import SceneEngine, default_scenes
 from .security import SecuritySystem
 from .simulation import VanSimulation
 from .store import ConfigStore
@@ -88,6 +88,16 @@ def _match_scene(text: str) -> str | None:
         if rx.search(text):
             return scene_id
     return None
+
+
+def _build_advisors(config, weather, maintenance, security):
+    """The complete advisor list, all thresholds from config tuning. Reused at
+    build time and whenever tuning changes, so live edits take effect."""
+    return default_advisors(config) + [
+        RainSoon(weather, threshold_h=config.tune("rain_soon_hours")),
+        ServiceDue(maintenance),
+        Intrusion(security),
+    ]
 
 
 @dataclass
@@ -266,6 +276,19 @@ class Core:
         odo = self.twin.get("vehicle.odometer_km")
         return self.maintenance.complete(item_id, odo, datetime.now().date())
 
+    def _apply_tunables(self) -> None:
+        """Rebuild the config-driven advisors/scenes/maintenance after a tuning
+        change, so overrides take effect without a restart."""
+        self.advisors.advisors = _build_advisors(
+            self.config, self.weather, self.maintenance, self.security
+        )
+        self.scenes = SceneEngine(
+            self.hub,
+            default_scenes(self.config.tune("scene_sleep_c"), self.config.tune("scene_comfort_c")),
+        )
+        self.maintenance.intervals = self.config.maintenance_intervals
+        self.maintenance.load()
+
     async def set_security_armed(self, armed: bool) -> dict[str, Any]:
         """Arm/disarm away mode, then re-run advisors so an intrusion notice
         appears or clears immediately."""
@@ -349,6 +372,11 @@ class Core:
             "assistant": self.assistant_state(),
             "simulate": self.config.simulate,
             "personality": self.personalities.active_id(),
+            # Feature tuning — current values + built-in defaults so the UI can edit
+            # and reset. Nothing here is hardcoded in the logic.
+            "tuning": dict(self.config.tuning),
+            "tuning_defaults": dict(DEFAULT_TUNING),
+            "maintenance_intervals": dict(self.config.maintenance_intervals),
             "plugins": [
                 {
                     "domain": p.domain,
@@ -373,6 +401,8 @@ class Core:
         online_base_url: str | None = None,
         online_api_key: str | None = None,
         simulate: bool | None = None,
+        tuning: dict[str, Any] | None = None,
+        maintenance_intervals: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if ai_enabled is not None:
             self.config.ai_enabled = ai_enabled
@@ -392,6 +422,20 @@ class Core:
             self.config.online_base_url = online_base_url.rstrip("/")
         if online_api_key is not None:
             self.config.online_api_key = online_api_key or None
+
+        # Feature tuning — merge overrides, then rebuild the advisors/scenes that
+        # use them so the change takes effect live (not just on restart).
+        tunables_changed = False
+        if tuning:
+            self.config.tuning.update({k: float(v) for k, v in tuning.items()})
+            tunables_changed = True
+        if maintenance_intervals:
+            self.config.maintenance_intervals.update(
+                {k: float(v) for k, v in maintenance_intervals.items()}
+            )
+            tunables_changed = True
+        if tunables_changed:
+            self._apply_tunables()
 
         # Re-resolve the effective model for the active profile + new config.
         await self.router.refresh()
@@ -481,7 +525,7 @@ def build_core(config: Config | None = None) -> Core:
         get_location=lambda: (twin.get("gps.lat"), twin.get("gps.lon")),
         bus=bus,
     )
-    advisors = AdvisorEngine(bus, hub, default_advisors() + [RainSoon(weather)])
+    advisors = AdvisorEngine(bus, hub, [])
     telemetry = TelemetryStore(
         config.data_dir / "telemetry.db", config.telemetry_retention_days
     )
@@ -501,11 +545,17 @@ def build_core(config: Config | None = None) -> Core:
         store=store,
     )
     memory_chat = ChatMemory(store, router)
-    scenes = SceneEngine(hub)
-    maintenance = MaintenanceLog(store, get_odometer=lambda: twin.get("vehicle.odometer_km"))
+    scenes = SceneEngine(
+        hub, default_scenes(config.tune("scene_sleep_c"), config.tune("scene_comfort_c"))
+    )
+    maintenance = MaintenanceLog(
+        store,
+        get_odometer=lambda: twin.get("vehicle.odometer_km"),
+        intervals=config.maintenance_intervals,
+    )
     security = SecuritySystem()
-    advisors.advisors.append(ServiceDue(maintenance))
-    advisors.advisors.append(Intrusion(security))
+    # Build the full advisor set from config-driven thresholds (nothing hardcoded).
+    advisors.advisors = _build_advisors(config, weather, maintenance, security)
     return Core(
         config=config,
         bus=bus,

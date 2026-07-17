@@ -156,6 +156,13 @@ const T: Record<string, Entry> = {
   "security.disarmed": { en: "Disarmed", sv: "Avstängt", de: "Unscharf" },
   "security.tapArm": { en: "Tap to arm when you leave", sv: "Tryck för att aktivera", de: "Zum Aktivieren tippen" },
   "security.tapDisarm": { en: "Tap to disarm", sv: "Tryck för att stänga av", de: "Zum Deaktivieren tippen" },
+  "settings.tuning": { en: "Tuning", sv: "Trösklar", de: "Schwellen" },
+  "tuning.hint": {
+    en: "Thresholds and setpoints for the advisors and scenes. Defaults are sensible; edit to suit your van, or reset.",
+    sv: "Trösklar och börvärden för rådgivarna och scenerna. Standard är rimliga; ändra efter din van, eller återställ.",
+    de: "Schwellen und Sollwerte für Hinweise und Szenen. Standardwerte sind sinnvoll; anpassen oder zurücksetzen.",
+  },
+  "tuning.reset": { en: "Reset all to defaults", sv: "Återställ allt", de: "Alles zurücksetzen" },
   "maint.title": { en: "Maintenance", sv: "Underhåll", de: "Wartung" },
   "maint.done": { en: "Done", sv: "Klart", de: "Erledigt" },
   "maint.overdue": { en: "Overdue", sv: "Försenat", de: "Überfällig" },

@@ -692,6 +692,51 @@ body {
   margin-top: 4px;
 }
 
+/* Tuning settings */
+.tuning-group {
+  margin-bottom: 14px;
+}
+.tuning-group h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tuning-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px 18px;
+}
+.tuning-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+}
+.tuning-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tuning-input input {
+  width: 84px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.tuning-input em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 32px;
+}
+
 /* Security away mode */
 .security-btn {
   display: flex;

@@ -41,9 +41,17 @@ class MaintenanceItem:
 
 
 class MaintenanceLog:
-    def __init__(self, store: Any, get_odometer: Callable[[], float | None]) -> None:
+    def __init__(
+        self,
+        store: Any,
+        get_odometer: Callable[[], float | None],
+        intervals: dict[str, float] | None = None,
+    ) -> None:
         self.store = store
         self.get_odometer = get_odometer
+        # Per-item interval overrides (km or days), keyed by item id. Defaults win
+        # when an id is absent, so nothing is hardcoded beyond the fallback.
+        self.intervals = intervals or {}
         self.items: dict[str, MaintenanceItem] = {}
 
     def load(self) -> None:
@@ -55,7 +63,8 @@ class MaintenanceLog:
         for item_id, label, kind, interval in DEFAULT_ITEMS:
             row = saved.get(item_id, {})
             self.items[item_id] = MaintenanceItem(
-                item_id, label, kind, interval, row.get("last_km"), row.get("last_iso")
+                item_id, label, kind, float(self.intervals.get(item_id, interval)),
+                row.get("last_km"), row.get("last_iso"),
             )
 
     def _persist(self) -> None:

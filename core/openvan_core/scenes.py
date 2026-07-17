@@ -42,16 +42,16 @@ class Scene:
         return {"id": self.id, "name": self.name, "icon": self.icon, "description": self.description}
 
 
-def default_scenes() -> list[Scene]:
-    """The four everyday routines. Setpoints are sensible defaults; a later
-    version can bind them to learned preferences (see backlog)."""
+def default_scenes(sleep_c: float = 16.0, comfort_c: float = 20.0) -> list[Scene]:
+    """The four everyday routines. Heater setpoints default to a cosy sleep/comfort
+    pair but are configurable (Config tuning) — nothing hardcoded."""
     return [
         Scene(
             "goodnight", "Goodnight", "moon",
             "Lights off, heater to a cosy sleeping temperature, pump off.",
             [
                 SceneStep("light.cabin", "turn_off"),
-                SceneStep("climate.diesel_heater", "set_temperature", {"temperature": 16}),
+                SceneStep("climate.diesel_heater", "set_temperature", {"temperature": sleep_c}),
                 SceneStep("climate.diesel_heater", "turn_on"),
                 SceneStep("switch.water_pump", "turn_off"),
             ],
@@ -61,7 +61,7 @@ def default_scenes() -> list[Scene]:
             "Lights on and warm the cabin back up.",
             [
                 SceneStep("light.cabin", "turn_on"),
-                SceneStep("climate.diesel_heater", "set_temperature", {"temperature": 20}),
+                SceneStep("climate.diesel_heater", "set_temperature", {"temperature": comfort_c}),
                 SceneStep("climate.diesel_heater", "turn_on"),
             ],
         ),
@@ -70,7 +70,7 @@ def default_scenes() -> list[Scene]:
             "Arriving: lights on, comfortable warmth.",
             [
                 SceneStep("light.cabin", "turn_on"),
-                SceneStep("climate.diesel_heater", "set_temperature", {"temperature": 20}),
+                SceneStep("climate.diesel_heater", "set_temperature", {"temperature": comfort_c}),
                 SceneStep("climate.diesel_heater", "turn_on"),
             ],
         ),

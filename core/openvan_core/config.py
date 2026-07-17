@@ -31,7 +31,42 @@ _PERSISTED_FIELDS = (
     "simulate",
     "camp_sources",
     "camp_search_radius_km",
+    "tuning",
+    "maintenance_intervals",
 )
+
+# Feature thresholds/setpoints — sensible DEFAULTS that are all overridable at
+# runtime (settings.json / API), so nothing is hardcoded in the advisors, scenes
+# or leveling maths. Keys are grouped by feature; see docs and the Settings UI.
+DEFAULT_TUNING = {
+    # Water / energy / journey (existing advisors)
+    "fresh_water_low_pct": 15.0,
+    "grey_water_full_pct": 85.0,
+    "diesel_low_pct": 15.0,
+    "battery_low_hours": 24.0,
+    "long_drive_hours": 2.0,
+    "rain_soon_hours": 2.0,
+    # Air & safety
+    "co_warn_ppm": 35.0,
+    "co_danger_ppm": 70.0,
+    "gas_leak_lel": 10.0,
+    "co2_high_ppm": 1500.0,
+    "condensation_humidity_pct": 60.0,
+    "condensation_margin_c": 1.5,
+    "cabin_cold_c": 3.0,
+    "cabin_hot_c": 30.0,
+    # Propane
+    "propane_low_pct": 20.0,
+    # Fridge
+    "fridge_warm_c": 8.0,
+    # Leveling
+    "level_threshold_deg": 1.5,
+    "level_track_m": 2.0,
+    "level_wheelbase_m": 3.6,
+    # Scenes (heater setpoints)
+    "scene_sleep_c": 16.0,
+    "scene_comfort_c": 20.0,
+}
 
 
 def settings_path(data_dir: Path) -> Path:
@@ -101,6 +136,13 @@ class Config:
     # the sim dead-reckons when this is off or roads can't be fetched (offline).
     roads_enabled: bool = True
     roads_radius_m: float = 1600.0
+    # Feature tuning — advisor thresholds, scene setpoints, leveling geometry. All
+    # default from DEFAULT_TUNING and are overridable (settings.json / API / UI), so
+    # no value is hardcoded in the logic. See Config.tune().
+    tuning: dict = field(default_factory=lambda: dict(DEFAULT_TUNING))
+    # Per-item maintenance interval overrides, keyed by item id (km or days). Empty
+    # = use the built-in defaults in maintenance.DEFAULT_ITEMS.
+    maintenance_intervals: dict = field(default_factory=dict)
     # Travel memory — auto-logs "stays" when parked. Offline-first, SQLite.
     memory_enabled: bool = True
     memory_dwell_s: float = 90.0  # parked this long before a stay is logged
@@ -173,6 +215,10 @@ class Config:
         }
     )
 
+    def tune(self, key: str) -> float:
+        """A tuning value: the override if set, else the built-in default."""
+        return float(self.tuning.get(key, DEFAULT_TUNING[key]))
+
     # --- persistence -----------------------------------------------------
     def persistable(self) -> dict:
         """The runtime-changeable settings that survive a restart (no API key)."""
@@ -181,7 +227,12 @@ class Config:
     def apply(self, data: dict) -> None:
         for f in _PERSISTED_FIELDS:
             if f in data and data[f] is not None:
-                setattr(self, f, data[f])
+                # Dict settings (tuning, maintenance overrides) MERGE, so a partial
+                # update keeps the other defaults instead of wiping them.
+                if f in ("tuning", "maintenance_intervals") and isinstance(data[f], dict):
+                    getattr(self, f).update(data[f])
+                else:
+                    setattr(self, f, data[f])
 
     @classmethod
     def resolve(cls) -> "Config":

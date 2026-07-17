@@ -442,8 +442,12 @@ class NotLevel(Advisor):
 
     key = "not_level"
 
-    def __init__(self, threshold_deg: float = 1.5) -> None:
+    def __init__(
+        self, threshold_deg: float = 1.5, track_m: float = 2.0, wheelbase_m: float = 3.6
+    ) -> None:
         self.threshold_deg = threshold_deg
+        self.track_m = track_m
+        self.wheelbase_m = wheelbase_m
 
     def evaluate(self, hub: "Hub") -> Notice | None:
         if hub.twin.get("vehicle.ignition"):
@@ -452,7 +456,10 @@ class NotLevel(Advisor):
         roll = _twin_float(hub, "imu.roll_deg")
         if pitch is None or roll is None:
             return None
-        advice = leveling_advice(pitch, roll, threshold_deg=self.threshold_deg)
+        advice = leveling_advice(
+            pitch, roll, threshold_deg=self.threshold_deg,
+            track_m=self.track_m, wheelbase_m=self.wheelbase_m,
+        )
         if advice is None:
             return None
         return Notice(
@@ -508,24 +515,32 @@ class ServiceDue(Advisor):
         )
 
 
-def default_advisors() -> list[Advisor]:
+def default_advisors(config: Any = None) -> list[Advisor]:
+    """Build the advisor set. Thresholds come from ``config.tune(...)`` when a
+    config is given, else each advisor's built-in default — so nothing is hardcoded
+    but the function still works bare (tests, AdvisorEngine default)."""
+    def g(key: str, default: float) -> float:
+        return config.tune(key) if config is not None else default
+
     return [
-        LowFreshWater(),
-        GreyWaterFull(),
-        LowDiesel(),
-        LowPropane(),
-        FridgeWarm(),
+        LowFreshWater(g("fresh_water_low_pct", 15.0)),
+        GreyWaterFull(g("grey_water_full_pct", 85.0)),
+        LowDiesel(g("diesel_low_pct", 15.0)),
+        LowPropane(g("propane_low_pct", 20.0)),
+        FridgeWarm(g("fridge_warm_c", 8.0)),
         FridgeDoorOpen(),
-        BatteryRuntime(),
-        LongDrive(),
+        BatteryRuntime(low_hours=g("battery_low_hours", 24.0)),
+        LongDrive(g("long_drive_hours", 2.0) * 3600.0),
         # Air & safety (life-critical → most-common)
-        CarbonMonoxide(),
-        GasLeak(),
+        CarbonMonoxide(g("co_warn_ppm", 35.0), g("co_danger_ppm", 70.0)),
+        GasLeak(g("gas_leak_lel", 10.0)),
         Smoke(),
-        HighCO2(),
-        Condensation(),
-        CabinClimateExtreme(),
-        NotLevel(),
+        HighCO2(g("co2_high_ppm", 1500.0)),
+        Condensation(g("condensation_humidity_pct", 60.0), g("condensation_margin_c", 1.5)),
+        CabinClimateExtreme(g("cabin_cold_c", 3.0), g("cabin_hot_c", 30.0)),
+        NotLevel(
+            g("level_threshold_deg", 1.5), g("level_track_m", 2.0), g("level_wheelbase_m", 3.6)
+        ),
     ]
 
 

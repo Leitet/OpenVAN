@@ -80,6 +80,8 @@ class SettingsBody(BaseModel):
     online_base_url: str | None = None
     online_api_key: str | None = None
     simulate: bool | None = None
+    tuning: dict[str, float] | None = None
+    maintenance_intervals: dict[str, float] | None = None
 
 
 class CampSourceBody(BaseModel):

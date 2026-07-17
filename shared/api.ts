@@ -179,6 +179,8 @@ export interface SettingsPatch {
   online_base_url?: string;
   online_api_key?: string;
   simulate?: boolean;
+  tuning?: Record<string, number>;
+  maintenance_intervals?: Record<string, number>;
 }
 
 export async function getSettings(): Promise<Settings> {
