@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { Moon, Sun, DoorOpen, Tent, Sparkles, Check } from "lucide-react";
 import { getScenes, runScene } from "@shared/api";
 import type { SceneInfo } from "@shared/types";
 import { useT } from "../i18n";
 
-const ICON: Record<string, string> = { moon: "🌙", sun: "☀️", door: "🚪", tent: "⛺" };
+const ICON = { moon: Moon, sun: Sun, door: DoorOpen, tent: Tent } as const;
 
 /** One-tap routines. Each scene runs a bundle of safety-checked intents in Core
  * (the same ones the assistant would), so "Goodnight" dims the whole van at once. */
@@ -35,18 +36,21 @@ export function Scenes() {
     <section className="panel">
       <h2>{t("home.routines")}</h2>
       <div className="scene-grid">
-        {scenes.map((s) => (
-          <button
-            key={s.id}
-            className={"scene-btn" + (done === s.id ? " done" : "")}
-            disabled={busy === s.id}
-            onClick={() => run(s.id)}
-            title={s.description}
-          >
-            <span className="scene-icon">{ICON[s.icon] ?? "✨"}</span>
-            <span className="scene-name">{done === s.id ? "✓" : s.name}</span>
-          </button>
-        ))}
+        {scenes.map((s) => {
+          const Icon = done === s.id ? Check : ICON[s.icon as keyof typeof ICON] ?? Sparkles;
+          return (
+            <button
+              key={s.id}
+              className={"scene-btn" + (done === s.id ? " done" : "")}
+              disabled={busy === s.id}
+              onClick={() => run(s.id)}
+              title={s.description}
+            >
+              <Icon className="scene-icon" />
+              <span className="scene-name">{s.name}</span>
+            </button>
+          );
+        })}
       </div>
     </section>
   );

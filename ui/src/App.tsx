@@ -1,4 +1,19 @@
 import { useEffect, useState } from "react";
+import {
+  Battery,
+  Droplet,
+  Thermometer,
+  Sun,
+  Moon,
+  Sunrise,
+  Sunset,
+  Clock,
+  Sparkles,
+  Cloud,
+  Cpu,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 import { useVanState } from "@shared/useVanState";
 import { VanProvider, useVan, num } from "./state";
 import { useT } from "./i18n";
@@ -30,7 +45,7 @@ const TABS: { id: TabId; labelKey: string; icon: string }[] = [
   { id: "settings", labelKey: "nav.settings", icon: "settings" },
 ];
 
-const PHASE_ICON: Record<string, string> = { day: "☀️", night: "🌙", dawn: "🌅", dusk: "🌆" };
+const PHASE_ICON = { day: Sun, night: Moon, dawn: Sunrise, dusk: Sunset } as const;
 
 function StatusBar() {
   const { twin, assistant, connected } = useVan();
@@ -41,33 +56,57 @@ function StatusBar() {
   const epoch = num(twin["clock.epoch"]);
   const phase = String(twin["environment.phase"] ?? "day");
   const clock = epoch ? new Date(epoch * 1000).toUTCString().slice(5, 22) : null;
-  const aiLabel =
+  const PhaseIcon = PHASE_ICON[phase as keyof typeof PHASE_ICON] ?? Clock;
+  const aiTitle =
     (assistant.llm
       ? `${t("ai.prefix")} · ${assistant.connectivity === "online" ? t("ai.cloud") : t("ai.local")} · ${assistant.model}`
       : `${t("ai.prefix")} · ${t("ai.rulesOnly")}`) +
     (assistant.personality ? ` · ${assistant.personality}` : "");
+
   return (
     <header className="statusbar">
       <div className="sb-vitals">
         <span className="sb-stat">
-          <b>{soc?.toFixed(0) ?? "—"}%</b> {t("status.battery")}
+          <Battery className="sb-ico" style={{ color: soc != null && soc < 20 ? "var(--warn)" : undefined }} />
+          <b>{soc?.toFixed(0) ?? "—"}</b>
+          <i>%</i>
         </span>
         <span className="sb-stat">
-          <b>{water?.toFixed(0) ?? "—"}%</b> {t("status.water")}
+          <Droplet className="sb-ico" style={{ color: water != null && water < 15 ? "var(--warn)" : undefined }} />
+          <b>{water?.toFixed(0) ?? "—"}</b>
+          <i>%</i>
         </span>
         <span className="sb-stat">
-          <b>{cabin?.toFixed(0) ?? "—"}°</b> {t("status.cabin")}
+          <Thermometer className="sb-ico" />
+          <b>{cabin?.toFixed(0) ?? "—"}</b>
+          <i>°</i>
         </span>
       </div>
       <div className="sb-right">
         {clock && (
           <span className="sb-clock" title={phase}>
-            {PHASE_ICON[phase] ?? "🕒"} {clock}
+            <PhaseIcon className="sb-ico" />
+            <span>{clock}</span>
           </span>
         )}
-        <span className={"conn" + (assistant.llm ? " up" : "")}>{aiLabel}</span>
-        <span className={"conn" + (connected ? " up" : " down")}>
-          {connected ? t("status.core") : t("status.reconnecting")}
+        <span className="sb-chip sb-ai" data-on={assistant.llm} title={aiTitle}>
+          <Sparkles className="sb-ico sb-ai-spark" />
+          {assistant.llm ? (
+            <>
+              {assistant.connectivity === "online" ? (
+                <Cloud className="sb-ico" />
+              ) : (
+                <Cpu className="sb-ico" />
+              )}
+              <span className="sb-ai-model">{assistant.model}</span>
+            </>
+          ) : (
+            <span className="sb-ai-model">{t("ai.rulesOnly")}</span>
+          )}
+        </span>
+        <span className="sb-chip sb-core" data-on={connected} title={connected ? t("status.core") : t("status.reconnecting")}>
+          {connected ? <Wifi className="sb-ico" /> : <WifiOff className="sb-ico" />}
+          <span>{t("status.core")}</span>
         </span>
       </div>
     </header>

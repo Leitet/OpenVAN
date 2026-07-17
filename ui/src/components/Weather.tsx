@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Cloud, Wind, CloudRain } from "lucide-react";
 import { getWeather, refreshWeather } from "@shared/api";
 import type { Weather as WeatherData } from "@shared/types";
 import { useT } from "../i18n";
@@ -51,13 +52,15 @@ export function Weather() {
             <div className="wx-meta">
               <div className="wx-cond">{cur.condition}</div>
               <div className="wx-sub">
-                ☁ {cur.cloud_pct ?? "—"}% · 💨 {cur.wind_kmh?.toFixed(0) ?? "—"} km/h
+                <Cloud className="wx-ico" /> {cur.cloud_pct ?? "—"}% ·{" "}
+                <Wind className="wx-ico" /> {cur.wind_kmh?.toFixed(0) ?? "—"} km/h
               </div>
             </div>
           </div>
 
           {rain !== null && rain !== undefined && (
             <div className="wx-rain">
+              <CloudRain className="inline-ico" />
               {rain < 0.5 ? t("weather.rainShortly") : t("weather.rainIn", { h: rain })}
             </div>
           )}

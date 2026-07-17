@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ShieldCheck, Shield } from "lucide-react";
 import { getSecurity, setSecurity } from "@shared/api";
 import { useT } from "../i18n";
 
@@ -31,7 +32,7 @@ export function Security() {
         disabled={busy || armed === null}
         onClick={toggle}
       >
-        <span className="security-icon">{armed ? "🔒" : "🔓"}</span>
+        <span className="security-icon">{armed ? <ShieldCheck /> : <Shield />}</span>
         <span>{armed ? t("security.armed") : t("security.disarmed")}</span>
         <small>{armed ? t("security.tapDisarm") : t("security.tapArm")}</small>
       </button>

@@ -1,3 +1,4 @@
+import { AlertTriangle, ShieldCheck, Check } from "lucide-react";
 import { useVan, num } from "../state";
 import { useT } from "../i18n";
 
@@ -33,13 +34,17 @@ export function AirSafety() {
         <div className="safety-alarm">
           {alarms.map((a) => (
             <div key={a.key} className="safety-alarm-row">
-              <strong>⚠ {a.title}</strong>
+              <strong>
+                <AlertTriangle className="inline-ico" /> {a.title}
+              </strong>
               <span>{a.message}</span>
             </div>
           ))}
         </div>
       ) : (
-        <div className="safety-ok">✓ {t("safety.allClear")}</div>
+        <div className="safety-ok">
+          <ShieldCheck className="inline-ico" /> {t("safety.allClear")}
+        </div>
       )}
 
       <div className="air-grid">
@@ -65,7 +70,7 @@ export function AirSafety() {
         </div>
         <div className={"air-cell" + (smoke ? " danger" : "")}>
           <span className="air-k">{t("safety.smoke")}</span>
-          <strong>{smoke ? "!" : "✓"}</strong>
+          <strong>{smoke ? <AlertTriangle className="cell-ico" /> : <Check className="cell-ico" />}</strong>
           <span className="air-u">{smoke ? "detected" : "clear"}</span>
         </div>
       </div>

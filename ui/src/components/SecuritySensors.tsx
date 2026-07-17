@@ -1,3 +1,4 @@
+import { AlertTriangle } from "lucide-react";
 import { useVan } from "../state";
 import { useT } from "../i18n";
 
@@ -18,7 +19,9 @@ export function SecuritySensors() {
       {alerts.map((a) => (
         <div className="safety-alarm" key={a.key}>
           <div className="safety-alarm-row">
-            <strong>⚠ {a.title}</strong>
+            <strong>
+              <AlertTriangle className="inline-ico" /> {a.title}
+            </strong>
             <span>{a.message}</span>
           </div>
         </div>

@@ -135,9 +135,14 @@ export function JourneyMap() {
       // camps
       campsRef.current?.clearLayers();
       for (const c of camps) {
+        // Lucide "tent" glyph (inline SVG so it themes via currentColor).
         const icon = L.divIcon({
           className: "",
-          html: '<div class="camp-pin">⛺</div>',
+          html:
+            '<div class="camp-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+            'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M3.5 21 14 3"/><path d="M20.5 21 10 3"/>' +
+            '<path d="M15.5 21 12 15l-3.5 6"/><path d="M2 21h20"/></svg></div>',
           iconSize: [22, 22],
           iconAnchor: [11, 20],
         });

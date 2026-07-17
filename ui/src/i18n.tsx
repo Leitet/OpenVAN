@@ -224,14 +224,14 @@ const T: Record<string, Entry> = {
   "weather.simulated": { en: "simulated", sv: "simulerad", de: "simuliert" },
   "weather.none": { en: "No forecast yet.", sv: "Ingen prognos än.", de: "Noch keine Vorhersage." },
   "weather.rainShortly": {
-    en: "🌧 Rain expected shortly",
-    sv: "🌧 Regn väntas snart",
-    de: "🌧 Regen bald erwartet",
+    en: "Rain expected shortly",
+    sv: "Regn väntas snart",
+    de: "Regen bald erwartet",
   },
   "weather.rainIn": {
-    en: "🌧 Rain expected in about {h}h",
-    sv: "🌧 Regn väntas om cirka {h}h",
-    de: "🌧 Regen in etwa {h}h erwartet",
+    en: "Rain expected in about {h}h",
+    sv: "Regn väntas om cirka {h}h",
+    de: "Regen in etwa {h}h erwartet",
   },
 
   // --- travel journal ---

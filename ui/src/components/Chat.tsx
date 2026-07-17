@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from "react";
+import { Cloud, Cpu, Volume2, VolumeX, Mic, Square } from "lucide-react";
 import { sendChat, getBriefing } from "@shared/api";
 import type { Assistant, CampSpot, Notice } from "@shared/types";
 import {
@@ -115,9 +116,18 @@ export function Chat({ notices, assistant }: { notices: Notice[]; assistant: Ass
         <div className="chat-title">
           <h2>{t("assistant.title")}</h2>
           <span className={"chat-target" + (assistant.llm ? " on" : "")} title={t("chat.whichModel")}>
-            {assistant.llm
-              ? `${assistant.connectivity === "online" ? "☁ " + t("ai.cloud") : "⌂ " + t("ai.local")} · ${assistant.model}`
-              : t("chat.rulesNoModel")}
+            {assistant.llm ? (
+              <>
+                {assistant.connectivity === "online" ? (
+                  <Cloud className="chat-ico" />
+                ) : (
+                  <Cpu className="chat-ico" />
+                )}
+                {assistant.connectivity === "online" ? t("ai.cloud") : t("ai.local")} · {assistant.model}
+              </>
+            ) : (
+              t("chat.rulesNoModel")
+            )}
           </span>
         </div>
         <div className="chat-actions">
@@ -127,7 +137,8 @@ export function Chat({ notices, assistant }: { notices: Notice[]; assistant: Ass
               onClick={() => setSpeakReplies((v) => !v)}
               title={t("chat.speak")}
             >
-              {speakReplies ? "🔊 " + t("chat.speaking") : "🔈 " + t("chat.speak")}
+              {speakReplies ? <Volume2 className="btn-ico" /> : <VolumeX className="btn-ico" />}
+              {speakReplies ? t("chat.speaking") : t("chat.speak")}
             </button>
           )}
           <button className="briefing-btn" onClick={briefing} disabled={busy}>
@@ -212,7 +223,7 @@ export function Chat({ notices, assistant }: { notices: Notice[]; assistant: Ass
             title={listening ? "Stop listening" : "Speak"}
             aria-label="Voice input"
           >
-            {listening ? "●" : "🎤"}
+            {listening ? <Square className="btn-ico" /> : <Mic className="btn-ico" />}
           </button>
         )}
         <input

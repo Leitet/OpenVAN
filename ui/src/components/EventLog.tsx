@@ -1,3 +1,4 @@
+import { Check, Ban, Dot } from "lucide-react";
 import type { LogEntry } from "@shared/types";
 import { useT } from "../i18n";
 
@@ -20,7 +21,15 @@ export function EventLog({ log }: { log: LogEntry[] }) {
             }
           >
             <span className="log-badge">
-              {entry.kind === "intent" ? (entry.allowed ? "✓" : "⛔") : "•"}
+              {entry.kind === "intent" ? (
+                entry.allowed ? (
+                  <Check className="log-ico" />
+                ) : (
+                  <Ban className="log-ico" />
+                )
+              ) : (
+                <Dot className="log-ico" />
+              )}
             </span>
             {entry.text}
           </li>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { X } from "lucide-react";
 import {
   addStayNote,
   bookmarkHere,
@@ -125,10 +126,11 @@ export function Journal() {
                 {s.notes && <div className="stay-notes">{s.notes}</div>}
               </div>
               <button
-                className="mini danger"
+                className="mini danger icon-btn"
+                aria-label="Delete"
                 onClick={() => deleteStay(s.id).then(load)}
               >
-                ✕
+                <X className="btn-ico" />
               </button>
             </li>
           ))}
