@@ -133,6 +133,18 @@ export function BenchApp() {
           >
             {twin["air.smoke"] ? "Smoke: DETECTED" : "Smoke: clear"}
           </button>
+          <button
+            className={"toggle" + (twin["security.door_open"] ? " on" : "")}
+            onClick={() => injectSignal("security.door_open", !twin["security.door_open"])}
+          >
+            {twin["security.door_open"] ? "Door: OPEN" : "Door: closed"}
+          </button>
+          <button
+            className={"toggle" + (twin["security.motion"] ? " on" : "")}
+            onClick={() => injectSignal("security.motion", !twin["security.motion"])}
+          >
+            {twin["security.motion"] ? "Motion: DETECTED" : "Motion: none"}
+          </button>
           <p className="note">
             CO/gas/smoke trip deterministic edge alarms in Core (no model in the danger
             path). Condensation fires from humidity vs. the dew point on cold walls.

@@ -151,6 +151,11 @@ const T: Record<string, Entry> = {
 
   // --- journey ---
   "home.routines": { en: "Routines", sv: "Rutiner", de: "Routinen" },
+  "security.title": { en: "Away mode", sv: "Bortaläge", de: "Abwesenheit" },
+  "security.armed": { en: "Armed", sv: "Aktiverat", de: "Scharf" },
+  "security.disarmed": { en: "Disarmed", sv: "Avstängt", de: "Unscharf" },
+  "security.tapArm": { en: "Tap to arm when you leave", sv: "Tryck för att aktivera", de: "Zum Aktivieren tippen" },
+  "security.tapDisarm": { en: "Tap to disarm", sv: "Tryck för att stänga av", de: "Zum Deaktivieren tippen" },
   "maint.title": { en: "Maintenance", sv: "Underhåll", de: "Wartung" },
   "maint.done": { en: "Done", sv: "Klart", de: "Erledigt" },
   "maint.overdue": { en: "Overdue", sv: "Försenat", de: "Überfällig" },

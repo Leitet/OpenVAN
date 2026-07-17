@@ -100,6 +100,10 @@ class MaintenanceBody(BaseModel):
     id: str
 
 
+class SecurityBody(BaseModel):
+    armed: bool
+
+
 class ActivePersonalityBody(BaseModel):
     id: str
 
@@ -242,6 +246,14 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
         if not core.complete_maintenance(body.id):
             raise HTTPException(404, f"unknown maintenance item '{body.id}'")
         return {"items": core.maintenance_status()}
+
+    @app.get("/api/security")
+    async def security() -> dict[str, Any]:
+        return core.security.status()
+
+    @app.post("/api/security")
+    async def set_security(body: SecurityBody) -> dict[str, Any]:
+        return await core.set_security_armed(body.armed)
 
     @app.post("/api/sim/signal")
     async def sim_signal(body: SignalBody) -> dict[str, str]:

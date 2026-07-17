@@ -5,6 +5,7 @@ import { Gauge } from "../components/Gauge";
 import { QuickToggle } from "../components/QuickToggle";
 import { Companion } from "../components/Companion";
 import { Scenes } from "../components/Scenes";
+import { Security } from "../components/Security";
 
 export function HomeTab() {
   const { entities, twin, notices } = useVan();
@@ -62,6 +63,7 @@ export function HomeTab() {
       </section>
 
       <Scenes />
+      <Security />
 
       <section className="panel span2">
         <Companion notices={notices} />

@@ -32,7 +32,7 @@ from .llm import (
 )
 from .memory import TravelMemory
 from .maintenance import MaintenanceLog
-from .notices import AdvisorEngine, RainSoon, ServiceDue, default_advisors
+from .notices import AdvisorEngine, Intrusion, RainSoon, ServiceDue, default_advisors
 from .personalities import PersonalityStore
 from .plugins import PluginManager, registered_plugins
 from .safety import (
@@ -43,6 +43,7 @@ from .safety import (
 )
 from .roads import RoadNetwork
 from .scenes import SceneEngine
+from .security import SecuritySystem
 from .simulation import VanSimulation
 from .store import ConfigStore
 from .telemetry import TelemetryRecorder, TelemetryStore
@@ -111,6 +112,7 @@ class Core:
     memory_chat: ChatMemory
     scenes: SceneEngine
     maintenance: MaintenanceLog
+    security: SecuritySystem
     roads: RoadNetwork | None = None
 
     async def start(self) -> None:
@@ -263,6 +265,13 @@ class Core:
 
         odo = self.twin.get("vehicle.odometer_km")
         return self.maintenance.complete(item_id, odo, datetime.now().date())
+
+    async def set_security_armed(self, armed: bool) -> dict[str, Any]:
+        """Arm/disarm away mode, then re-run advisors so an intrusion notice
+        appears or clears immediately."""
+        self.security.set_armed(armed)
+        await self.advisors.evaluate()
+        return self.security.status()
 
     async def _run_scene_reply(self, scene_id: str) -> dict[str, Any]:
         result = await self.scenes.run(scene_id)
@@ -494,7 +503,9 @@ def build_core(config: Config | None = None) -> Core:
     memory_chat = ChatMemory(store, router)
     scenes = SceneEngine(hub)
     maintenance = MaintenanceLog(store, get_odometer=lambda: twin.get("vehicle.odometer_km"))
+    security = SecuritySystem()
     advisors.advisors.append(ServiceDue(maintenance))
+    advisors.advisors.append(Intrusion(security))
     return Core(
         config=config,
         bus=bus,
@@ -515,6 +526,7 @@ def build_core(config: Config | None = None) -> Core:
         memory_chat=memory_chat,
         scenes=scenes,
         maintenance=maintenance,
+        security=security,
         router=router,
         roads=roads,
     )

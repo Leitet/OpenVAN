@@ -264,6 +264,19 @@ export async function completeMaintenance(id: string): Promise<MaintenanceItem[]
   return (await res.json()).items as MaintenanceItem[];
 }
 
+export async function getSecurity(): Promise<{ armed: boolean }> {
+  return (await fetch("/api/security")).json();
+}
+
+export async function setSecurity(armed: boolean): Promise<{ armed: boolean }> {
+  const res = await fetch("/api/security", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ armed }),
+  });
+  return res.json();
+}
+
 export async function getAssistantMemory(): Promise<AssistantMemory> {
   return (await fetch("/api/assistant/memory")).json();
 }

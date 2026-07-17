@@ -462,6 +462,29 @@ class NotLevel(Advisor):
         )
 
 
+class Intrusion(Advisor):
+    """When 'away mode' is armed, a door or motion event is a security alert."""
+
+    key = "intrusion"
+
+    def __init__(self, security: Any) -> None:
+        self.security = security
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        if not self.security.is_armed():
+            return None
+        door = hub.twin.get("security.door_open")
+        motion = hub.twin.get("security.motion")
+        if not (door or motion):
+            return None
+        what = "a door opened" if door else "motion was seen"
+        return Notice(
+            self.key, "warning", "safety", "Security alert",
+            f"While away mode is armed, {what} inside the van. Check on it.",
+            {"door": bool(door), "motion": bool(motion)},
+        )
+
+
 class ServiceDue(Advisor):
     """Surface any maintenance item that's due or overdue (odometer or date based)."""
 

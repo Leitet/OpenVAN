@@ -159,6 +159,9 @@ class Config:
             "fridge.temp_c": 4.0,
             "fridge.door_open": False,
             "fridge.power": 45.0,
+            # Security — quiet by default.
+            "security.door_open": False,
+            "security.motion": False,
             # Vehicle / GPS — starting parked in the Dolomites.
             "gps.lat": 46.5405,
             "gps.lon": 11.6553,
