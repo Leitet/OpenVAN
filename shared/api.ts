@@ -39,11 +39,14 @@ export async function sendText(text: string): Promise<IntentResult> {
   return res.json();
 }
 
+import type { CampSourceInfo, CampSpot } from "./types";
+
 export interface ChatReply {
   reply: string;
   action: boolean; // true if a device command ran (vs a conversational answer)
   ok: boolean;
   blocked_by_safety: boolean;
+  spots?: CampSpot[]; // present when the reply is a camp recommendation
 }
 
 // Conversational assistant: runs a command (safety-checked) or answers from state.
@@ -54,6 +57,23 @@ export async function sendChat(text: string): Promise<ChatReply> {
     body: JSON.stringify({ text }),
   });
   return res.json();
+}
+
+export async function getCampSources(): Promise<CampSourceInfo[]> {
+  const data = await (await fetch("/api/camp/sources")).json();
+  return data.sources as CampSourceInfo[];
+}
+
+export async function setCampSource(
+  id: string,
+  enabled: boolean,
+): Promise<CampSourceInfo[]> {
+  const res = await fetch("/api/camp/sources", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, enabled }),
+  });
+  return (await res.json()).sources as CampSourceInfo[];
 }
 
 import type { TelemetryPoint } from "./types";

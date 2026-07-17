@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { sendChat, getBriefing } from "@shared/api";
-import type { Assistant, Notice } from "@shared/types";
+import type { Assistant, CampSpot, Notice } from "@shared/types";
 import {
   createDictation,
   speak,
@@ -15,6 +15,7 @@ interface Msg {
   role: "user" | "assistant";
   text: string;
   blocked?: boolean;
+  spots?: CampSpot[]; // camp recommendation candidates
 }
 
 let counter = 0;
@@ -60,7 +61,12 @@ export function Chat({ notices, assistant }: { notices: Notice[]; assistant: Ass
     try {
       const r = await sendChat(q);
       const reply = r.reply?.trim() || "…";
-      push({ role: "assistant", text: reply, blocked: r.blocked_by_safety || !r.ok });
+      push({
+        role: "assistant",
+        text: reply,
+        blocked: r.blocked_by_safety || !r.ok,
+        spots: r.spots,
+      });
       if (speakRef.current) speak(reply);
     } catch {
       push({ role: "assistant", text: t("chat.unreachable"), blocked: true });
@@ -153,9 +159,29 @@ export function Chat({ notices, assistant }: { notices: Notice[]; assistant: Ass
           </p>
         ) : (
           msgs.map((m) => (
-            <div key={m.id} className={"bubble " + m.role + (m.blocked ? " blocked" : "")}>
-              {m.text}
-            </div>
+            <Fragment key={m.id}>
+              <div className={"bubble " + m.role + (m.blocked ? " blocked" : "")}>
+                {m.text}
+              </div>
+              {m.spots && m.spots.length > 0 && (
+                <ul className="spot-list">
+                  {m.spots.slice(0, 6).map((s) => (
+                    <li key={s.id}>
+                      <span className="spot-name">
+                        {s.name}
+                        {s.distance_km != null && (
+                          <span className="spot-dist">{s.distance_km} km</span>
+                        )}
+                      </span>
+                      <span className="spot-meta">
+                        {s.kind}
+                        {s.amenities.length > 0 ? ` · ${s.amenities.join(", ")}` : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Fragment>
           ))
         )}
         {busy && (

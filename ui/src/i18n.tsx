@@ -261,6 +261,22 @@ const T: Record<string, Entry> = {
 
   // --- settings / assistant config ---
   "settings.catGeneral": { en: "General", sv: "Allmänt", de: "Allgemein" },
+  "settings.camping": { en: "Camping", sv: "Camping", de: "Camping" },
+  "settings.campingNote": {
+    en: "Sources for places to stay. The van proposes camp spots from the enabled ones — add more by dropping a source package under campsources/.",
+    sv: "Källor för platser att stanna på. Bilen föreslår campingplatser från de aktiverade — lägg till fler genom att lägga en källa under campsources/.",
+    de: "Quellen für Übernachtungsplätze. Der Van schlägt Stellplätze aus den aktivierten vor — weitere per Paket unter campsources/ hinzufügen.",
+  },
+  "settings.needsInternet": {
+    en: "needs internet",
+    sv: "kräver internet",
+    de: "braucht Internet",
+  },
+  "settings.noCampSources": {
+    en: "No camp sources installed.",
+    sv: "Inga campingkällor installerade.",
+    de: "Keine Camp-Quellen installiert.",
+  },
   "settings.assistant": { en: "Assistant", sv: "Assistent", de: "Assistent" },
   "settings.enableAi": {
     en: "Enable AI assistant",

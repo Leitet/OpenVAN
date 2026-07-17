@@ -101,6 +101,29 @@ export interface Stay {
   notes: string;
 }
 
+export interface CampSpot {
+  id: string;
+  source: string;
+  name: string;
+  lat: number;
+  lon: number;
+  kind: string;
+  amenities: string[];
+  rating: number | null;
+  price: string | null;
+  description: string | null;
+  url: string | null;
+  distance_km: number | null;
+}
+
+export interface CampSourceInfo {
+  id: string;
+  name: string;
+  enabled: boolean;
+  requires_internet: boolean;
+  requires_key: boolean;
+}
+
 export interface Notice {
   key: string;
   level: "info" | "suggestion" | "warning";

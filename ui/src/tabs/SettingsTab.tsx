@@ -3,10 +3,11 @@ import { useT } from "../i18n";
 import { SettingsProvider, useSettings } from "../settings/SettingsProvider";
 import { GeneralSettings } from "../settings/GeneralSettings";
 import { AssistantSettings } from "../settings/AssistantSettings";
+import { CampingSettings } from "../settings/CampingSettings";
 import { SystemSettings } from "../settings/SystemSettings";
 import { Personalities } from "../components/Personalities";
 
-type Category = "general" | "assistant" | "personalities" | "system";
+type Category = "general" | "assistant" | "personalities" | "camping" | "system";
 
 // Settings is split into categories, selected by the sub-tab bar. Adding a category
 // = one entry here + one panel. Shared state lives in SettingsProvider.
@@ -14,6 +15,7 @@ const CATEGORIES: { id: Category; labelKey: string }[] = [
   { id: "general", labelKey: "settings.catGeneral" },
   { id: "assistant", labelKey: "settings.assistant" },
   { id: "personalities", labelKey: "personalities.title" },
+  { id: "camping", labelKey: "settings.camping" },
   { id: "system", labelKey: "settings.system" },
 ];
 
@@ -48,6 +50,7 @@ function SettingsCategories() {
         {cat === "general" && <GeneralSettings />}
         {cat === "assistant" && <AssistantSettings />}
         {cat === "personalities" && <Personalities />}
+        {cat === "camping" && <CampingSettings />}
         {cat === "system" && <SystemSettings />}
       </div>
 
