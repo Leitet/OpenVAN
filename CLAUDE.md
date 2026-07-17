@@ -137,6 +137,22 @@ from telemetry). Users add notes, name places, or bookmark the current spot
 instantly. Local SQLite (`data/journal.db`), surfaced to the companion for recall
 ("remember that lake?"). API: `/api/memory/*`.
 
+### Conversation memory (`conversation.py`)
+
+So the van *learns how you want it*. `ChatMemory` holds three horizons: **turns**
+(the last few messages, for follow-ups like "turn it on"), a rolling **summary**
+(older context folded in by the model so it isn't lost), and durable **preferences**
+("likes the cabin around 21°C", "prefers quiet spots away from roads"). `Core.chat`
+feeds turns + summary + preferences to `converse`, and preferences also shape camp
+picks and answers — e.g. "make it comfortable" fills in the learned setpoint. Every
+few turns `maybe_consolidate` asks the model to update the summary + preferences;
+both persist to the config store (`assistant` namespace) so they survive restarts.
+Offline-first: the turn window always works; summary/preference *learning* is
+model-enhanced. Like the rest of the assistant it only shapes phrasing and
+suggestions — it never controls hardware on its own (Rule 2). API:
+`/api/assistant/memory` (GET learned memory, DELETE to forget); surfaced in the
+Assistant tab's "What I've learned".
+
 ### Weather (`weather.py`)
 
 Location-aware, offline-first. `WeatherService` fetches the forecast for the

@@ -133,6 +133,11 @@ export interface CampSourceInfo {
   config: CampSourceConfigField[];
 }
 
+export interface AssistantMemory {
+  summary: string;
+  preferences: string[];
+}
+
 export interface Notice {
   key: string;
   level: "info" | "suggestion" | "warning";

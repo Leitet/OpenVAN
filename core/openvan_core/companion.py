@@ -47,12 +47,13 @@ _ANSWER_FALLBACK = {
 
 ANSWER_SYSTEM = """\
 Your task: you are chatting with the traveller. You are given your current status as
-JSON and their message. Answer directly and briefly (1-3 sentences) about YOURSELF,
-in the first person ("my battery is …", "I'm …"), using only facts from the status —
-if it isn't there, say you don't have it. Give friendly, practical suggestions. You
-do NOT control anything in this reply; if they want an action, tell them to ask for
-it directly (e.g. "turn on the cabin light"). Plain natural speech — no lists, no
-markdown.
+JSON, their message, and their durable `preferences` (how they like things). Answer
+directly and briefly (1-3 sentences) about YOURSELF, in the first person ("my battery
+is …", "I'm …"), using only facts from the status — if it isn't there, say you don't
+have it. Give friendly, practical suggestions, and lean on their preferences when
+relevant. You do NOT control anything in this reply; if they want an action, tell them
+to ask for it directly (e.g. "turn on the cabin light"). Plain natural speech — no
+lists, no markdown.
 """
 
 CAMP_SYSTEM = """\
@@ -63,9 +64,10 @@ condition, rain_eta_hours), `sun` (the hour now; the sun sets in the WEST),
 `status` (my resources: battery %, fresh water %, grey water %, diesel %, and the
 estimated hours until each runs out or fills up), `needs` (the resources running
 low right now — each names the `amenity` that would solve it), `notices` (active
-alerts) and `wants` (their stated preferences).
+alerts), `wants` (what they asked for this time) and `preferences` (durable likings
+I've learned — e.g. "prefers quiet spots away from roads", "wants morning sun").
 
-Honour their `request` and `wants`, and FACTOR IN MY `needs`: when a resource is
+Honour their `request`, `wants` and standing `preferences`, and FACTOR IN MY `needs`: when a resource is
 low, prefer a spot whose `amenities` meet it (water / power / toilets for a grey
 dump) and say so — e.g. "since we're low on water, Lakeside has a tap". If no
 nearby spot covers a need, suggest topping up on the way — e.g. "fill up at services
@@ -223,13 +225,16 @@ class Companion:
         use_llm: bool,
         persona: str | None = None,
         language: str = "en",
+        preferences: list[str] | None = None,
     ) -> str:
         """Answer a free-form question from live van state. Read-only: it never
         controls anything — actions go through the intent path (Rule 2)."""
         context = self.build_context(hub, notices)
         if use_llm and self.router.active:
             system = build_system(ANSWER_SYSTEM, language, persona)
-            payload = json.dumps({"status": context, "question": question})
+            payload = json.dumps(
+                {"status": context, "question": question, "preferences": preferences or []}
+            )
             text = await self.router.build_client().chat_text(system, payload)
             if text:
                 return text.strip()
@@ -248,6 +253,7 @@ class Companion:
         use_llm: bool,
         persona: str | None = None,
         language: str = "en",
+        preferences: list[str] | None = None,
     ) -> str:
         """Recommend a place to camp from ``spots``, with weather/sun-aware
         micro-siting. Read-only — it proposes, never navigates or acts (Rule 2)."""
@@ -285,6 +291,7 @@ class Companion:
                     },
                     "needs": _camp_needs(context),
                     "notices": context.get("notices", []),
+                    "preferences": preferences or [],
                 }
             )
             system = build_system(CAMP_SYSTEM, language, persona)

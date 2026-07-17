@@ -150,6 +150,13 @@ const T: Record<string, Entry> = {
   },
 
   // --- journey ---
+  "memory.title": { en: "What I've learned", sv: "Vad jag har lärt mig", de: "Was ich gelernt habe" },
+  "memory.empty": {
+    en: "Nothing yet — chat with me and I'll learn how you like things.",
+    sv: "Inget än — prata med mig så lär jag mig hur du vill ha det.",
+    de: "Noch nichts — sprich mit mir und ich lerne, wie du es magst.",
+  },
+  "memory.forget": { en: "Forget", sv: "Glöm", de: "Vergessen" },
   "journey.title": { en: "Journey", sv: "Resa", de: "Reise" },
   "journey.position": { en: "position", sv: "position", de: "Position" },
   "journey.pastStay": { en: "past stay", sv: "tidigare plats", de: "früherer Halt" },

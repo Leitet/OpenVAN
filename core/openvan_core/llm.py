@@ -159,6 +159,12 @@ Use it to resolve references and follow-ups — e.g. if they said they were cold
 then say "turn it on", they mean the heater; "a bit warmer" after that is a setpoint
 change. Always resolve pronouns like "it/that/them" from `history` before deciding.
 
+And `memory`: a `summary` of past conversations plus durable `preferences` (how
+they like things — e.g. "likes the cabin around 21°C"). Tailor your answers to them,
+and when they ask you to act without giving a value, fill in their usual choice
+(e.g. set the heater to their preferred temperature). Preferences guide you; they
+never make you act unless the traveller actually asks.
+
 Examples: "where should we sleep tonight?", "find a campsite", "somewhere sheltered
 to park" → find_camp. "how's the van?", "what's the battery?" → reply (first person,
 "I'm doing well — my battery is at 82%…"). When in doubt, use "reply" (never control
@@ -571,13 +577,15 @@ class LLMIntentResolver(IntentResolver):
         persona: str | None = None,
         language: str = "en",
         history: list[dict[str, str]] | None = None,
+        memory: dict[str, Any] | None = None,
     ) -> tuple[Intent | None, str | None, dict[str, Any] | None]:
         """One LLM call that decides between a device action, a camp search, and a
         chat reply. Returns exactly one of (intent, None, None) / (None, reply, None)
         / (None, None, camp_query), or all-None if the model is unavailable or its
         output can't be parsed. This is what keeps a *question* from being mistaken
         for a *command*. ``history`` (recent turns) lets it resolve follow-ups like
-        "turn it on"."""
+        "turn it on"; ``memory`` (summary + learned preferences) lets it tailor the
+        answer to how they like things."""
         if not self.router.active:
             return None, None, None
         controllable = self._controllable(entities)
@@ -589,6 +597,8 @@ class LLMIntentResolver(IntentResolver):
         }
         if history:
             payload["history"] = history
+        if memory:
+            payload["memory"] = memory
         user = json.dumps(payload)
         raw = await self.router.build_client().chat_json(system, user)
         if not raw:

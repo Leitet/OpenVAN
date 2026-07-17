@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from typing import Any
 
@@ -17,6 +17,7 @@ from .backends import Backend, SimBackend
 from .camp import CampService
 from .companion import Companion
 from .config import Config
+from .conversation import ChatMemory
 from .events import EventBus
 from .hub import Hub
 from .intents import Intent, IntentResolver
@@ -64,9 +65,6 @@ _CAMP_HINTS = (
 )
 _CAMP_RE = re.compile("|".join(re.escape(h) for h in _CAMP_HINTS), re.IGNORECASE)
 
-# How many chat messages (user+assistant) to keep as rolling context. ~5 turns.
-_MAX_CHAT_HISTORY = 10
-
 
 def _looks_like_camp_query(text: str) -> bool:
     return bool(_CAMP_RE.search(text))
@@ -91,14 +89,14 @@ class Core:
     memory: TravelMemory
     camp: CampService
     store: ConfigStore
+    memory_chat: ChatMemory
     roads: RoadNetwork | None = None
-    # Short rolling chat memory (role/content turns) so the assistant can resolve
-    # follow-ups like "turn it on". Kept server-side; trimmed to the last few turns.
-    chat_history: list[dict[str, str]] = field(default_factory=list)
 
     async def start(self) -> None:
-        # The config store holds plugin / camp-source settings (incl. credentials).
+        # The config store holds plugin / camp-source settings (incl. credentials)
+        # and the assistant's learned memory (summary + preferences).
         self.store.open()
+        self.memory_chat.load()
         # Open telemetry and start recording before seeding, so the initial
         # state is captured as the first samples.
         if self.config.telemetry_enabled:
@@ -158,67 +156,69 @@ class Core:
         van state, read-only). The AI never controls hardware except via an intent the
         safety layer has approved (Rule 2), and a *question* is never mistaken for a
         command — with a model that decision is made explicitly in one call."""
+        persona = self.personalities.get_active().style
+        language = self.config.language
+
+        result = await self._route(text, persona, language)
+
+        # Record the turn, then let the model fold older context into the long-term
+        # summary and update learned preferences (every few turns, when available).
+        self.memory_chat.record("user", text)
+        reply = result.get("reply")
+        if reply:
+            self.memory_chat.record("assistant", reply)
+        await self.memory_chat.maybe_consolidate(persona, language)
+        return result
+
+    async def _route(self, text: str, persona: str | None, language: str) -> dict[str, Any]:
         resolver = self.hub.resolver
         entities = self.hub.entities
         notices = self.advisors.active_notices()
-        persona = self.personalities.get_active().style
-
-        language = self.config.language
-
-        # Snapshot the conversation so far (before this turn) for the model to use.
-        history = list(self.chat_history)
+        preferences = self.memory_chat.preferences
 
         # Camp queries route to a camp search regardless of model strength, so a weak
         # or offline model can't mistake "where should we sleep?" for a device command.
         if self.config.camp_enabled and _looks_like_camp_query(text):
-            result = await self._chat_camp(
+            return await self._chat_camp(
                 {"radius_km": None, "wants": []}, notices, persona, language, request=text
             )
-            return self._finish(text, result)
 
         if getattr(resolver, "active", False):
             status = self.companion.build_context(self.hub, notices)
+            # Recent turns for follow-ups, plus the long-term summary + learned
+            # preferences so the van tailors its answer to how you like things.
             intent, reply, camp = await resolver.converse(
-                text, entities, status, persona, language, history=history
+                text,
+                entities,
+                status,
+                persona,
+                language,
+                history=self.memory_chat.recent(),
+                memory=self.memory_chat.context(),
             )
             if intent is not None:
-                return self._finish(text, await self._chat_action(intent))
+                return await self._chat_action(intent)
             if camp is not None:
-                result = await self._chat_camp(camp, notices, persona, language, request=text)
-                return self._finish(text, result)
+                return await self._chat_camp(camp, notices, persona, language, request=text)
             if reply is not None:
-                return self._finish(
-                    text, {"reply": reply, "action": False, "ok": True, "blocked_by_safety": False}
-                )
+                return {"reply": reply, "action": False, "ok": True, "blocked_by_safety": False}
             # Model gave nothing usable — answer from state, don't guess a command.
             answer = await self.companion.answer(
-                self.hub, notices, text, use_llm=True, persona=persona, language=language
+                self.hub, notices, text, use_llm=True, persona=persona,
+                language=language, preferences=preferences,
             )
-            return self._finish(
-                text, {"reply": answer, "action": False, "ok": True, "blocked_by_safety": False}
-            )
+            return {"reply": answer, "action": False, "ok": True, "blocked_by_safety": False}
 
         # Offline: the rule resolver is conservative (only known command phrases);
         # everything else gets a templated status answer.
         intent = await resolver.resolve(text, entities)
         if intent is not None:
-            return self._finish(text, await self._chat_action(intent))
+            return await self._chat_action(intent)
         answer = await self.companion.answer(
-            self.hub, notices, text, use_llm=False, persona=persona, language=language
+            self.hub, notices, text, use_llm=False, persona=persona,
+            language=language, preferences=preferences,
         )
-        return self._finish(
-            text, {"reply": answer, "action": False, "ok": True, "blocked_by_safety": False}
-        )
-
-    def _finish(self, user_text: str, result: dict[str, Any]) -> dict[str, Any]:
-        """Record the turn in the rolling chat memory and return the result."""
-        self.chat_history.append({"role": "user", "content": user_text})
-        reply = result.get("reply")
-        if reply:
-            self.chat_history.append({"role": "assistant", "content": reply})
-        # Keep only the last few turns (an action confirmation counts as a turn).
-        del self.chat_history[: max(0, len(self.chat_history) - _MAX_CHAT_HISTORY)]
-        return result
+        return {"reply": answer, "action": False, "ok": True, "blocked_by_safety": False}
 
     async def _chat_action(self, intent: Intent) -> dict[str, Any]:
         result = await self.hub.execute_intent(intent)
@@ -248,6 +248,7 @@ class Core:
             use_llm=self.router.active,
             persona=persona,
             language=language,
+            preferences=self.memory_chat.preferences,
         )
         return {
             "reply": reply,
@@ -432,6 +433,7 @@ def build_core(config: Config | None = None) -> Core:
         get_location=lambda: (twin.get("gps.lat"), twin.get("gps.lon")),
         store=store,
     )
+    memory_chat = ChatMemory(store, router)
     return Core(
         config=config,
         bus=bus,
@@ -449,6 +451,7 @@ def build_core(config: Config | None = None) -> Core:
         memory=memory,
         camp=camp,
         store=store,
+        memory_chat=memory_chat,
         router=router,
         roads=roads,
     )

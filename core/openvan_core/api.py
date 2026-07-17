@@ -223,6 +223,16 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
     async def notices() -> dict[str, Any]:
         return {"notices": core.advisors.active_notices()}
 
+    @app.get("/api/assistant/memory")
+    async def assistant_memory() -> dict[str, Any]:
+        """What the van has learned about the traveller (summary + preferences)."""
+        return core.memory_chat.snapshot()
+
+    @app.delete("/api/assistant/memory")
+    async def clear_assistant_memory() -> dict[str, Any]:
+        core.memory_chat.clear()
+        return core.memory_chat.snapshot()
+
     @app.post("/api/briefing")
     async def briefing() -> dict[str, str]:
         text = await core.companion.briefing(

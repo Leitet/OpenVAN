@@ -247,3 +247,13 @@ export async function updatePersonality(
 export async function deletePersonality(id: string): Promise<void> {
   await fetch(`/api/personalities/${id}`, { method: "DELETE" });
 }
+
+import type { AssistantMemory } from "./types";
+
+export async function getAssistantMemory(): Promise<AssistantMemory> {
+  return (await fetch("/api/assistant/memory")).json();
+}
+
+export async function clearAssistantMemory(): Promise<AssistantMemory> {
+  return (await fetch("/api/assistant/memory", { method: "DELETE" })).json();
+}
