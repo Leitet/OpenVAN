@@ -18,7 +18,15 @@ export function JourneyMap() {
   const campsRef = useRef<L.LayerGroup | null>(null);
   const followRef = useRef(true);
   const fittedRef = useRef(false);
+  const programmaticRef = useRef(false); // true while *we* move the map, not the user
   const [empty, setEmpty] = useState(true);
+
+  // Move the map without it counting as a user "I want to look elsewhere" gesture.
+  const jump = (fn: () => void) => {
+    programmaticRef.current = true;
+    fn();
+    programmaticRef.current = false;
+  };
 
   // init the map once
   useEffect(() => {
@@ -31,7 +39,10 @@ export function JourneyMap() {
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap contributors",
     }).addTo(map);
-    map.on("dragstart zoomstart", () => (followRef.current = false));
+    // Only a *user* pan/zoom drops follow — programmatic moves (fit, follow) don't.
+    map.on("movestart zoomstart", () => {
+      if (!programmaticRef.current) followRef.current = false;
+    });
 
     staysRef.current = L.layerGroup().addTo(map);
     campsRef.current = L.layerGroup().addTo(map);
@@ -47,7 +58,7 @@ export function JourneyMap() {
           L.DomEvent.stop(e);
           followRef.current = true;
           const van = vanRef.current;
-          if (van) map.setView(van.getLatLng(), Math.max(map.getZoom(), 14));
+          if (van) jump(() => map.setView(van.getLatLng(), Math.max(map.getZoom(), 14)));
         });
         return btn;
       },
@@ -90,10 +101,22 @@ export function JourneyMap() {
       // van marker at the latest fix
       if (track.length) {
         const here = track[track.length - 1];
-        const icon = L.divIcon({ className: "", html: '<div class="van-dot"></div>', iconSize: [18, 18] });
+        const icon = L.divIcon({
+          className: "",
+          html: '<div class="van-dot"></div>',
+          iconSize: [18, 18],
+          iconAnchor: [9, 9], // centre the dot on the fix
+        });
         if (vanRef.current) vanRef.current.setLatLng(here);
         else vanRef.current = L.marker(here, { icon, zIndexOffset: 1000 }).addTo(map);
-        if (followRef.current) map.setView(here, map.getZoom(), { animate: true });
+        // While following, keep the whole framed view until the van nears the
+        // edge, then recenter — so you see the travelled track *and* the position.
+        if (followRef.current && fittedRef.current) {
+          const inner = map.getBounds().pad(-0.2);
+          if (!inner.contains(L.latLng(here))) {
+            jump(() => map.setView(here, map.getZoom(), { animate: false }));
+          }
+        }
       }
 
       // stays
@@ -113,7 +136,12 @@ export function JourneyMap() {
       // camps
       campsRef.current?.clearLayers();
       for (const c of camps) {
-        const icon = L.divIcon({ className: "", html: '<div class="camp-pin">⛺</div>', iconSize: [22, 22] });
+        const icon = L.divIcon({
+          className: "",
+          html: '<div class="camp-pin">⛺</div>',
+          iconSize: [22, 22],
+          iconAnchor: [11, 20],
+        });
         const m = L.marker([c.lat, c.lon], { icon });
         m.bindTooltip(`${c.name} · ${c.kind}${c.distance_km != null ? ` · ${c.distance_km} km` : ""}`);
         campsRef.current?.addLayer(m);
@@ -127,7 +155,7 @@ export function JourneyMap() {
           ...camps.map((c) => [c.lat, c.lon] as [number, number]),
         ];
         if (pts.length) {
-          map.fitBounds(L.latLngBounds(pts).pad(0.3), { maxZoom: 15 });
+          jump(() => map.fitBounds(L.latLngBounds(pts).pad(0.3), { maxZoom: 15 }));
           fittedRef.current = true;
         }
       }
