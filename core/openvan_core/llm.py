@@ -137,7 +137,7 @@ Rules:
 
 CHAT_SYSTEM = """\
 Your task: decide whether the traveller's message is a request to CONTROL a device,
-or a QUESTION / chat.
+to FIND A PLACE TO CAMP, or a QUESTION / chat.
 
 You are given `message`, `devices` (controllable — each lists its `commands`) and
 `status` (your live readings + notices). Respond with JSON ONLY, exactly one of:
@@ -146,15 +146,18 @@ You are given `message`, `devices` (controllable — each lists its `commands`) 
       — ONLY for an explicit control request. Use a device + command from `devices`.
         For a setpoint use command "set_temperature", params {"temperature": <°C>}.
 
-  {"reply": "<a short, friendly spoken answer, 1-3 sentences, in the first person>"}
-      — for questions, status checks, chit-chat, or anything that is NOT a direct
-        control request. Answer as yourself using only facts from `status`; if it
-        isn't there, say you don't have it.
+  {"find_camp": {"radius_km": <km, default 20>, "wants": ["evening sun","sheltered","water"]}}
+      — when the traveller asks where to SLEEP, camp, park or stop for the night, or
+        to find a nearby spot/pitch. Put any preferences they mention in `wants`.
 
-Questions like "how's the van?", "how are you?", "what's the battery?", "anything to
-worry about?", "what can you do?" are NOT actions — use "reply" and answer in the
-first person ("I'm doing well — my battery is at 82%…"). When in doubt, use "reply"
-(never control a device unless clearly asked). Never invent data. No markdown.
+  {"reply": "<a short, friendly spoken answer, 1-3 sentences, in the first person>"}
+      — for questions, status checks, chit-chat, or anything else. Answer as yourself
+        using only facts from `status`; if it isn't there, say you don't have it.
+
+Examples: "where should we sleep tonight?", "find a campsite", "somewhere sheltered
+to park" → find_camp. "how's the van?", "what's the battery?" → reply (first person,
+"I'm doing well — my battery is at 82%…"). When in doubt, use "reply" (never control
+a device unless clearly asked). Never invent data. No markdown.
 """
 
 
@@ -562,13 +565,14 @@ class LLMIntentResolver(IntentResolver):
         status: dict[str, Any],
         persona: str | None = None,
         language: str = "en",
-    ) -> tuple[Intent | None, str | None]:
-        """One LLM call that decides between a device action and a chat reply.
-        Returns (intent, None) for a command, (None, reply) for an answer, or
-        (None, None) if the model is unavailable/unparseable. This is what keeps a
-        *question* from being mistaken for a *command*."""
+    ) -> tuple[Intent | None, str | None, dict[str, Any] | None]:
+        """One LLM call that decides between a device action, a camp search, and a
+        chat reply. Returns exactly one of (intent, None, None) / (None, reply, None)
+        / (None, None, camp_query), or all-None if the model is unavailable or its
+        output can't be parsed. This is what keeps a *question* from being mistaken
+        for a *command*."""
         if not self.router.active:
-            return None, None
+            return None, None, None
         controllable = self._controllable(entities)
         system = build_system(CHAT_SYSTEM, language, persona)
         user = json.dumps(
@@ -576,22 +580,25 @@ class LLMIntentResolver(IntentResolver):
         )
         raw = await self.router.build_client().chat_json(system, user)
         if not raw:
-            return None, None
+            return None, None, None
         try:
             data = json.loads(raw)
         except (ValueError, TypeError):
-            return None, None
+            return None, None, None
         if not isinstance(data, dict):
-            return None, None
+            return None, None, None
         action = data.get("action")
         if isinstance(action, dict):
             intent = self._intent_from(action, text, controllable)
             if intent is not None:
-                return intent, None
+                return intent, None, None
+        camp = data.get("find_camp")
+        if isinstance(camp, dict):
+            return None, None, camp
         reply = data.get("reply")
         if isinstance(reply, str) and reply.strip():
-            return None, reply.strip()
-        return None, None
+            return None, reply.strip(), None
+        return None, None, None
 
     def _intent_from(
         self, data: dict[str, Any], text: str, controllable: dict[str, Entity]

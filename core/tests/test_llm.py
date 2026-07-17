@@ -90,8 +90,8 @@ async def test_converse_returns_reply_for_a_question(tmp_path):
     client = FakeClient('{"reply": "The battery is at 82%."}', available=True)
     resolver, _ = _resolver(tmp_path, client)
     await resolver.startup()
-    intent, reply = await resolver.converse("how is the battery?", _entities(), {"soc": 82})
-    assert intent is None
+    intent, reply, camp = await resolver.converse("how is the battery?", _entities(), {"soc": 82})
+    assert intent is None and camp is None
     assert reply == "The battery is at 82%."
 
 
@@ -101,11 +101,22 @@ async def test_converse_returns_action_for_a_command(tmp_path):
     )
     resolver, _ = _resolver(tmp_path, client)
     await resolver.startup()
-    intent, reply = await resolver.converse("turn on the cabin light", _entities(), {})
-    assert reply is None
+    intent, reply, camp = await resolver.converse("turn on the cabin light", _entities(), {})
+    assert reply is None and camp is None
     assert intent is not None
     assert intent.entity_id == "light.cabin"
     assert intent.command == "turn_on"
+
+
+async def test_converse_returns_find_camp_for_a_camp_query(tmp_path):
+    client = FakeClient(
+        '{"find_camp": {"radius_km": 15, "wants": ["sheltered"]}}', available=True
+    )
+    resolver, _ = _resolver(tmp_path, client)
+    await resolver.startup()
+    intent, reply, camp = await resolver.converse("where should we sleep?", _entities(), {})
+    assert intent is None and reply is None
+    assert camp == {"radius_km": 15, "wants": ["sheltered"]}
 
 
 async def test_valid_llm_json_becomes_intent(tmp_path):

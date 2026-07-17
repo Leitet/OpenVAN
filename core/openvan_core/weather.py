@@ -36,9 +36,18 @@ _WMO = {
 
 Location = tuple[float | None, float | None]
 
+_CARDINALS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+
 
 def _at(seq: list, i: int) -> Any:
     return seq[i] if 0 <= i < len(seq) else None
+
+
+def _cardinal(deg: float | None) -> str | None:
+    """Compass direction the wind is coming FROM, e.g. 350° -> 'N'."""
+    if deg is None:
+        return None
+    return _CARDINALS[int((deg % 360) / 45.0 + 0.5) % 8]
 
 
 class WeatherService:
@@ -143,7 +152,7 @@ class WeatherService:
         params = {
             "latitude": lat,
             "longitude": lon,
-            "current": "temperature_2m,precipitation,cloud_cover,weather_code,wind_speed_10m",
+            "current": "temperature_2m,precipitation,cloud_cover,weather_code,wind_speed_10m,wind_direction_10m",
             "hourly": "temperature_2m,precipitation,precipitation_probability,cloud_cover",
             "wind_speed_unit": "kmh",
             "forecast_days": 2,
@@ -206,6 +215,8 @@ class WeatherService:
                 "precip_mm": cur.get("precipitation"),
                 "cloud_pct": cur.get("cloud_cover"),
                 "wind_kmh": cur.get("wind_speed_10m"),
+                "wind_dir_deg": cur.get("wind_direction_10m"),
+                "wind_from": _cardinal(cur.get("wind_direction_10m")),
                 "code": code,
                 "condition": _WMO.get(code, "—"),
             },

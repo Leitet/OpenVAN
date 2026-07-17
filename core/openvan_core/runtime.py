@@ -124,9 +124,13 @@ class Core:
 
         if getattr(resolver, "active", False):
             status = self.companion.build_context(self.hub, notices)
-            intent, reply = await resolver.converse(text, entities, status, persona, language)
+            intent, reply, camp = await resolver.converse(
+                text, entities, status, persona, language
+            )
             if intent is not None:
                 return await self._chat_action(intent)
+            if camp is not None:
+                return await self._chat_camp(camp, notices, persona, language)
             if reply is not None:
                 return {"reply": reply, "action": False, "ok": True, "blocked_by_safety": False}
             # Model gave nothing usable — answer from state, don't guess a command.
@@ -152,6 +156,33 @@ class Core:
             "action": True,
             "ok": result.ok,
             "blocked_by_safety": result.blocked_by_safety,
+        }
+
+    async def _chat_camp(
+        self, camp: dict[str, Any], notices, persona, language
+    ) -> dict[str, Any]:
+        """Search nearby camp spots and let the van recommend one (read-only)."""
+        result = (
+            await self.camp.search(camp.get("radius_km"))
+            if self.config.camp_enabled
+            else {"spots": []}
+        )
+        spots = result.get("spots", [])
+        reply = await self.companion.recommend_camp(
+            self.hub,
+            notices,
+            spots,
+            camp.get("wants") or [],
+            use_llm=self.router.active,
+            persona=persona,
+            language=language,
+        )
+        return {
+            "reply": reply,
+            "action": False,
+            "ok": True,
+            "blocked_by_safety": False,
+            "spots": spots,
         }
 
     # --- runtime settings (Admin UI / API / MCP) -------------------------

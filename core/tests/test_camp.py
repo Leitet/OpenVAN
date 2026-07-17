@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from openvan_core import build_core
 from openvan_core.camp import CampService
 from openvan_core.config import Config
 
@@ -67,3 +68,39 @@ async def test_radius_filters_out_distant_spots(tmp_path):
     wide = await svc.search(radius_km=30)
     narrow = await svc.search(radius_km=2)
     assert len(narrow["spots"]) < len(wide["spots"])
+
+
+class _FakeCampLLM:
+    """A model that routes a camp query to find_camp, then recommends a spot."""
+
+    async def available(self):
+        return True
+
+    async def chat_json(self, system, user):
+        return '{"find_camp": {"radius_km": 20, "wants": ["sheltered"]}}'
+
+    async def chat_text(self, system, user):
+        return "Head to Pine Forest Aire, 2.7 km away — the north pines will shelter you."
+
+
+async def test_chat_proposes_a_camp_spot(tmp_path):
+    core = build_core(
+        Config(
+            ai_enabled=True,
+            weather_enabled=False,
+            memory_enabled=False,
+            telemetry_enabled=False,
+            data_dir=tmp_path,
+        )
+    )
+    core.router._client_factory = lambda _b: _FakeCampLLM()
+    await core.start()
+    await core.twin.set_signal("gps.lat", 46.5, source="test")
+    await core.twin.set_signal("gps.lon", 11.3, source="test")
+
+    r = await core.chat("where should we sleep tonight?")
+    assert r["action"] is False
+    assert r["ok"] is True
+    assert len(r["spots"]) >= 3  # sim source returned candidates
+    assert "Pine Forest" in r["reply"]  # the van recommended one
+    await core.stop()

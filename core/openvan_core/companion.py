@@ -55,6 +55,34 @@ it directly (e.g. "turn on the cabin light"). Plain natural speech — no lists,
 markdown.
 """
 
+CAMP_SYSTEM = """\
+Your task: recommend where to spend the night, choosing from the `spots` I found
+nearby. Each spot has name, kind, distance_km, amenities and a description. You also
+get `weather` (wind_from = the direction the wind blows FROM, wind_kmh, cloud,
+condition, rain_eta_hours), `sun` (the hour now; the sun sets in the WEST),
+`status` (my battery + fresh water) and `wants` (their stated preferences).
+
+Pick the best 1-2 spots and say why, in the FIRST PERSON, warm and brief (2-4
+sentences). Weigh distance, amenities (prefer water/toilets if my fresh water is
+low), rain and comfort. Where you can, add a short MICRO-SITING tip for the pitch:
+for evening sun, face/park open to the WEST; for shelter, keep the side facing the
+wind (`wind_from`) blocked by trees, walls or terrain, and avoid exposed ridges when
+it's windy. Use only the facts given (spot descriptions + weather). No lists, no
+markdown.
+"""
+
+# Localised offline lines when no model can phrase a recommendation.
+_CAMP_FALLBACK = {
+    "en": "Nearby I found: {spots}.",
+    "sv": "I närheten hittade jag: {spots}.",
+    "de": "In der Nähe habe ich gefunden: {spots}.",
+}
+_CAMP_NONE = {
+    "en": "I couldn't find any spots nearby right now.",
+    "sv": "Jag hittade inga platser i närheten just nu.",
+    "de": "Ich habe gerade keine Plätze in der Nähe gefunden.",
+}
+
 _BATTERY_CAPACITY_AH = 200.0
 
 
@@ -186,6 +214,50 @@ class Companion:
         # No model could answer (offline, or the configured model failed) — a short
         # localised line, in the assistant's language (never invents data).
         return _ANSWER_FALLBACK.get(language, _ANSWER_FALLBACK["en"])
+
+    async def recommend_camp(
+        self,
+        hub: "Hub",
+        notices: list[dict[str, Any]],
+        spots: list[dict[str, Any]],
+        wants: list[str],
+        *,
+        use_llm: bool,
+        persona: str | None = None,
+        language: str = "en",
+    ) -> str:
+        """Recommend a place to camp from ``spots``, with weather/sun-aware
+        micro-siting. Read-only — it proposes, never navigates or acts (Rule 2)."""
+        if not spots:
+            return _CAMP_NONE.get(language, _CAMP_NONE["en"])
+        if use_llm and self.router.active:
+            context = self.build_context(hub, notices)
+            current = (self.weather.snapshot().get("current") if self.weather else {}) or {}
+            payload = json.dumps(
+                {
+                    "spots": spots,
+                    "wants": wants or [],
+                    "weather": {
+                        "wind_from": current.get("wind_from"),
+                        "wind_kmh": current.get("wind_kmh"),
+                        "cloud_pct": current.get("cloud_pct"),
+                        "condition": current.get("condition"),
+                        "rain_eta_hours": self.weather.rain_eta_hours() if self.weather else None,
+                    },
+                    "sun": {"hour_now": datetime.now().hour, "note": "the sun sets in the west"},
+                    "status": {
+                        "battery_soc_pct": context.get("battery_soc_pct"),
+                        "fresh_water_pct": context.get("fresh_water_pct"),
+                    },
+                }
+            )
+            system = build_system(CAMP_SYSTEM, language, persona)
+            text = await self.router.build_client().chat_text(system, payload)
+            if text:
+                return text.strip()
+        # Offline: a short localised list of the closest options.
+        names = ", ".join(f"{s.get('name')} ({s.get('distance_km')} km)" for s in spots[:3])
+        return _CAMP_FALLBACK.get(language, _CAMP_FALLBACK["en"]).format(spots=names)
 
     def render_template(self, ctx: dict[str, Any]) -> str:
         parts = [f"{ctx['greeting']}."]
