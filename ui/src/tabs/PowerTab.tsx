@@ -3,6 +3,7 @@ import { useT } from "../i18n";
 import { Gauge } from "../components/Gauge";
 import { Trends } from "../components/Trends";
 import { Predictions } from "../components/Predictions";
+import { Maintenance } from "../components/Maintenance";
 
 export function PowerTab() {
   const { twin } = useVan();
@@ -21,6 +22,7 @@ export function PowerTab() {
 
       <Predictions />
       <Trends />
+      <Maintenance />
     </div>
   );
 }

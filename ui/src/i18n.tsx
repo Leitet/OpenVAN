@@ -151,6 +151,10 @@ const T: Record<string, Entry> = {
 
   // --- journey ---
   "home.routines": { en: "Routines", sv: "Rutiner", de: "Routinen" },
+  "maint.title": { en: "Maintenance", sv: "Underhåll", de: "Wartung" },
+  "maint.done": { en: "Done", sv: "Klart", de: "Erledigt" },
+  "maint.overdue": { en: "Overdue", sv: "Försenat", de: "Überfällig" },
+  "maint.days": { en: "days", sv: "dagar", de: "Tage" },
   "level.title": { en: "Leveling", sv: "Nivellering", de: "Nivellierung" },
   "level.pitch": { en: "Pitch", sv: "Lutning fram/bak", de: "Neigung" },
   "level.roll": { en: "Roll", sv: "Lutning sida", de: "Querneigung" },

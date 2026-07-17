@@ -692,6 +692,40 @@ body {
   margin-top: 4px;
 }
 
+/* Maintenance */
+.maint-list {
+  display: flex;
+  flex-direction: column;
+}
+.maint-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.maint-row:last-child {
+  border-bottom: none;
+}
+.maint-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.maint-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.maint-remaining {
+  font-size: 12px;
+  color: var(--muted);
+}
+.maint-row.due .maint-remaining {
+  color: var(--warn);
+  font-weight: 700;
+}
+
 /* Leveling bubble */
 .level-row {
   display: flex;

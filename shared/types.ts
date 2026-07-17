@@ -145,6 +145,17 @@ export interface SceneInfo {
   description: string;
 }
 
+export interface MaintenanceItem {
+  id: string;
+  label: string;
+  kind: "odometer" | "date";
+  due: boolean;
+  remaining_km?: number;
+  next_km?: number;
+  remaining_days?: number;
+  next_iso?: string;
+}
+
 export interface Notice {
   key: string;
   level: "info" | "suggestion" | "warning";

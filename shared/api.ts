@@ -248,7 +248,21 @@ export async function deletePersonality(id: string): Promise<void> {
   await fetch(`/api/personalities/${id}`, { method: "DELETE" });
 }
 
-import type { AssistantMemory, SceneInfo } from "./types";
+import type { AssistantMemory, SceneInfo, MaintenanceItem } from "./types";
+
+export async function getMaintenance(): Promise<MaintenanceItem[]> {
+  const data = await (await fetch("/api/maintenance")).json();
+  return data.items as MaintenanceItem[];
+}
+
+export async function completeMaintenance(id: string): Promise<MaintenanceItem[]> {
+  const res = await fetch("/api/maintenance/complete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+  return (await res.json()).items as MaintenanceItem[];
+}
 
 export async function getAssistantMemory(): Promise<AssistantMemory> {
   return (await fetch("/api/assistant/memory")).json();

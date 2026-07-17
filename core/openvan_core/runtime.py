@@ -31,7 +31,8 @@ from .llm import (
     filter_chat_models,
 )
 from .memory import TravelMemory
-from .notices import AdvisorEngine, RainSoon, default_advisors
+from .maintenance import MaintenanceLog
+from .notices import AdvisorEngine, RainSoon, ServiceDue, default_advisors
 from .personalities import PersonalityStore
 from .plugins import PluginManager, registered_plugins
 from .safety import (
@@ -109,6 +110,7 @@ class Core:
     store: ConfigStore
     memory_chat: ChatMemory
     scenes: SceneEngine
+    maintenance: MaintenanceLog
     roads: RoadNetwork | None = None
 
     async def start(self) -> None:
@@ -116,6 +118,7 @@ class Core:
         # and the assistant's learned memory (summary + preferences).
         self.store.open()
         self.memory_chat.load()
+        self.maintenance.load()
         # Open telemetry and start recording before seeding, so the initial
         # state is captured as the first samples.
         if self.config.telemetry_enabled:
@@ -248,6 +251,18 @@ class Core:
     async def run_scene(self, scene_id: str) -> dict[str, Any] | None:
         """Run a scene's steps through the safety-checked intent path."""
         return await self.scenes.run(scene_id)
+
+    def maintenance_status(self) -> list[dict[str, Any]]:
+        from datetime import datetime
+
+        odo = self.twin.get("vehicle.odometer_km")
+        return self.maintenance.status(odo, datetime.now().date())
+
+    def complete_maintenance(self, item_id: str) -> bool:
+        from datetime import datetime
+
+        odo = self.twin.get("vehicle.odometer_km")
+        return self.maintenance.complete(item_id, odo, datetime.now().date())
 
     async def _run_scene_reply(self, scene_id: str) -> dict[str, Any]:
         result = await self.scenes.run(scene_id)
@@ -478,6 +493,8 @@ def build_core(config: Config | None = None) -> Core:
     )
     memory_chat = ChatMemory(store, router)
     scenes = SceneEngine(hub)
+    maintenance = MaintenanceLog(store, get_odometer=lambda: twin.get("vehicle.odometer_km"))
+    advisors.advisors.append(ServiceDue(maintenance))
     return Core(
         config=config,
         bus=bus,
@@ -497,6 +514,7 @@ def build_core(config: Config | None = None) -> Core:
         store=store,
         memory_chat=memory_chat,
         scenes=scenes,
+        maintenance=maintenance,
         router=router,
         roads=roads,
     )

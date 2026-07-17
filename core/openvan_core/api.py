@@ -96,6 +96,10 @@ class SceneBody(BaseModel):
     id: str
 
 
+class MaintenanceBody(BaseModel):
+    id: str
+
+
 class ActivePersonalityBody(BaseModel):
     id: str
 
@@ -228,6 +232,16 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
         if result is None:
             raise HTTPException(404, f"unknown scene '{body.id}'")
         return result
+
+    @app.get("/api/maintenance")
+    async def maintenance() -> dict[str, Any]:
+        return {"items": core.maintenance_status()}
+
+    @app.post("/api/maintenance/complete")
+    async def complete_maintenance(body: MaintenanceBody) -> dict[str, Any]:
+        if not core.complete_maintenance(body.id):
+            raise HTTPException(404, f"unknown maintenance item '{body.id}'")
+        return {"items": core.maintenance_status()}
 
     @app.post("/api/sim/signal")
     async def sim_signal(body: SignalBody) -> dict[str, str]:

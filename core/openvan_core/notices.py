@@ -431,6 +431,29 @@ class NotLevel(Advisor):
         )
 
 
+class ServiceDue(Advisor):
+    """Surface any maintenance item that's due or overdue (odometer or date based)."""
+
+    key = "service_due"
+
+    def __init__(self, log: Any) -> None:
+        self.log = log
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        from datetime import datetime
+
+        odo = _twin_float(hub, "vehicle.odometer_km")
+        due = [s for s in self.log.status(odo, datetime.now().date()) if s["due"]]
+        if not due:
+            return None
+        labels = ", ".join(s["label"] for s in due)
+        return Notice(
+            self.key, "suggestion", "journey", "Maintenance due",
+            f"Due now: {labels}. Tick it off once done.",
+            {"items": [s["id"] for s in due]},
+        )
+
+
 def default_advisors() -> list[Advisor]:
     return [
         LowFreshWater(),
