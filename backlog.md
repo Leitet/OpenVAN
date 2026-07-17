@@ -86,8 +86,18 @@ cloud service and is patchy on iPad Safari):
 - Snooze / acknowledge notices; per-notice preferences.
 
 ## Integrations (plugins)
-GPS / vehicle plugin and weather (open-meteo, offline-first) both landed.
-Remaining:
+GPS / vehicle plugin and weather (open-meteo, offline-first) both landed. A
+**vehicle profile** (dimensions/weight/fuel/category + 33 model presets) and
+**low-bridge / weight-limit** warnings (height & gross weight vs. OSM
+maxheight/maxweight on the road ahead) also landed. Remaining:
+- **Vehicle-aware routing** (builds on the vehicle profile + roads.py):
+  - **`maxwidth` check** for narrow lanes/tunnels, using width-incl-mirrors.
+  - **Surface active height/weight/width limits on the Journey tab** (a small
+    "restrictions ahead" strip), not just as a companion notice.
+  - **Height/weight/width-aware route planner** — route around low bridges,
+    weight-limited roads and narrow lanes (needs a routing engine that honours the
+    OSM restriction tags, e.g. an OSRM/Valhalla profile built from the vehicle
+    dimensions).
 - Navigation / routing + destination ETA (builds on the GPS the vehicle plugin
   now provides).
 - OBD-II / CAN detail for the vehicle plugin (doors, fuel, engine data).
