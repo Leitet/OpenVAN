@@ -158,6 +158,7 @@ const T: Record<string, Entry> = {
   "journey.heading": { en: "Heading", sv: "Kurs", de: "Kurs" },
   "journey.odometer": { en: "Odometer", sv: "Vägmätare", de: "Kilometerzähler" },
   "journey.positionLabel": { en: "Position", sv: "Position", de: "Position" },
+  "journey.camp": { en: "camp spot", sv: "campingplats", de: "Stellplatz" },
 
   // --- weather ---
   "weather.title": { en: "Weather", sv: "Väder", de: "Wetter" },
@@ -272,6 +273,7 @@ const T: Record<string, Entry> = {
     sv: "kräver internet",
     de: "braucht Internet",
   },
+  "settings.needsKey": { en: "needs key", sv: "kräver nyckel", de: "braucht Schlüssel" },
   "settings.noCampSources": {
     en: "No camp sources installed.",
     sv: "Inga campingkällor installerade.",

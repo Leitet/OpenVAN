@@ -22,6 +22,7 @@ export function Journey({ twin }: { twin: Twin }) {
             <span><i className="dot here" /> {t("journey.position")}</span>
             <span><i className="dot stay" /> {t("journey.pastStay")}</span>
             <span><i className="dot open" /> {t("journey.hereNow")}</span>
+            <span><i className="dot camp" /> {t("journey.camp")}</span>
           </div>
         </div>
         <div className="journey-side">

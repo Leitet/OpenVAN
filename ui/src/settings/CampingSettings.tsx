@@ -31,6 +31,7 @@ export function CampingSettings() {
               {s.requires_internet && (
                 <span className="pill"> {t("settings.needsInternet")}</span>
               )}
+              {s.requires_key && <span className="pill"> {t("settings.needsKey")}</span>}
             </label>
             <input
               type="checkbox"

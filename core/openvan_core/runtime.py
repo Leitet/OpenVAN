@@ -8,6 +8,7 @@ non-HTTP front-ends like a voice loop) can drive a fully-formed Core directly.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 
 from typing import Any
@@ -42,6 +43,28 @@ from .simulation import VanSimulation
 from .telemetry import TelemetryRecorder, TelemetryStore
 from .twin import VanTwin
 from .weather import WeatherService
+
+# Phrase hints that a message is asking where to spend the night. Deterministic so a
+# weak/offline model can't mistake "where should we sleep?" for a device command.
+# Phrase-based (not bare "camp") to avoid false positives like "the campervan".
+_CAMP_HINTS = (
+    "campsite", "camping", "campground", "camp for the night", "camp tonight",
+    "where to camp", "somewhere to camp", "place to camp", "find a camp", "wild camp",
+    "an aire", "overnight spot", "overnight stay", "stay overnight", "park overnight",
+    "sleep tonight", "somewhere to sleep", "where to sleep", "where should we sleep",
+    "spend the night", "stay the night", "spot for the night", "pitch for the night",
+    "park for the night", "park up for the night", "place to stay tonight",
+    # sv
+    "campingplats", "ställplats", "övernatta", "sova i natt", "var ska vi sova",
+    "stå för natten", "plats för natten",
+    # de
+    "campingplatz", "stellplatz", "übernachten", "wo schlafen wir", "platz für die nacht",
+)
+_CAMP_RE = re.compile("|".join(re.escape(h) for h in _CAMP_HINTS), re.IGNORECASE)
+
+
+def _looks_like_camp_query(text: str) -> bool:
+    return bool(_CAMP_RE.search(text))
 
 
 @dataclass
@@ -122,6 +145,13 @@ class Core:
 
         language = self.config.language
 
+        # Camp queries route to a camp search regardless of model strength, so a weak
+        # or offline model can't mistake "where should we sleep?" for a device command.
+        if self.config.camp_enabled and _looks_like_camp_query(text):
+            return await self._chat_camp(
+                {"radius_km": None, "wants": []}, notices, persona, language, request=text
+            )
+
         if getattr(resolver, "active", False):
             status = self.companion.build_context(self.hub, notices)
             intent, reply, camp = await resolver.converse(
@@ -130,7 +160,7 @@ class Core:
             if intent is not None:
                 return await self._chat_action(intent)
             if camp is not None:
-                return await self._chat_camp(camp, notices, persona, language)
+                return await self._chat_camp(camp, notices, persona, language, request=text)
             if reply is not None:
                 return {"reply": reply, "action": False, "ok": True, "blocked_by_safety": False}
             # Model gave nothing usable — answer from state, don't guess a command.
@@ -159,7 +189,7 @@ class Core:
         }
 
     async def _chat_camp(
-        self, camp: dict[str, Any], notices, persona, language
+        self, camp: dict[str, Any], notices, persona, language, request: str = ""
     ) -> dict[str, Any]:
         """Search nearby camp spots and let the van recommend one (read-only)."""
         result = (
@@ -173,6 +203,7 @@ class Core:
             notices,
             spots,
             camp.get("wants") or [],
+            request=request,
             use_llm=self.router.active,
             persona=persona,
             language=language,

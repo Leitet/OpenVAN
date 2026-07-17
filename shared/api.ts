@@ -59,6 +59,18 @@ export async function sendChat(text: string): Promise<ChatReply> {
   return res.json();
 }
 
+export interface CampSearchResult {
+  location: { lat: number; lon: number } | null;
+  radius_km?: number;
+  sources?: string[];
+  spots: CampSpot[];
+}
+
+export async function campSearch(radius?: number): Promise<CampSearchResult> {
+  const q = radius ? `?radius=${radius}` : "";
+  return (await fetch(`/api/camp/search${q}`)).json();
+}
+
 export async function getCampSources(): Promise<CampSourceInfo[]> {
   const data = await (await fetch("/api/camp/sources")).json();
   return data.sources as CampSourceInfo[];

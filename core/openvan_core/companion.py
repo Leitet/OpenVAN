@@ -62,9 +62,10 @@ get `weather` (wind_from = the direction the wind blows FROM, wind_kmh, cloud,
 condition, rain_eta_hours), `sun` (the hour now; the sun sets in the WEST),
 `status` (my battery + fresh water) and `wants` (their stated preferences).
 
-Pick the best 1-2 spots and say why, in the FIRST PERSON, warm and brief (2-4
-sentences). Weigh distance, amenities (prefer water/toilets if my fresh water is
-low), rain and comfort. Where you can, add a short MICRO-SITING tip for the pitch:
+Honour their `request` and `wants`. Pick the best 1-2 spots and say why, in the
+FIRST PERSON, warm and brief (2-4 sentences). Weigh distance, amenities (prefer
+water/toilets if my fresh water is low), rain and comfort. Where you can, add a
+short MICRO-SITING tip for the pitch:
 for evening sun, face/park open to the WEST; for shelter, keep the side facing the
 wind (`wind_from`) blocked by trees, walls or terrain, and avoid exposed ridges when
 it's windy. Use only the facts given (spot descriptions + weather). No lists, no
@@ -222,6 +223,7 @@ class Companion:
         spots: list[dict[str, Any]],
         wants: list[str],
         *,
+        request: str = "",
         use_llm: bool,
         persona: str | None = None,
         language: str = "en",
@@ -235,6 +237,7 @@ class Companion:
             current = (self.weather.snapshot().get("current") if self.weather else {}) or {}
             payload = json.dumps(
                 {
+                    "request": request,
                     "spots": spots,
                     "wants": wants or [],
                     "weather": {

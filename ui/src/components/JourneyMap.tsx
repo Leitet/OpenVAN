@@ -1,23 +1,25 @@
 import { useEffect, useState } from "react";
-import { getSeries, getStays } from "@shared/api";
-import type { Stay } from "@shared/types";
+import { campSearch, getSeries, getStays } from "@shared/api";
+import type { CampSpot, Stay } from "@shared/types";
 
 const W = 320;
 const H = 190;
 const PAD = 14;
 
-/** Breadcrumb map: the GPS track plus markers for past stays (offline, no tiles). */
+/** Breadcrumb map: the GPS track, past stays, and nearby camp spots (offline, no tiles). */
 export function JourneyMap() {
   const [track, setTrack] = useState<{ lat: number; lon: number }[]>([]);
   const [stays, setStays] = useState<Stay[]>([]);
+  const [camps, setCamps] = useState<CampSpot[]>([]);
 
   useEffect(() => {
     let active = true;
     const load = async () => {
-      const [lat, lon, mem] = await Promise.all([
+      const [lat, lon, mem, camp] = await Promise.all([
         getSeries("gps.lat", 120),
         getSeries("gps.lon", 120),
         getStays(),
+        campSearch().catch(() => ({ spots: [] })),
       ]);
       if (!active) return;
       const n = Math.min(lat.length, lon.length);
@@ -25,6 +27,7 @@ export function JourneyMap() {
       for (let i = 0; i < n; i++) pts.push({ lat: lat[i].v, lon: lon[i].v });
       setTrack(pts);
       setStays(mem.stays.filter((s) => s.lat !== null && s.lon !== null));
+      setCamps(camp.spots ?? []);
     };
     load();
     const timer = setInterval(load, 4000);
@@ -35,7 +38,8 @@ export function JourneyMap() {
   }, []);
 
   const stayPts = stays.map((s) => ({ lat: s.lat as number, lon: s.lon as number }));
-  const all = [...track, ...stayPts];
+  const campPts = camps.map((c) => ({ lat: c.lat, lon: c.lon }));
+  const all = [...track, ...stayPts, ...campPts];
 
   if (all.length === 0) {
     return (
@@ -68,6 +72,25 @@ export function JourneyMap() {
     <svg viewBox={`0 0 ${W} ${H}`} className="journey-map">
       <rect x="0" y="0" width={W} height={H} className="journey-bg" rx="10" />
       {track.length >= 2 && <polyline points={path} className="journey-track" />}
+      {camps.map((c) => {
+        const [x, y] = project({ lat: c.lat, lon: c.lon });
+        return (
+          <rect
+            key={c.id}
+            x={x - 3}
+            y={y - 3}
+            width={6}
+            height={6}
+            className="journey-camp"
+            transform={`rotate(45 ${x} ${y})`}
+          >
+            <title>
+              {c.name} · {c.kind}
+              {c.distance_km != null ? ` · ${c.distance_km} km` : ""}
+            </title>
+          </rect>
+        );
+      })}
       {stays.map((s) => {
         const [x, y] = project({ lat: s.lat as number, lon: s.lon as number });
         return (

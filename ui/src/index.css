@@ -722,6 +722,11 @@ body {
 .journey-stay.open {
   fill: var(--accent);
 }
+.journey-camp {
+  fill: color-mix(in srgb, var(--accent) 35%, var(--panel));
+  stroke: var(--accent);
+  stroke-width: 1.4;
+}
 .journey-legend {
   display: flex;
   gap: 14px;
@@ -745,6 +750,12 @@ body {
 }
 .journey-legend .dot.open {
   background: var(--accent);
+}
+.journey-legend .dot.camp {
+  background: color-mix(in srgb, var(--accent) 35%, var(--panel));
+  border: 1.5px solid var(--accent);
+  border-radius: 2px;
+  transform: rotate(45deg);
 }
 .journey-side {
   display: flex;
