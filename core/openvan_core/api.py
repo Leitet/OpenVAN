@@ -106,6 +106,13 @@ class SecurityBody(BaseModel):
     armed: bool
 
 
+class CameraBody(BaseModel):
+    id: str
+    label: str = ""
+    location: str = "cabin"
+    connection: str = "wifi"
+
+
 class ActivePersonalityBody(BaseModel):
     id: str
 
@@ -248,6 +255,22 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
         if not core.complete_maintenance(body.id):
             raise HTTPException(404, f"unknown maintenance item '{body.id}'")
         return {"items": core.maintenance_status()}
+
+    @app.get("/api/cameras")
+    async def cameras() -> dict[str, Any]:
+        return {"cameras": core.cameras()}
+
+    @app.post("/api/cameras")
+    async def add_camera(body: CameraBody) -> dict[str, Any]:
+        if not await core.add_camera(body.id, body.label, body.location, body.connection):
+            raise HTTPException(400, f"could not add camera '{body.id}' (missing or exists)")
+        return {"cameras": core.cameras()}
+
+    @app.delete("/api/cameras/{cam_id}")
+    async def remove_camera(cam_id: str) -> dict[str, Any]:
+        if not await core.remove_camera(cam_id):
+            raise HTTPException(404, f"unknown camera '{cam_id}'")
+        return {"cameras": core.cameras()}
 
     @app.get("/api/security")
     async def security() -> dict[str, Any]:

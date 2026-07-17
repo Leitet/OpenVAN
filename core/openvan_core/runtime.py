@@ -264,6 +264,25 @@ class Core:
         """Run a scene's steps through the safety-checked intent path."""
         return await self.scenes.run(scene_id)
 
+    # --- cameras (dynamic) ----------------------------------------------
+    def cameras(self) -> list[dict[str, str]]:
+        plugin = self.plugins.get("cameras")
+        return plugin.list() if plugin is not None else []
+
+    async def add_camera(self, cam_id: str, label: str, location: str, connection: str) -> bool:
+        plugin = self.plugins.get("cameras")
+        if plugin is None or not await plugin.add_camera(cam_id, label, location, connection):
+            return False
+        self.store.set_many("plugin:cameras", {"list": plugin.list()})
+        return True
+
+    async def remove_camera(self, cam_id: str) -> bool:
+        plugin = self.plugins.get("cameras")
+        if plugin is None or not await plugin.remove_camera(cam_id):
+            return False
+        self.store.set_many("plugin:cameras", {"list": plugin.list()})
+        return True
+
     def maintenance_status(self) -> list[dict[str, Any]]:
         from datetime import datetime
 

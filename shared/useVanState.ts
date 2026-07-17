@@ -46,6 +46,15 @@ export function useVanState() {
           setEntities((prev) => ({ ...prev, [e.entity_id]: e }));
           break;
         }
+        case "entity.removed": {
+          const id = msg.data.entity_id as string;
+          setEntities((prev) => {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          });
+          break;
+        }
         case "twin.signal_changed": {
           setTwin((prev) => ({ ...prev, [msg.data.key]: msg.data.value }));
           break;

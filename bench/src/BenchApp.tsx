@@ -6,6 +6,8 @@ import {
   simulateWeather,
   getSettings,
   saveSettings,
+  addCamera,
+  removeCamera,
 } from "@shared/api";
 import type { Weather } from "@shared/types";
 import { useVanState } from "@shared/useVanState";
@@ -111,8 +113,50 @@ function fmt(v: number | boolean | string): string {
   return String(v);
 }
 
+const LOCATIONS = ["rear", "cabin", "door", "awning"];
+const CONNECTIONS = ["wired", "wifi", "4g"];
+
+function CameraAdder() {
+  const [id, setId] = useState("");
+  const [label, setLabel] = useState("");
+  const [location, setLocation] = useState("cabin");
+  const [connection, setConnection] = useState("wifi");
+
+  const add = async () => {
+    const cid = id.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+    if (!cid) return;
+    await addCamera({ id: cid, label: label.trim() || cid, location, connection });
+    setId("");
+    setLabel("");
+  };
+
+  return (
+    <div className="cam-add">
+      <input placeholder="id" value={id} onChange={(e) => setId(e.target.value)} />
+      <input placeholder="name" value={label} onChange={(e) => setLabel(e.target.value)} />
+      <select value={location} onChange={(e) => setLocation(e.target.value)}>
+        {LOCATIONS.map((l) => (
+          <option key={l} value={l}>
+            {l}
+          </option>
+        ))}
+      </select>
+      <select value={connection} onChange={(e) => setConnection(e.target.value)}>
+        {CONNECTIONS.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
+      <button className="chip on" onClick={add}>
+        + add
+      </button>
+    </div>
+  );
+}
+
 export function BenchApp() {
-  const { twin, connected } = useVanState();
+  const { twin, connected, entities } = useVanState();
   const [wx, setWx] = useState<Weather>({});
   const [simulate, setSimulate] = useState<boolean | null>(null);
 
@@ -230,35 +274,39 @@ export function BenchApp() {
 
         <section className="card">
           <h2>Cameras</h2>
-          {[
-            ["rear", "Rear View"],
-            ["cabin", "Cabin"],
-            ["entry", "Entry / Door"],
-            ["awning", "Side / Awning"],
-          ].map(([id, label]) => (
-            <div className="cam-row" key={id}>
-              <span className="cam-row-label">{label}</span>
-              <button
-                className={"chip" + (twin[`camera.${id}.online`] ? " on" : "")}
-                onClick={() => injectSignal(`camera.${id}.online`, !twin[`camera.${id}.online`])}
-              >
-                {twin[`camera.${id}.online`] ? "online" : "offline"}
-              </button>
-              <button
-                className={"chip" + (twin[`camera.${id}.motion`] ? " warn" : "")}
-                onClick={() => injectSignal(`camera.${id}.motion`, !twin[`camera.${id}.motion`])}
-              >
-                motion
-              </button>
-              <button
-                className={"chip" + (twin[`camera.${id}.recording`] ? " rec" : "")}
-                onClick={() => injectSignal(`camera.${id}.recording`, !twin[`camera.${id}.recording`])}
-              >
-                rec
-              </button>
-            </div>
-          ))}
-          <p className="note">Motion on any camera while Away mode is armed trips the intrusion alarm.</p>
+          {Object.values(entities)
+            .filter((e) => e.domain === "camera")
+            .map((cam) => {
+              const id = cam.entity_id.split(".")[1];
+              return (
+                <div className="cam-row" key={id}>
+                  <span className="cam-row-label">{cam.name}</span>
+                  <button
+                    className={"chip" + (twin[`camera.${id}.online`] ? " on" : "")}
+                    onClick={() => injectSignal(`camera.${id}.online`, !twin[`camera.${id}.online`])}
+                  >
+                    {twin[`camera.${id}.online`] ? "online" : "offline"}
+                  </button>
+                  <button
+                    className={"chip" + (twin[`camera.${id}.motion`] ? " warn" : "")}
+                    onClick={() => injectSignal(`camera.${id}.motion`, !twin[`camera.${id}.motion`])}
+                  >
+                    motion
+                  </button>
+                  <button
+                    className={"chip" + (twin[`camera.${id}.recording`] ? " rec" : "")}
+                    onClick={() => injectSignal(`camera.${id}.recording`, !twin[`camera.${id}.recording`])}
+                  >
+                    rec
+                  </button>
+                  <button className="chip danger" title="Remove" onClick={() => removeCamera(id)}>
+                    ✕
+                  </button>
+                </div>
+              );
+            })}
+          <CameraAdder />
+          <p className="note">Add/remove cameras here; motion on any while Away mode is armed trips the intrusion alarm.</p>
         </section>
 
         <section className="card">

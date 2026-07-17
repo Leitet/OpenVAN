@@ -5,13 +5,14 @@ import { useT } from "../i18n";
 // cam high on the back, the awning cam up on the side/roofline, the door cam by the
 // sliding door, and the cabin cam inside. Each mount shows its field-of-view and
 // lights up on motion — so the placement reads like a real install.
+// Keyed by camera *location* so any camera set maps onto the van.
 const MOUNTS: Record<
   string,
   { x: number; y: number; fov: string; lx: number; ly: number; anchor: "start" | "middle" | "end" }
 > = {
   rear: { x: 296, y: 54, fov: "296,54 322,62 322,96", lx: 300, ly: 47, anchor: "end" },
   awning: { x: 208, y: 42, fov: "208,42 186,86 230,86", lx: 208, ly: 35, anchor: "middle" },
-  entry: { x: 250, y: 66, fov: "250,66 232,106 268,106", lx: 258, ly: 62, anchor: "start" },
+  door: { x: 250, y: 66, fov: "250,66 232,106 268,106", lx: 258, ly: 62, anchor: "start" },
   cabin: { x: 140, y: 60, fov: "140,60 126,92 154,92", lx: 140, ly: 53, anchor: "middle" },
 };
 
@@ -45,8 +46,8 @@ export function VanCameraMap() {
         <circle className="vcm-wheel" cx="252" cy="112" r="14" />
 
         {cams.map((c) => {
-          const id = c.entity_id.split(".")[1];
-          const m = MOUNTS[id];
+          const loc = String((c.attributes as Record<string, unknown>).location ?? "");
+          const m = MOUNTS[loc];
           if (!m) return null;
           const s = stateOf(c);
           return (

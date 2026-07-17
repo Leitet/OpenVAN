@@ -46,6 +46,16 @@ class Hub:
     def get_entity(self, entity_id: str) -> Entity | None:
         return self.entities.get(entity_id)
 
+    async def remove_entity(self, entity_id: str) -> bool:
+        """Drop an entity (and its handler) and tell subscribers, so a removed
+        device disappears from the UI. Used for dynamic devices like cameras."""
+        if entity_id not in self.entities:
+            return False
+        self.entities.pop(entity_id, None)
+        self._handlers.pop(entity_id, None)
+        await self.bus.publish("entity.removed", {"entity_id": entity_id})
+        return True
+
     async def set_state(
         self, entity_id: str, state: Any, attributes: dict[str, Any] | None = None
     ) -> None:

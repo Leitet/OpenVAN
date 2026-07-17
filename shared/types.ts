@@ -148,6 +148,13 @@ export interface SceneInfo {
   description: string;
 }
 
+export interface CameraDef {
+  id: string;
+  label: string;
+  location: string; // rear | cabin | door | awning
+  connection: string; // wired | wifi | 4g
+}
+
 export interface MaintenanceItem {
   id: string;
   label: string;

@@ -482,12 +482,13 @@ class Intrusion(Advisor):
             return None
         door = hub.twin.get("security.door_open")
         motion = hub.twin.get("security.motion")
-        # A camera seeing motion while armed is a tripwire too.
+        # A camera seeing motion while armed is a tripwire too — read from the camera
+        # *entities* so a removed camera's stale signal can't fire it.
         cam = next(
             (
-                k.split(".")[1]
-                for k, v in hub.twin.snapshot().items()
-                if k.startswith("camera.") and k.endswith(".motion") and v
+                eid.split(".", 1)[1]
+                for eid, e in hub.entities.items()
+                if e.domain == "camera" and e.attributes.get("motion")
             ),
             None,
         )

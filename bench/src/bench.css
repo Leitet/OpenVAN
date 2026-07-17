@@ -336,6 +336,32 @@ input[type="range"]::-moz-range-thumb {
   color: #ff5b5b;
   border-color: currentColor;
 }
+.chip.danger {
+  color: #ff5b5b;
+  border-color: var(--line);
+}
+.chip.danger:hover {
+  border-color: #ff5b5b;
+}
+.cam-add {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.cam-add input,
+.cam-add select {
+  padding: 5px 7px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.cam-add input {
+  width: 68px;
+}
 .scenario-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

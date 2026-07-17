@@ -266,6 +266,26 @@ export async function completeMaintenance(id: string): Promise<MaintenanceItem[]
   return (await res.json()).items as MaintenanceItem[];
 }
 
+import type { CameraDef } from "./types";
+
+export async function getCameras(): Promise<CameraDef[]> {
+  return (await (await fetch("/api/cameras")).json()).cameras as CameraDef[];
+}
+
+export async function addCamera(cam: CameraDef): Promise<CameraDef[]> {
+  const res = await fetch("/api/cameras", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cam),
+  });
+  return (await res.json()).cameras as CameraDef[];
+}
+
+export async function removeCamera(id: string): Promise<CameraDef[]> {
+  const res = await fetch(`/api/cameras/${id}`, { method: "DELETE" });
+  return (await res.json()).cameras as CameraDef[];
+}
+
 export async function getSecurity(): Promise<{ armed: boolean }> {
   return (await fetch("/api/security")).json();
 }

@@ -55,3 +55,36 @@ async def test_disarmed_cameras_do_not_alert(core):
     assert "intrusion" in {x["key"] for x in core.advisors.active_notices()}
     await core.set_security_armed(False)
     assert "intrusion" not in {x["key"] for x in core.advisors.active_notices()}
+
+
+async def test_add_and_remove_camera(core):
+    ids = {c["id"] for c in core.cameras()}
+    assert ids == {"rear", "cabin", "entry", "awning"}
+
+    # Add a new one — entity appears with the given attributes + seeded online.
+    assert await core.add_camera("garage", "Garage", "door", "wired") is True
+    assert core.hub.entities["camera.garage"].attributes["connection"] == "wired"
+    assert core.hub.entities["camera.garage"].state == "online"
+    assert "garage" in {c["id"] for c in core.cameras()}
+    # Duplicate id is rejected.
+    assert await core.add_camera("garage", "x", "door", "wifi") is False
+
+    # Remove one — the entity is gone and it's dropped from the list.
+    assert await core.remove_camera("cabin") is True
+    assert "camera.cabin" not in core.hub.entities
+    assert "cabin" not in {c["id"] for c in core.cameras()}
+    assert await core.remove_camera("nope") is False
+
+
+async def test_removed_camera_cannot_trip_intrusion(core):
+    await core.remove_camera("rear")
+    await core.set_security_armed(True)
+    # The removed camera's motion signal is quieted; re-asserting it must not alarm.
+    await core.twin.set_signal("camera.rear.motion", True)
+    assert "intrusion" not in {x["key"] for x in core.advisors.active_notices()}
+
+
+async def test_camera_list_persists_to_store(core):
+    await core.add_camera("garage", "Garage", "door", "wired")
+    saved = core.store.get_all("plugin:cameras").get("list")
+    assert any(c["id"] == "garage" for c in saved)

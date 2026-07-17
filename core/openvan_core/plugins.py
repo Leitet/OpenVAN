@@ -70,6 +70,9 @@ class PluginManager:
         self.backend = backend
         self.plugins: list[Plugin] = []
 
+    def get(self, domain: str) -> "Plugin | None":
+        return next((p for p in self.plugins if p.domain == domain), None)
+
     def discover(self, plugins_dir: Path | str) -> None:
         plugins_dir = Path(plugins_dir)
         if not plugins_dir.is_dir():
