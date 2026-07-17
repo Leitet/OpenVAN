@@ -167,6 +167,11 @@ class VanSimulation:
                 # steering bench re-injects the wheel heading on its own cadence).
                 if abs(((nheading - heading + 180) % 360) - 180) > 0.5:
                     await self._twin.set_signal("vehicle.heading", nheading)
+                # Surface the tightest height/weight limit on the road ahead (0 =
+                # none) so the low-clearance / weight-limit advisors can fire early.
+                limit = self._roads.restriction_ahead()
+                await self._twin.set_signal("road.max_height_m", limit.get("maxheight") or 0.0)
+                await self._twin.set_signal("road.max_weight_t", limit.get("maxweight") or 0.0)
                 return
 
         # Dead reckoning: heading 0 = north, 90 = east.

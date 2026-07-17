@@ -507,6 +507,70 @@ class Intrusion(Advisor):
         )
 
 
+class LowClearance(Advisor):
+    """Warn when the road ahead has a height limit the van can't (or barely) clear —
+    the deadliest routing mistake for a tall van. `road.max_height_m` is the tightest
+    clearance ahead (0 = none); the van's height comes from the vehicle profile."""
+
+    key = "low_clearance"
+
+    def __init__(self, config: Any = None, margin_m: float = 0.2) -> None:
+        self.config = config
+        self.margin_m = margin_m
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        limit = _twin_float(hub, "road.max_height_m")
+        if limit is None or limit <= 0:
+            return None
+        veh = (getattr(self.config, "vehicle", None) or {}) if self.config is not None else {}
+        h_mm = veh.get("height_mm")
+        try:
+            height = float(h_mm) / 1000.0
+        except (TypeError, ValueError):
+            return None
+        if height + self.margin_m < limit:
+            return None  # comfortably clears
+        wont_fit = height >= limit
+        tail = (
+            "It won't fit — find another route."
+            if wont_fit
+            else "It's tight — slow right down or reroute."
+        )
+        return Notice(
+            self.key, "warning", "journey", "Low clearance ahead",
+            f"Height limit {limit:.1f} m ahead and the van is {height:.2f} m. {tail}",
+            {"limit_m": limit, "height_m": round(height, 2), "wont_fit": wont_fit},
+        )
+
+
+class OverweightRoad(Advisor):
+    """Warn when a weight-limited road/bridge ahead is below the van's gross weight."""
+
+    key = "weight_limit"
+
+    def __init__(self, config: Any = None) -> None:
+        self.config = config
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        limit_t = _twin_float(hub, "road.max_weight_t")
+        if limit_t is None or limit_t <= 0:
+            return None
+        veh = (getattr(self.config, "vehicle", None) or {}) if self.config is not None else {}
+        gvw = veh.get("gross_weight_kg")
+        try:
+            gvw_t = float(gvw) / 1000.0
+        except (TypeError, ValueError):
+            return None
+        if gvw_t <= limit_t:
+            return None
+        return Notice(
+            self.key, "warning", "journey", "Weight limit ahead",
+            f"Weight limit {limit_t:.1f} t ahead and the van is {gvw_t:.1f} t gross — "
+            f"find another route.",
+            {"limit_t": limit_t, "gross_t": round(gvw_t, 1)},
+        )
+
+
 class ServiceDue(Advisor):
     """Surface any maintenance item that's due or overdue (odometer or date based)."""
 
@@ -569,6 +633,9 @@ def default_advisors(config: Any = None) -> list[Advisor]:
         Condensation(g("condensation_humidity_pct", 60.0), g("condensation_margin_c", 1.5)),
         CabinClimateExtreme(g("cabin_cold_c", 3.0), g("cabin_hot_c", 30.0)),
         NotLevel(g("level_threshold_deg", 1.5), track_m, wheelbase_m),
+        # Routing hazards for a tall/heavy van (checked against the vehicle profile)
+        LowClearance(config),
+        OverweightRoad(config),
     ]
 
 

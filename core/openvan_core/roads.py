@@ -23,6 +23,7 @@ import asyncio
 import json
 import logging
 import math
+import re
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -68,6 +69,20 @@ def _interp(a: tuple[float, float], b: tuple[float, float], t: float) -> tuple[f
     return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
 
 
+def _parse_limit(value: Any) -> float | None:
+    """OSM maxheight/maxweight → a float (metres / tonnes). Takes the leading number
+    (handles "3.5", "3.5 m", "7.5 t"); returns None for feet/inches or unparseable."""
+    if value is None:
+        return None
+    m = re.match(r"\s*([0-9]+(?:\.[0-9]+)?)", str(value))
+    if not m or "'" in str(value) or '"' in str(value):
+        return None
+    try:
+        return float(m.group(1))
+    except ValueError:
+        return None
+
+
 class RoadNetwork:
     """A local drivable-road graph plus a moving position along it."""
 
@@ -75,6 +90,8 @@ class RoadNetwork:
         self.config = config
         self.nodes: dict[int, tuple[float, float]] = {}
         self.adj: dict[int, set[int]] = defaultdict(set)
+        # Height/weight limits per undirected segment (min-id, max-id) → {mh, mw}.
+        self._seg_limits: dict[tuple[int, int], dict[str, float | None]] = {}
         # Where the loaded graph is centred, and how far it reaches (metres).
         self._center: tuple[float, float] | None = None
         self._radius_m = float(getattr(config, "roads_radius_m", 1600))
@@ -154,10 +171,40 @@ class RoadNetwork:
                 continue
             for i in range(len(ids)):
                 self.nodes[ids[i]] = (geom[i]["lat"], geom[i]["lon"])
+            tags = el.get("tags") or {}
+            mh = _parse_limit(tags.get("maxheight"))
+            mw = _parse_limit(tags.get("maxweight"))
             for i in range(len(ids) - 1):
                 a, b = ids[i], ids[i + 1]
                 self.adj[a].add(b)
                 self.adj[b].add(a)
+                if mh is not None or mw is not None:
+                    self._seg_limits[(min(a, b), max(a, b))] = {"maxheight": mh, "maxweight": mw}
+
+    def restriction_ahead(self, lookahead: int = 8) -> dict[str, float | None]:
+        """Tightest height/weight limit on the current road and the next few segments
+        (following the straightest continuation), so a warning fires *before* the
+        van reaches a low bridge. Empty when no data is loaded."""
+        prev, cur = self._prev, self._cur
+        heights: list[float] = []
+        weights: list[float] = []
+        for _ in range(lookahead):
+            if prev is None or cur is None:
+                break
+            lim = self._seg_limits.get((min(prev, cur), max(prev, cur)))
+            if lim:
+                if lim.get("maxheight") is not None:
+                    heights.append(lim["maxheight"])
+                if lim.get("maxweight") is not None:
+                    weights.append(lim["maxweight"])
+            nxt = [n for n in self.adj.get(cur, ()) if n != prev]
+            if not nxt:
+                break
+            prev, cur = cur, nxt[0]
+        return {
+            "maxheight": min(heights) if heights else None,
+            "maxweight": min(weights) if weights else None,
+        }
 
     def _save_cache(self, elements: list[dict], lat: float, lon: float) -> None:
         try:

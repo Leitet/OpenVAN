@@ -242,6 +242,11 @@ class Config:
             "vehicle.odometer_km": 48210.0,
             "vehicle.ignition": False,
             "vehicle.trip_seconds": 0.0,
+            # Tightest routing limits on the road ahead (0 = none). Filled from OSM
+            # maxheight/maxweight when road data is available; else driven from the
+            # bench to simulate approaching a low bridge or a weight-limited road.
+            "road.max_height_m": 0.0,
+            "road.max_weight_t": 0.0,
         }
     )
 

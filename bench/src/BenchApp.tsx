@@ -105,6 +105,9 @@ const SCENARIOS: Array<{ label: string; signals: Array<[string, number | boolean
   { label: "Gas leak", signals: [["air.lpg_pct_lel", 25]] },
   { label: "Condensation", signals: [["cabin.humidity_pct", 80], ["outside.temperature", 4]] },
   { label: "Clear the air", signals: [["air.co_ppm", 0], ["air.lpg_pct_lel", 0], ["air.co2_ppm", 600], ["air.smoke", false]] },
+  { label: "Low bridge ahead", signals: [["road.max_height_m", 2.6]] },
+  { label: "Weight-limited bridge", signals: [["road.max_weight_t", 3.0]] },
+  { label: "Clear road", signals: [["road.max_height_m", 0], ["road.max_weight_t", 0]] },
 ];
 
 function fmt(v: number | boolean | string): string {
@@ -314,6 +317,17 @@ export function BenchApp() {
           <SignalSlider label="Pitch (nose up +)" signalKey="imu.pitch_deg" value={num(twin["imu.pitch_deg"])} min={-8} max={8} step={0.1} unit="°" />
           <SignalSlider label="Roll (right low +)" signalKey="imu.roll_deg" value={num(twin["imu.roll_deg"])} min={-8} max={8} step={0.1} unit="°" />
           <p className="note">Parked + off level makes the van suggest which ramp to use, on the Journey tab.</p>
+        </section>
+
+        <section className="card">
+          <h2>Road ahead</h2>
+          <SignalSlider label="Max height (0 = none)" signalKey="road.max_height_m" value={num(twin["road.max_height_m"])} min={0} max={5} step={0.1} unit=" m" />
+          <SignalSlider label="Max weight (0 = none)" signalKey="road.max_weight_t" value={num(twin["road.max_weight_t"])} min={0} max={40} step={0.5} unit=" t" />
+          <p className="note">
+            Checked against the vehicle profile (Settings → Vehicle). Set a limit
+            below the van's height/weight to trigger a routing warning. On a real
+            van these come from OSM maxheight/maxweight on the road ahead.
+          </p>
         </section>
 
         <section className="card">
