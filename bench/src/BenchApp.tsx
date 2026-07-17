@@ -11,6 +11,7 @@ import type { Weather } from "@shared/types";
 import { useVanState } from "@shared/useVanState";
 import { SignalSlider } from "./components/SignalSlider";
 import { VanView } from "./components/VanView";
+import { TurboDash } from "./components/TurboDash";
 
 function num(v: unknown): number | undefined {
   return typeof v === "number" ? v : undefined;
@@ -26,8 +27,6 @@ const SCENARIOS: Array<{ label: string; signals: Array<[string, number | boolean
   { label: "Full sun", signals: [["solar.power", 550]] },
   { label: "Freezing night", signals: [["outside.temperature", -8], ["solar.power", 0]] },
   { label: "Empty fresh tank", signals: [["fresh_water.level_pct", 2]] },
-  { label: "Start driving", signals: [["vehicle.ignition", true], ["vehicle.speed_kmh", 60]] },
-  { label: "Park", signals: [["vehicle.speed_kmh", 0], ["vehicle.ignition", false]] },
 ];
 
 function fmt(v: number | boolean | string): string {
@@ -94,19 +93,19 @@ export function BenchApp() {
           </p>
         </section>
 
-        <section className="card">
-          <h2>Drive</h2>
-          <button
-            className={"toggle" + (ignition ? " on" : "")}
-            onClick={() => injectSignal("vehicle.ignition", !ignition)}
-          >
-            {ignition ? "Ignition: ON" : "Ignition: OFF"}
-          </button>
-          <SignalSlider label="Speed" signalKey="vehicle.speed_kmh" value={num(twin["vehicle.speed_kmh"])} min={0} max={130} unit=" km/h" />
-          <SignalSlider label="Heading" signalKey="vehicle.heading" value={num(twin["vehicle.heading"])} min={0} max={359} unit="°" />
+        <section className="card span-2 turbo-card">
+          <h2>Drive — Turbo Dash 🏁</h2>
+          <TurboDash
+            speed={num(twin["vehicle.speed_kmh"]) ?? 0}
+            ignition={ignition}
+            heading={num(twin["vehicle.heading"]) ?? 0}
+            onSignal={injectSignal}
+          />
           <p className="note">
-            Ignition on + a speed makes the van dead-reckon along its heading; the
-            odometer ticks and GPS traces on the product map.
+            Turn the key, hit the gas, steer with the wheel (or ← →). It's a toy —
+            but it drives the real twin: throttle sets <code>vehicle.speed_kmh</code>,
+            the wheel integrates <code>vehicle.heading</code>, so the van dead-reckons
+            and the product-UI map traces your route as you pass cars.
           </p>
         </section>
 
