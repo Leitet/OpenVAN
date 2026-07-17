@@ -96,6 +96,11 @@ class Config:
     camp_sources: list[str] = field(default_factory=lambda: ["sim"])
     camp_search_radius_km: float = 30.0
     camp_sources_dir: Path = field(default_factory=lambda: _REPO_ROOT / "campsources")
+    # Road-following: snap simulated driving onto the real OSM road graph so the
+    # GPS trace follows actual streets (matches the map tiles). Enhancement only —
+    # the sim dead-reckons when this is off or roads can't be fetched (offline).
+    roads_enabled: bool = True
+    roads_radius_m: float = 1600.0
     # Travel memory — auto-logs "stays" when parked. Offline-first, SQLite.
     memory_enabled: bool = True
     memory_dwell_s: float = 90.0  # parked this long before a stay is logged

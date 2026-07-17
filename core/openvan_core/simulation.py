@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import math
 from dataclasses import dataclass
+from typing import Any
 
 from .events import EventBus
 from .twin import VanTwin
@@ -55,12 +56,16 @@ class VanSimulation:
         interval: float = 1.0,
         thermal: ThermalParams | None = None,
         water: WaterParams | None = None,
+        roads: Any = None,
     ) -> None:
         self._bus = bus
         self._twin = twin
         self.interval = interval
         self.thermal = thermal or ThermalParams()
         self.water = water or WaterParams()
+        # Optional RoadNetwork: when present, driving snaps to real roads instead
+        # of free dead-reckoning. None (or not yet loaded) → dead reckon (offline).
+        self._roads = roads
         self._task: asyncio.Task | None = None
 
     async def step(self, dt: float) -> None:
@@ -111,13 +116,29 @@ class VanSimulation:
         lat = _as_float(self._twin.get("gps.lat"))
         lon = _as_float(self._twin.get("gps.lon"))
         heading = _as_float(self._twin.get("vehicle.heading")) or 0.0
-        if lat is not None and lon is not None:
-            # Dead reckoning: heading 0 = north, 90 = east.
-            hr = math.radians(heading)
-            dlat = distance_km / 111.0 * math.cos(hr)
-            dlon = distance_km / (111.0 * max(0.01, math.cos(math.radians(lat)))) * math.sin(hr)
-            await self._twin.set_signal("gps.lat", round(lat + dlat, 6))
-            await self._twin.set_signal("gps.lon", round(lon + dlon, 6))
+        if lat is None or lon is None:
+            return
+
+        # Prefer following the real road graph; fall back to free dead-reckoning
+        # when no roads are loaded (offline / not yet fetched).
+        if self._roads is not None:
+            snapped = self._roads.advance(lat, lon, heading, distance_km * 1000.0)
+            if snapped is not None:
+                nlat, nlon, nheading = snapped
+                await self._twin.set_signal("gps.lat", nlat)
+                await self._twin.set_signal("gps.lon", nlon)
+                # The road decides the heading now — reflect the turn we took (a
+                # steering bench re-injects the wheel heading on its own cadence).
+                if abs(((nheading - heading + 180) % 360) - 180) > 0.5:
+                    await self._twin.set_signal("vehicle.heading", nheading)
+                return
+
+        # Dead reckoning: heading 0 = north, 90 = east.
+        hr = math.radians(heading)
+        dlat = distance_km / 111.0 * math.cos(hr)
+        dlon = distance_km / (111.0 * max(0.01, math.cos(math.radians(lat)))) * math.sin(hr)
+        await self._twin.set_signal("gps.lat", round(lat + dlat, 6))
+        await self._twin.set_signal("gps.lon", round(lon + dlon, 6))
 
     def start(self) -> None:
         if self._task is None:

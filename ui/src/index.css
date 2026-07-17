@@ -699,53 +699,93 @@ body {
     grid-template-columns: 1fr;
   }
 }
-.journey-map {
+.journey-map-wrap {
+  position: relative;
   width: 100%;
-  height: auto;
-  border-radius: 10px;
 }
-.journey-map.empty {
+.journey-leaflet {
+  width: 100%;
+  height: 320px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  z-index: 0;
+}
+.journey-map-empty {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  min-height: 180px;
   padding: 20px;
-  background: var(--panel-2);
-  border: 1px dashed var(--line);
   color: var(--muted);
   font-size: 14px;
+  background: color-mix(in srgb, var(--panel-2) 82%, transparent);
+  border-radius: 10px;
+  pointer-events: none;
 }
-.journey-bg {
-  fill: var(--panel-2);
-  stroke: var(--line);
+/* re-follow-the-van control */
+.journey-recenter {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  border: none;
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--accent);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
 }
-.journey-track {
-  fill: none;
+/* leaflet vector + marker theming */
+.journey-line {
   stroke: var(--accent);
-  stroke-width: 2;
+  stroke-width: 4;
   stroke-linejoin: round;
   stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
-}
-.journey-here {
-  fill: var(--warn);
-  stroke: var(--bg);
-  stroke-width: 1.5;
+  opacity: 0.9;
 }
 .journey-stay {
   fill: var(--good);
-  stroke: var(--bg);
-  stroke-width: 1.5;
-  cursor: pointer;
+  stroke: #fff;
+  stroke-width: 2;
 }
 .journey-stay.open {
   fill: var(--accent);
 }
-.journey-camp {
-  fill: color-mix(in srgb, var(--accent) 35%, var(--panel));
-  stroke: var(--accent);
-  stroke-width: 1.4;
+.van-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--warn);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--warn) 40%, transparent);
+  animation: van-pulse 1.6s ease-out infinite;
+}
+@keyframes van-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--warn) 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 12px color-mix(in srgb, var(--warn) 0%, transparent);
+  }
+}
+.camp-pin {
+  font-size: 18px;
+  line-height: 22px;
+  text-align: center;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+/* keep Leaflet's own controls legible on dark panels */
+.leaflet-bar a,
+.leaflet-control-attribution {
+  background: var(--panel);
+  color: var(--muted);
+}
+.leaflet-bar a {
+  border-bottom-color: var(--line);
 }
 .journey-legend {
   display: flex;

@@ -172,6 +172,15 @@ a plugin *owns as an actuator* (e.g. `diesel_heater.on`) are written by the
 plugin; values the *world* determines (e.g. `cabin.temperature`) are the
 simulation's. Its constants are illustrative — measure a real van before shipping.
 
+Driving normally dead-reckons `gps.lat/lon` from `speed` + `heading`. When a
+`RoadNetwork` (`roads.py`) is present it instead **snaps the drive onto the real
+OSM road graph** so the GPS trace follows actual streets (matching the map tiles
+in the product UI); at a junction it takes the road whose bearing best matches the
+driver's `heading`, so steering still chooses the route. The graph is fetched from
+Overpass in the background and cached (`data/roads.json`); until it loads — or when
+Overpass is unreachable — driving falls back to free dead-reckoning, so this stays
+an offline-first *enhancement* (Rule 3), never a dependency.
+
 ### Data flow
 
 - Sensor: the **bench** injects `house_battery.soc` → `VanTwin` emits

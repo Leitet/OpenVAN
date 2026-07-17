@@ -1,108 +1,151 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { campSearch, getSeries, getStays } from "@shared/api";
-import type { CampSpot, Stay } from "@shared/types";
 
-const W = 320;
-const H = 190;
-const PAD = 14;
-
-/** Breadcrumb map: the GPS track, past stays, and nearby camp spots (offline, no tiles). */
+/**
+ * Live OpenStreetMap of the journey: the GPS track (which now follows real roads,
+ * because Core snaps the simulated drive onto the OSM road graph), the current
+ * position, past stays and nearby camp spots. Auto-follows the van while driving;
+ * drag to explore, then tap ◎ to re-follow.
+ */
 export function JourneyMap() {
-  const [track, setTrack] = useState<{ lat: number; lon: number }[]>([]);
-  const [stays, setStays] = useState<Stay[]>([]);
-  const [camps, setCamps] = useState<CampSpot[]>([]);
+  const elRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const trackRef = useRef<L.Polyline | null>(null);
+  const vanRef = useRef<L.Marker | null>(null);
+  const staysRef = useRef<L.LayerGroup | null>(null);
+  const campsRef = useRef<L.LayerGroup | null>(null);
+  const followRef = useRef(true);
+  const fittedRef = useRef(false);
+  const [empty, setEmpty] = useState(true);
 
+  // init the map once
+  useEffect(() => {
+    if (!elRef.current || mapRef.current) return;
+    const map = L.map(elRef.current, { zoomControl: true, attributionControl: true }).setView(
+      [46.5, 11.3],
+      13,
+    );
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors",
+    }).addTo(map);
+    map.on("dragstart zoomstart", () => (followRef.current = false));
+
+    staysRef.current = L.layerGroup().addTo(map);
+    campsRef.current = L.layerGroup().addTo(map);
+
+    // "re-follow the van" control
+    const Recenter = L.Control.extend({
+      options: { position: "topright" },
+      onAdd() {
+        const btn = L.DomUtil.create("button", "journey-recenter");
+        btn.innerHTML = "◎";
+        btn.title = "Follow the van";
+        L.DomEvent.on(btn, "click", (e) => {
+          L.DomEvent.stop(e);
+          followRef.current = true;
+          const van = vanRef.current;
+          if (van) map.setView(van.getLatLng(), Math.max(map.getZoom(), 14));
+        });
+        return btn;
+      },
+    });
+    map.addControl(new Recenter());
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // poll data and render
   useEffect(() => {
     let active = true;
     const load = async () => {
       const [lat, lon, mem, camp] = await Promise.all([
-        getSeries("gps.lat", 120),
-        getSeries("gps.lon", 120),
+        getSeries("gps.lat", 300),
+        getSeries("gps.lon", 300),
         getStays(),
         campSearch().catch(() => ({ spots: [] })),
       ]);
-      if (!active) return;
+      if (!active || !mapRef.current) return;
+
+      const map = mapRef.current;
       const n = Math.min(lat.length, lon.length);
-      const pts = [];
-      for (let i = 0; i < n; i++) pts.push({ lat: lat[i].v, lon: lon[i].v });
-      setTrack(pts);
-      setStays(mem.stays.filter((s) => s.lat !== null && s.lon !== null));
-      setCamps(camp.spots ?? []);
+      const track: [number, number][] = [];
+      for (let i = 0; i < n; i++) track.push([lat[i].v, lon[i].v]);
+      const stays = mem.stays.filter((s) => s.lat !== null && s.lon !== null);
+      const camps = camp.spots ?? [];
+      setEmpty(track.length === 0 && stays.length === 0 && camps.length === 0);
+
+      // track polyline
+      if (track.length >= 2) {
+        if (trackRef.current) trackRef.current.setLatLngs(track);
+        else trackRef.current = L.polyline(track, { className: "journey-line" }).addTo(map);
+      }
+
+      // van marker at the latest fix
+      if (track.length) {
+        const here = track[track.length - 1];
+        const icon = L.divIcon({ className: "", html: '<div class="van-dot"></div>', iconSize: [18, 18] });
+        if (vanRef.current) vanRef.current.setLatLng(here);
+        else vanRef.current = L.marker(here, { icon, zIndexOffset: 1000 }).addTo(map);
+        if (followRef.current) map.setView(here, map.getZoom(), { animate: true });
+      }
+
+      // stays
+      staysRef.current?.clearLayers();
+      for (const s of stays) {
+        const m = L.circleMarker([s.lat as number, s.lon as number], {
+          radius: 6,
+          className: s.open ? "journey-stay open" : "journey-stay",
+        });
+        m.bindTooltip(
+          (s.place || `${(s.lat as number).toFixed(4)}, ${(s.lon as number).toFixed(4)}`) +
+            (s.condition ? ` · ${s.condition}` : ""),
+        );
+        staysRef.current?.addLayer(m);
+      }
+
+      // camps
+      campsRef.current?.clearLayers();
+      for (const c of camps) {
+        const icon = L.divIcon({ className: "", html: '<div class="camp-pin">⛺</div>', iconSize: [22, 22] });
+        const m = L.marker([c.lat, c.lon], { icon });
+        m.bindTooltip(`${c.name} · ${c.kind}${c.distance_km != null ? ` · ${c.distance_km} km` : ""}`);
+        campsRef.current?.addLayer(m);
+      }
+
+      // one-time fit to everything we know about
+      if (!fittedRef.current) {
+        const pts = [
+          ...track,
+          ...stays.map((s) => [s.lat, s.lon] as [number, number]),
+          ...camps.map((c) => [c.lat, c.lon] as [number, number]),
+        ];
+        if (pts.length) {
+          map.fitBounds(L.latLngBounds(pts).pad(0.3), { maxZoom: 15 });
+          fittedRef.current = true;
+        }
+      }
     };
     load();
-    const timer = setInterval(load, 4000);
+    const timer = setInterval(load, 3000);
     return () => {
       active = false;
       clearInterval(timer);
     };
   }, []);
 
-  const stayPts = stays.map((s) => ({ lat: s.lat as number, lon: s.lon as number }));
-  const campPts = camps.map((c) => ({ lat: c.lat, lon: c.lon }));
-  const all = [...track, ...stayPts, ...campPts];
-
-  if (all.length === 0) {
-    return (
-      <div className="journey-map empty">
-        Start driving or bookmark a spot to see your route and stays.
-      </div>
-    );
-  }
-
-  let minLat = Math.min(...all.map((p) => p.lat));
-  let maxLat = Math.max(...all.map((p) => p.lat));
-  let minLon = Math.min(...all.map((p) => p.lon));
-  let maxLon = Math.max(...all.map((p) => p.lon));
-  // Centre a single cluster instead of pinning it to a corner.
-  if (maxLat - minLat < 1e-5) (minLat -= 0.002), (maxLat += 0.002);
-  if (maxLon - minLon < 1e-5) (minLon -= 0.002), (maxLon += 0.002);
-  const spanLat = maxLat - minLat;
-  const spanLon = maxLon - minLon;
-
-  const project = (p: { lat: number; lon: number }) => {
-    const x = PAD + ((p.lon - minLon) / spanLon) * (W - 2 * PAD);
-    const y = H - PAD - ((p.lat - minLat) / spanLat) * (H - 2 * PAD);
-    return [x, y];
-  };
-
-  const path = track.map((p) => project(p).join(",")).join(" ");
-  const here = track.length ? project(track[track.length - 1]) : null;
-
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="journey-map">
-      <rect x="0" y="0" width={W} height={H} className="journey-bg" rx="10" />
-      {track.length >= 2 && <polyline points={path} className="journey-track" />}
-      {camps.map((c) => {
-        const [x, y] = project({ lat: c.lat, lon: c.lon });
-        return (
-          <rect
-            key={c.id}
-            x={x - 3}
-            y={y - 3}
-            width={6}
-            height={6}
-            className="journey-camp"
-            transform={`rotate(45 ${x} ${y})`}
-          >
-            <title>
-              {c.name} · {c.kind}
-              {c.distance_km != null ? ` · ${c.distance_km} km` : ""}
-            </title>
-          </rect>
-        );
-      })}
-      {stays.map((s) => {
-        const [x, y] = project({ lat: s.lat as number, lon: s.lon as number });
-        return (
-          <circle key={s.id} cx={x} cy={y} r="4" className={"journey-stay" + (s.open ? " open" : "")}>
-            <title>
-              {(s.place || `${(s.lat as number).toFixed(4)}, ${(s.lon as number).toFixed(4)}`) +
-                (s.condition ? ` · ${s.condition}` : "")}
-            </title>
-          </circle>
-        );
-      })}
-      {here && <circle cx={here[0]} cy={here[1]} r="5" className="journey-here" />}
-    </svg>
+    <div className="journey-map-wrap">
+      <div ref={elRef} className="journey-leaflet" />
+      {empty && (
+        <div className="journey-map-empty">Start driving or bookmark a spot to see your route.</div>
+      )}
+    </div>
   );
 }

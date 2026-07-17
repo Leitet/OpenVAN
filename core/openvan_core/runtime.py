@@ -39,6 +39,7 @@ from .safety import (
     PumpDryRunProtection,
     SafetyValidator,
 )
+from .roads import RoadNetwork
 from .simulation import VanSimulation
 from .store import ConfigStore
 from .telemetry import TelemetryRecorder, TelemetryStore
@@ -87,6 +88,7 @@ class Core:
     memory: TravelMemory
     camp: CampService
     store: ConfigStore
+    roads: RoadNetwork | None = None
 
     async def start(self) -> None:
         # The config store holds plugin / camp-source settings (incl. credentials).
@@ -107,6 +109,8 @@ class Core:
         }
         await self.plugins.setup_all(plugin_configs)
         await self.router.refresh()  # probe the effective model for the active profile
+        if self.roads is not None:
+            self.roads.load_cache()  # last-known road graph, for instant offline follow
         if self.config.simulate:
             self.simulation.start()
         # Subscribe advisors, then evaluate once against the seeded state.
@@ -375,7 +379,8 @@ def build_core(config: Config | None = None) -> Core:
     resolver = LLMIntentResolver(router, fallback=IntentResolver())
     hub = Hub(bus, twin, safety, resolver)
     plugins = PluginManager(hub, backend)
-    simulation = VanSimulation(bus, twin)
+    roads = RoadNetwork(config) if config.roads_enabled else None
+    simulation = VanSimulation(bus, twin, roads=roads)
     weather = WeatherService(
         config,
         get_location=lambda: (twin.get("gps.lat"), twin.get("gps.lon")),
@@ -418,4 +423,5 @@ def build_core(config: Config | None = None) -> Core:
         camp=camp,
         store=store,
         router=router,
+        roads=roads,
     )
