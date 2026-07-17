@@ -146,6 +146,9 @@ class Config:
             "air.co2_ppm": 600.0,
             "air.smoke": False,
             "cabin.humidity_pct": 55.0,
+            # Inclinometer — parked dead level by default.
+            "imu.pitch_deg": 0.0,
+            "imu.roll_deg": 0.0,
             "cabin_light.on": False,
             "diesel_heater.on": False,
             "diesel_heater.setpoint": 20.0,

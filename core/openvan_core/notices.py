@@ -355,6 +355,64 @@ class CabinClimateExtreme(Advisor):
         return None
 
 
+def leveling_advice(
+    pitch_deg: float,
+    roll_deg: float,
+    *,
+    threshold_deg: float = 1.5,
+    track_m: float = 2.0,
+    wheelbase_m: float = 3.6,
+) -> dict[str, Any] | None:
+    """Turn pitch/roll into how much to raise which side/end. Returns None when the
+    van is level enough. pitch>0 = nose up (raise rear); roll>0 = right low (raise
+    right). Shared shape with the UI's bubble level."""
+    if abs(pitch_deg) < threshold_deg and abs(roll_deg) < threshold_deg:
+        return None
+    parts: list[str] = []
+    roll_cm = math.tan(math.radians(abs(roll_deg))) * track_m * 100
+    pitch_cm = math.tan(math.radians(abs(pitch_deg))) * wheelbase_m * 100
+    side = end = None
+    if abs(roll_deg) >= threshold_deg:
+        side = "right" if roll_deg > 0 else "left"
+        parts.append(f"raise the {side} side about {roll_cm:.0f} cm")
+    if abs(pitch_deg) >= threshold_deg:
+        end = "rear" if pitch_deg > 0 else "front"
+        parts.append(f"raise the {end} about {pitch_cm:.0f} cm")
+    return {
+        "tilt_deg": round(max(abs(pitch_deg), abs(roll_deg)), 1),
+        "raise_side": side,
+        "raise_end": end,
+        "roll_cm": round(roll_cm),
+        "pitch_cm": round(pitch_cm),
+        "text": " and ".join(parts),
+    }
+
+
+class NotLevel(Advisor):
+    """When parked, nudge the driver to level up for a comfortable night."""
+
+    key = "not_level"
+
+    def __init__(self, threshold_deg: float = 1.5) -> None:
+        self.threshold_deg = threshold_deg
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        if hub.twin.get("vehicle.ignition"):
+            return None  # only worth saying once you've stopped to park
+        pitch = _twin_float(hub, "imu.pitch_deg")
+        roll = _twin_float(hub, "imu.roll_deg")
+        if pitch is None or roll is None:
+            return None
+        advice = leveling_advice(pitch, roll, threshold_deg=self.threshold_deg)
+        if advice is None:
+            return None
+        return Notice(
+            self.key, "suggestion", "journey", "Not quite level",
+            f"You're {advice['tilt_deg']}° off level — {advice['text']} for a flat night.",
+            advice,
+        )
+
+
 def default_advisors() -> list[Advisor]:
     return [
         LowFreshWater(),
@@ -369,6 +427,7 @@ def default_advisors() -> list[Advisor]:
         HighCO2(),
         Condensation(),
         CabinClimateExtreme(),
+        NotLevel(),
     ]
 
 

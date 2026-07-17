@@ -692,6 +692,89 @@ body {
   margin-top: 4px;
 }
 
+/* Leveling bubble */
+.level-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.level-dial {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--panel-2);
+  border: 2px solid var(--line);
+  overflow: hidden;
+}
+.level-dial.ok {
+  border-color: color-mix(in srgb, var(--good) 55%, transparent);
+}
+.level-ring {
+  position: absolute;
+  inset: 39px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--muted);
+  opacity: 0.6;
+}
+.level-cross-h,
+.level-cross-v {
+  position: absolute;
+  background: var(--line);
+}
+.level-cross-h {
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  height: 1px;
+}
+.level-cross-v {
+  top: 8px;
+  bottom: 8px;
+  left: 50%;
+  width: 1px;
+}
+.level-bubble {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--accent) 70%, #fff), var(--accent));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 55%, transparent);
+  transition: transform 0.2s ease-out;
+}
+.level-dial.ok .level-bubble {
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--good) 70%, #fff), var(--good));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--good) 55%, transparent);
+}
+.level-read {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.level-figures {
+  display: flex;
+  gap: 18px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.level-figures strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.level-advice {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+.level-advice.ok {
+  color: var(--good);
+}
+
 /* Scenes / routines */
 .scene-grid {
   display: grid;

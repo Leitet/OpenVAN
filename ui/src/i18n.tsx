@@ -151,6 +151,15 @@ const T: Record<string, Entry> = {
 
   // --- journey ---
   "home.routines": { en: "Routines", sv: "Rutiner", de: "Routinen" },
+  "level.title": { en: "Leveling", sv: "Nivellering", de: "Nivellierung" },
+  "level.pitch": { en: "Pitch", sv: "Lutning fram/bak", de: "Neigung" },
+  "level.roll": { en: "Roll", sv: "Lutning sida", de: "Querneigung" },
+  "level.flat": { en: "Nicely level — good to go.", sv: "Fint i våg — redo.", de: "Schön eben — bereit." },
+  "level.raise": { en: "Raise", sv: "Höj", de: "Anheben" },
+  "level.left": { en: "left side", sv: "vänster sida", de: "linke Seite" },
+  "level.right": { en: "right side", sv: "höger sida", de: "rechte Seite" },
+  "level.front": { en: "front", sv: "fram", de: "vorne" },
+  "level.rear": { en: "rear", sv: "bak", de: "hinten" },
   "comfort.airSafety": { en: "Air & Safety", sv: "Luft & säkerhet", de: "Luft & Sicherheit" },
   "label.co": { en: "Carbon monoxide", sv: "Kolmonoxid", de: "Kohlenmonoxid" },
   "label.lpg": { en: "Propane", sv: "Gasol", de: "Propan" },

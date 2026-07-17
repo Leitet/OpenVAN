@@ -132,6 +132,13 @@ export function BenchApp() {
         </section>
 
         <section className="card">
+          <h2>Leveling</h2>
+          <SignalSlider label="Pitch (nose up +)" signalKey="imu.pitch_deg" value={num(twin["imu.pitch_deg"])} min={-8} max={8} step={0.1} unit="°" />
+          <SignalSlider label="Roll (right low +)" signalKey="imu.roll_deg" value={num(twin["imu.roll_deg"])} min={-8} max={8} step={0.1} unit="°" />
+          <p className="note">Parked + off level makes the van suggest which ramp to use, on the Journey tab.</p>
+        </section>
+
+        <section className="card">
           <h2>Scenarios</h2>
           <div className="scenario-grid">
             {SCENARIOS.map((s) => (
