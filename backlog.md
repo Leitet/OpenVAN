@@ -9,6 +9,39 @@ an issue/branch and delete it here.
 
 ---
 
+## Van-life pain points — deferred (2026-07 research session)
+
+From `docs/RESEARCH.md`. The session shipped air/CO safety, condensation,
+climate-extreme, scenes, leveling, propane and maintenance. Still open:
+
+- **Connectivity plugin** (#11) — Starlink/LTE/Wi-Fi status + signal strength as
+  sensors; a "weak signal, better spot 300 m back" hint. Needs a modem/router
+  integration (Teltonika, GL.iNet, Starlink API); build the sensor seam + a sim
+  source first.
+- **Services layer on the map/route** (#12) — water refill, dump/black, LPG,
+  fuel points from OSM/Park4Night along the route, and "grey tank full → dump 4 km
+  ahead". Framework exists (camp sources + roads); needs a services data source
+  (Overpass `amenity=sanitary_dump_station|drinking_water`, blocked in this env).
+- **Cost / trip stats** (#13) — fuel, camp fees, distance, nights; a simple trip
+  ledger over telemetry + journal.
+- **Security / intrusion** (#14) — motion/door/shock sensors → armed "away" mode,
+  alert + optional siren; a "someone's at the van" push. Needs sensors + push.
+- **Solar-orientation & load-timing advisor** (#15) — we already compute a
+  weather-aware solar forecast; add "best window to run the kettle/charge" and
+  "park nose-south for morning charge".
+- **Fridge plugin** (#16) — compressor draw, door-ajar alert, food-safety temp log.
+- **Black / cassette toilet** (#17) — mirror the grey-tank advisor; cassette-full
+  reminder + dump finder.
+- **Pet mode** — an explicit "pet aboard" toggle that tightens the cabin-temp
+  alarm band and (online) can push an alert; ties into the existing
+  `CabinClimateExtreme` advisor.
+- **Scene polish** — user-editable scenes and setpoints; bind Goodnight's sleep
+  temperature to the learned preference; localise scene names.
+- **Maintenance polish** — user-editable intervals; per-item history; odometer
+  baseline from a real "install" reading rather than the interval window.
+- **Air-quality trends** — log CO2/humidity to telemetry and show the overnight
+  curve (helps people see when to crack a vent).
+
 ## Assistant / AI
 
 ### Voice chat — offline-first STT/TTS ⭐
