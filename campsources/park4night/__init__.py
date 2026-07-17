@@ -2,10 +2,8 @@
 
 Park4Night / iOverlander have no official public API, so this is the *template* for
 adding a source that needs credentials. It drops in exactly like the keyless OSM
-source; you supply access via the environment:
-
-    OPENVAN_PARK4NIGHT_KEY=…      # your API key / token
-    OPENVAN_PARK4NIGHT_URL=…      # their API or your own proxy endpoint
+source; the API key + endpoint are configured in the Admin UI (Settings > Camping)
+and stored in the local config database — never in environment variables.
 
 Without a key it is simply unavailable (the service skips it), just as the OSM
 source is when offline. The endpoint is expected to accept ``lat``, ``lon``,
@@ -14,8 +12,6 @@ services:[…], note, url}]}`` — adjust ``_parse`` to match the real response.
 """
 
 from __future__ import annotations
-
-import os
 
 import httpx
 
@@ -29,14 +25,16 @@ class Park4NightSource(CampSource):
     name = "Park4Night"
     requires_internet = True
     requires_key = True
+    config_fields = [
+        {"key": "base_url", "label": "API base URL", "secret": False},
+        {"key": "api_key", "label": "API key", "secret": True},
+    ]
 
-    @staticmethod
-    def _key() -> str | None:
-        return os.environ.get("OPENVAN_PARK4NIGHT_KEY")
+    def _key(self) -> str | None:
+        return self.config.get("api_key")
 
-    @staticmethod
-    def _url() -> str | None:
-        return os.environ.get("OPENVAN_PARK4NIGHT_URL")
+    def _url(self) -> str | None:
+        return self.config.get("base_url")
 
     async def available(self) -> bool:
         return bool(self._key() and self._url())

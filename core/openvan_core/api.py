@@ -87,6 +87,11 @@ class CampSourceBody(BaseModel):
     enabled: bool
 
 
+class CampSourceConfigBody(BaseModel):
+    id: str
+    config: dict[str, Any]
+
+
 class ActivePersonalityBody(BaseModel):
     id: str
 
@@ -200,6 +205,12 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
     @app.post("/api/camp/sources")
     async def set_camp_source(body: CampSourceBody) -> dict[str, Any]:
         if not await core.set_camp_source(body.id, body.enabled):
+            raise HTTPException(404, f"unknown camp source '{body.id}'")
+        return {"sources": core.camp.source_infos()}
+
+    @app.post("/api/camp/sources/config")
+    async def set_camp_source_config(body: CampSourceConfigBody) -> dict[str, Any]:
+        if not await core.set_camp_source_config(body.id, body.config):
             raise HTTPException(404, f"unknown camp source '{body.id}'")
         return {"sources": core.camp.source_infos()}
 

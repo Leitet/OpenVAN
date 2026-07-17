@@ -88,6 +88,18 @@ export async function setCampSource(
   return (await res.json()).sources as CampSourceInfo[];
 }
 
+export async function setCampSourceConfig(
+  id: string,
+  config: Record<string, string>,
+): Promise<CampSourceInfo[]> {
+  const res = await fetch("/api/camp/sources/config", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, config }),
+  });
+  return (await res.json()).sources as CampSourceInfo[];
+}
+
 import type { TelemetryPoint } from "./types";
 
 export async function getSeries(

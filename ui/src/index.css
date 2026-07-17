@@ -172,6 +172,26 @@ body {
   color: var(--good);
   border-color: color-mix(in srgb, var(--good) 40%, transparent);
 }
+.camp-source {
+  border-bottom: 1px solid var(--line);
+}
+.camp-source .setting-row {
+  border-bottom: none;
+}
+.camp-source-config {
+  padding: 4px 0 12px 16px;
+  margin-left: 4px;
+  border-left: 2px solid var(--line);
+}
+.camp-source-config input[type="text"],
+.camp-source-config input[type="password"] {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  min-width: 220px;
+}
 .sys-grid {
   display: flex;
   gap: 28px;

@@ -32,7 +32,7 @@ from .llm import (
 from .memory import TravelMemory
 from .notices import AdvisorEngine, RainSoon, default_advisors
 from .personalities import PersonalityStore
-from .plugins import PluginManager
+from .plugins import PluginManager, registered_plugins
 from .safety import (
     CriticalBatteryLoadShedding,
     FuelRequiredToStart,
@@ -40,6 +40,7 @@ from .safety import (
     SafetyValidator,
 )
 from .simulation import VanSimulation
+from .store import ConfigStore
 from .telemetry import TelemetryRecorder, TelemetryStore
 from .twin import VanTwin
 from .weather import WeatherService
@@ -85,8 +86,11 @@ class Core:
     weather: WeatherService
     memory: TravelMemory
     camp: CampService
+    store: ConfigStore
 
     async def start(self) -> None:
+        # The config store holds plugin / camp-source settings (incl. credentials).
+        self.store.open()
         # Open telemetry and start recording before seeding, so the initial
         # state is captured as the first samples.
         if self.config.telemetry_enabled:
@@ -96,7 +100,12 @@ class Core:
         for key, value in self.config.seed_twin.items():
             await self.twin.set_signal(key, value, source="seed")
         self.plugins.discover(self.config.plugins_dir)
-        await self.plugins.setup_all()
+        # Plugin config comes from the store (namespace "plugin:<domain>"), not env.
+        plugin_configs = {
+            cls.domain: self.store.get_all(f"plugin:{cls.domain}")
+            for cls in registered_plugins()
+        }
+        await self.plugins.setup_all(plugin_configs)
         await self.router.refresh()  # probe the effective model for the active profile
         if self.config.simulate:
             self.simulation.start()
@@ -121,6 +130,7 @@ class Core:
             await self.telemetry_recorder.stop()
             self.telemetry.close()
         await self.plugins.teardown_all()
+        self.store.close()
 
     def assistant_state(self) -> dict[str, Any]:
         binding = self.router.binding()
@@ -307,6 +317,13 @@ class Core:
         await self.bus.publish("settings.changed", {"settings": self.settings()})
         return True
 
+    async def set_camp_source_config(self, source_id: str, values: dict[str, Any]) -> bool:
+        """Persist a camp source's settings (keys, endpoints) to the config database."""
+        if not self.camp.set_config(source_id, values):
+            return False
+        await self.bus.publish("settings.changed", {"settings": self.settings()})
+        return True
+
     def _save_settings(self) -> None:
         from .config import settings_path
 
@@ -377,8 +394,11 @@ def build_core(config: Config | None = None) -> Core:
     )
     memory = TravelMemory(config, twin, weather=weather, telemetry=telemetry)
     companion = Companion(router, telemetry, weather, memory)
+    store = ConfigStore(config.data_dir / "store.db")
     camp = CampService(
-        config, get_location=lambda: (twin.get("gps.lat"), twin.get("gps.lon"))
+        config,
+        get_location=lambda: (twin.get("gps.lat"), twin.get("gps.lon")),
+        store=store,
     )
     return Core(
         config=config,
@@ -396,5 +416,6 @@ def build_core(config: Config | None = None) -> Core:
         weather=weather,
         memory=memory,
         camp=camp,
+        store=store,
         router=router,
     )

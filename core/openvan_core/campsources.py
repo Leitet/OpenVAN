@@ -74,6 +74,10 @@ class CampSource(ABC):
     name: str = ""
     requires_internet: bool = False
     requires_key: bool = False
+    # Editable settings this source needs, e.g. an API key or endpoint. Rendered in
+    # the Admin UI and stored in the config database (never env vars). Each field:
+    # {"key": str, "label": str, "secret": bool}.
+    config_fields: list[dict[str, Any]] = []
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)

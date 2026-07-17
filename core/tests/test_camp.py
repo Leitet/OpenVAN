@@ -6,6 +6,7 @@ from openvan_core import build_core
 from openvan_core.camp import CampService
 from openvan_core.config import Config
 from openvan_core.runtime import _looks_like_camp_query
+from openvan_core.store import ConfigStore
 
 
 def test_camp_query_detector_avoids_false_positives():
@@ -59,15 +60,16 @@ def test_source_infos_lists_registered_with_enabled_flag(tmp_path):
     assert infos["park4night"]["enabled"] is False
 
 
-async def test_keyed_source_unavailable_without_key_and_parses(tmp_path, monkeypatch):
+async def test_keyed_source_unavailable_without_config_and_parses(tmp_path):
     _service(tmp_path)  # puts campsources/ on sys.path and imports the packages
     import park4night
 
-    monkeypatch.delenv("OPENVAN_PARK4NIGHT_KEY", raising=False)
-    monkeypatch.delenv("OPENVAN_PARK4NIGHT_URL", raising=False)
-    src = park4night.Park4NightSource()
+    src = park4night.Park4NightSource()  # no config -> unavailable, no env vars involved
     assert await src.available() is False
     assert await src.search(46.5, 11.3, 20) == []  # no key -> nothing, no crash
+    # With config it becomes available (credentials come from the store, not env).
+    src = park4night.Park4NightSource({"base_url": "https://x/api", "api_key": "secret"})
+    assert await src.available() is True
 
     spots = park4night.Park4NightSource._parse(
         {"places": [{"id": 7, "name": "Wild Bay", "lat": 46.6, "lng": 11.7, "type": "wild", "services": ["water"]}]},
@@ -76,6 +78,62 @@ async def test_keyed_source_unavailable_without_key_and_parses(tmp_path, monkeyp
     assert len(spots) == 1
     assert spots[0].name == "Wild Bay" and spots[0].kind == "wild"
     assert spots[0].amenities == ["water"]
+
+
+def _service_with_store(tmp_path, sources=("sim",)):
+    store = ConfigStore(tmp_path / "store.db")
+    store.open()
+    cfg = Config(data_dir=tmp_path)
+    cfg.camp_sources = list(sources)
+    svc = CampService(cfg, get_location=lambda: (46.5, 11.3), store=store)
+    svc.discover()
+    return svc, store
+
+
+def test_set_config_persists_credentials_to_the_database(tmp_path):
+    svc, store = _service_with_store(tmp_path)
+    assert svc.set_config("park4night", {"base_url": "https://p4n/api", "api_key": "sk-xyz"}) is True
+    # Saved in the config database (not env, not settings.json).
+    saved = store.get_all("camp:park4night")
+    assert saved == {"base_url": "https://p4n/api", "api_key": "sk-xyz"}
+    # The re-created source now carries the config.
+    assert svc._sources["park4night"].config["api_key"] == "sk-xyz"
+    assert svc.set_config("nonexistent", {"x": "1"}) is False
+
+
+def test_config_reloads_from_store_on_discover(tmp_path):
+    svc, store = _service_with_store(tmp_path)
+    svc.set_config("park4night", {"base_url": "https://p4n/api", "api_key": "sk-xyz"})
+    # A fresh service over the same store rebuilds sources with their saved config.
+    cfg = Config(data_dir=tmp_path)
+    svc2 = CampService(cfg, get_location=lambda: (46.5, 11.3), store=store)
+    svc2.discover()
+    assert svc2._sources["park4night"].config["api_key"] == "sk-xyz"
+
+
+def test_source_infos_exposes_schema_and_masks_secrets(tmp_path):
+    svc, _ = _service_with_store(tmp_path)
+    svc.set_config("park4night", {"base_url": "https://p4n/api", "api_key": "sk-xyz"})
+    info = {i["id"]: i for i in svc.source_infos()}["park4night"]
+    fields = {f["key"]: f for f in info["config"]}
+    # Non-secret value is returned; secret is masked to a boolean, never the value.
+    assert fields["base_url"]["secret"] is False
+    assert fields["base_url"]["value"] == "https://p4n/api"
+    assert fields["api_key"]["secret"] is True
+    assert fields["api_key"]["set"] is True
+    assert "value" not in fields["api_key"]
+    # Sources without config fields expose an empty list.
+    assert {i["id"]: i for i in svc.source_infos()}["sim"]["config"] == []
+
+
+def test_blank_value_does_not_wipe_a_stored_secret(tmp_path):
+    svc, store = _service_with_store(tmp_path)
+    svc.set_config("park4night", {"base_url": "https://p4n/api", "api_key": "sk-xyz"})
+    # Editing only the URL, leaving the key field blank, must not clear the key.
+    svc.set_config("park4night", {"base_url": "https://new/api", "api_key": ""})
+    saved = store.get_all("camp:park4night")
+    assert saved["api_key"] == "sk-xyz"
+    assert saved["base_url"] == "https://new/api"
 
 
 async def test_offline_without_location_serves_cache(tmp_path):

@@ -116,12 +116,21 @@ export interface CampSpot {
   distance_km: number | null;
 }
 
+export interface CampSourceConfigField {
+  key: string;
+  label: string;
+  secret: boolean;
+  value?: string; // present for non-secret fields
+  set?: boolean; // present for secret fields — whether a value is stored
+}
+
 export interface CampSourceInfo {
   id: string;
   name: string;
   enabled: boolean;
   requires_internet: boolean;
   requires_key: boolean;
+  config: CampSourceConfigField[];
 }
 
 export interface Notice {

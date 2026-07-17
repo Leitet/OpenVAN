@@ -33,10 +33,14 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 class CampService:
-    def __init__(self, config: Any, get_location: Callable[[], Location]) -> None:
+    def __init__(
+        self, config: Any, get_location: Callable[[], Location], store: Any = None
+    ) -> None:
         self.config = config
         self.get_location = get_location
+        self.store = store  # ConfigStore — where per-source settings/keys live
         self._sources: dict[str, CampSource] = {}
+        self._config: dict[str, dict[str, Any]] = {}
         self._cache: list[dict[str, Any]] = []
 
     # --- lifecycle -------------------------------------------------------
@@ -44,7 +48,9 @@ class CampService:
         discover_camp_sources(self.config.camp_sources_dir)
         for cls in registered_camp_sources():
             if cls.id not in self._sources:
-                self._sources[cls.id] = cls()
+                cfg = self.store.get_all(f"camp:{cls.id}") if self.store is not None else {}
+                self._config[cls.id] = cfg
+                self._sources[cls.id] = cls(cfg)
         self._load_cache()
         logger.info("camp sources: %s", ", ".join(sorted(self._sources)) or "none")
 
@@ -60,9 +66,40 @@ class CampService:
                 "enabled": s.id in self.config.camp_sources,
                 "requires_internet": s.requires_internet,
                 "requires_key": s.requires_key,
+                "config": self._config_view(s),
             }
             for s in self._sources.values()
         ]
+
+    def _config_view(self, source: CampSource) -> list[dict[str, Any]]:
+        """The source's config fields with current values — secrets masked to a
+        boolean 'set' so keys never leave the database."""
+        cfg = self._config.get(source.id, {})
+        fields = []
+        for field in source.config_fields:
+            key = field["key"]
+            entry = {"key": key, "label": field.get("label", key), "secret": bool(field.get("secret"))}
+            if entry["secret"]:
+                entry["set"] = bool(cfg.get(key))
+            else:
+                entry["value"] = cfg.get(key, "")
+            fields.append(entry)
+        return fields
+
+    def set_config(self, source_id: str, values: dict[str, Any]) -> bool:
+        """Persist a source's settings to the database and re-create it with them.
+        Blank values are ignored, so a secret isn't wiped by an empty field."""
+        if source_id not in self._sources:
+            return False
+        cfg = dict(self._config.get(source_id, {}))
+        for key, value in values.items():
+            if value != "":
+                cfg[key] = value
+        self._config[source_id] = cfg
+        if self.store is not None:
+            self.store.set_many(f"camp:{source_id}", cfg)
+        self._sources[source_id] = type(self._sources[source_id])(cfg)
+        return True
 
     def set_enabled(self, source_id: str, enabled: bool) -> bool:
         if source_id not in self._sources:
