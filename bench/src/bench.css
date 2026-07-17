@@ -362,6 +362,36 @@ input[type="range"]::-moz-range-thumb {
 .cam-add input {
   width: 68px;
 }
+.bench-integrations {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.bench-int-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+.bench-int-row.on {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.bench-int-row .toggle {
+  min-width: 42px;
+  flex: none;
+}
+.bench-int-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.bench-int-meta strong {
+  font-size: 12px;
+}
 .scenario-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

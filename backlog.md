@@ -101,8 +101,27 @@ maxheight/maxweight on the road ahead) also landed. Remaining:
 - Navigation / routing + destination ETA (builds on the GPS the vehicle plugin
   now provides).
 - OBD-II / CAN detail for the vehicle plugin (doors, fuel, engine data).
-- Real device backends: Victron, MQTT, Matter, ESPHome, Shelly, Starlink,
-  Home Assistant bridge — implement the `Backend` seam against real hardware.
+- **Integration framework landed** (`integrations.py` + `integrations/`): the
+  ecosystem-driver layer with machine-readable descriptors (transport / local /
+  offline / permissions / safety_class / status / warning), a status-badged catalog
+  (Settings → Integrations + a bench card), enable/disable persistence, and
+  sim-backed reference drivers for the launch set (Victron Venus, ESPHome, MQTT/HA,
+  Modbus, RuuviTag, Teltonika, Autoterm, Renogy). Strategy map in
+  `docs/OPENVAN-INTEGRATION-LANDSCAPE.md`. Remaining — turn the sim drivers into
+  **real transports** against hardware:
+  - **Fas 1 real transports**: Victron local MQTT + Modbus-TCP + VE.Direct; ESPHome
+    native API; a local MQTT broker + HA discovery (import *and* export); Teltonika
+    RutOS Web API; RuuviTag BLE scan; Autoterm UART (through the safety layer).
+  - **Normalised entities**: add plugins that turn the new integration signals
+    (`solar.yield_today_wh`, `alternator.power`, `inverter.*`, `connectivity.*`,
+    `ruuvitag.*`) into semantic entities on the product UI (energy/connectivity tabs).
+  - **Fas 2–4** (see the landscape doc): JK/JBD BMS, EPEver, EcoFlow, Mopeka, Shelly,
+    Signal K, OBD-II; then OEM buses (CI-BUS, RV-C, NMEA 2000, Truma/Dometic); then
+    vendor partnerships.
+  - **Discovery**: mDNS / DHCP / BLE scan auto-detect so integrations offer to
+    enable themselves when the hardware is present.
+  - **Safety-class-4 gating**: locks / gas valves need strong auth + audit +
+    isolation before any such integration ships (never free LLM access).
 
 ## Telemetry & data
 Local time-series storage complete: SQLite recording, read-time downsampling,

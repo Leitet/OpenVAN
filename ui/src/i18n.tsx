@@ -328,6 +328,12 @@ const T: Record<string, Entry> = {
 
   // --- settings / assistant config ---
   "settings.catGeneral": { en: "General", sv: "Allmänt", de: "Allgemein" },
+  "settings.integrations": { en: "Integrations", sv: "Integrationer", de: "Integrationen" },
+  "settings.integrationsNote": {
+    en: "Hardware ecosystems OpenVan can talk to. Each shows how robust its support is (status), how it connects (transport) and how risky control is (safety). Enable the ones your van has — they run against the simulator until real hardware is attached.",
+    sv: "Hårdvaruekosystem som OpenVan kan prata med. Var och en visar hur robust stödet är (status), hur den ansluter (transport) och hur riskabel styrningen är (säkerhet). Aktivera de din bil har — de körs mot simulatorn tills riktig hårdvara ansluts.",
+    de: "Hardware-Ökosysteme, mit denen OpenVan sprechen kann. Jedes zeigt, wie robust die Unterstützung ist (Status), wie es verbindet (Transport) und wie riskant die Steuerung ist (Sicherheit). Aktiviere die, die dein Van hat — sie laufen gegen den Simulator, bis echte Hardware angeschlossen ist.",
+  },
   "settings.camping": { en: "Camping", sv: "Camping", de: "Camping" },
   "settings.campingNote": {
     en: "Sources for places to stay. The van proposes camp spots from the enabled ones — add more by dropping a source package under campsources/.",

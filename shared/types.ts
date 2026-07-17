@@ -163,6 +163,33 @@ export interface CameraDef {
   connection: string; // wired | wifi | 4g
 }
 
+// The machine-readable integration descriptor + live enabled state, mirroring
+// openvan_core.integrations.IntegrationInfo.
+export interface IntegrationPermissions {
+  read: boolean | "limited";
+  control: boolean | "limited";
+  configure: boolean | "limited";
+}
+
+export interface IntegrationInfo {
+  id: string;
+  name: string;
+  category: string;
+  vendor: string;
+  transports: string[];
+  local: boolean;
+  offline_capable: boolean;
+  discovery: string;
+  permissions: IntegrationPermissions;
+  safety_class: number; // 0 safest … 4 critical
+  status: string; // native | certified | open | community | experimental | …
+  priority: string; // P0 … P3
+  provides: string[];
+  description: string;
+  warning: string;
+  enabled: boolean;
+}
+
 export interface MaintenanceItem {
   id: string;
   label: string;

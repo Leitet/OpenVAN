@@ -117,6 +117,11 @@ class VehicleBody(BaseModel):
     profile: dict[str, Any]
 
 
+class IntegrationBody(BaseModel):
+    id: str
+    enabled: bool
+
+
 class ActivePersonalityBody(BaseModel):
     id: str
 
@@ -267,6 +272,16 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
     @app.post("/api/vehicle")
     async def set_vehicle(body: VehicleBody) -> dict[str, Any]:
         return await core.set_vehicle(body.profile)
+
+    @app.get("/api/integrations")
+    async def integrations() -> dict[str, Any]:
+        return {"integrations": core.integrations_list()}
+
+    @app.post("/api/integrations")
+    async def set_integration(body: IntegrationBody) -> dict[str, Any]:
+        if not await core.set_integration_enabled(body.id, body.enabled):
+            raise HTTPException(404, f"unknown integration '{body.id}'")
+        return {"integrations": core.integrations_list()}
 
     @app.get("/api/cameras")
     async def cameras() -> dict[str, Any]:

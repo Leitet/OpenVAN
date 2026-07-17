@@ -24,6 +24,14 @@ from .llm import (
 from .memory import TravelMemory
 from .notices import Advisor, AdvisorEngine, Notice
 from .personalities import Personality, PersonalityStore
+from .integrations import (
+    Integration,
+    IntegrationInfo,
+    IntegrationManager,
+    Permissions,
+    Status,
+    Transport,
+)
 from .plugins import Plugin, PluginManager
 from .predictions import compute_predictions
 from .runtime import Core, build_core
@@ -60,6 +68,12 @@ __all__ = [
     "compute_predictions",
     "Plugin",
     "PluginManager",
+    "Integration",
+    "IntegrationInfo",
+    "IntegrationManager",
+    "Permissions",
+    "Status",
+    "Transport",
     "CampSource",
     "CampSpot",
     "CampService",

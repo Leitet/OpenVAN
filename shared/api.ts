@@ -299,6 +299,24 @@ export async function removeCamera(id: string): Promise<CameraDef[]> {
   return (await res.json()).cameras as CameraDef[];
 }
 
+import type { IntegrationInfo } from "./types";
+
+export async function getIntegrations(): Promise<IntegrationInfo[]> {
+  return (await (await fetch("/api/integrations")).json()).integrations as IntegrationInfo[];
+}
+
+export async function setIntegration(
+  id: string,
+  enabled: boolean,
+): Promise<IntegrationInfo[]> {
+  const res = await fetch("/api/integrations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, enabled }),
+  });
+  return (await res.json()).integrations as IntegrationInfo[];
+}
+
 export async function getSecurity(): Promise<{ armed: boolean }> {
   return (await fetch("/api/security")).json();
 }

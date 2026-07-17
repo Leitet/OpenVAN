@@ -59,6 +59,7 @@ class VanSimulation:
         thermal: ThermalParams | None = None,
         water: WaterParams | None = None,
         roads: Any = None,
+        integrations: Any = None,
     ) -> None:
         self._bus = bus
         self._twin = twin
@@ -68,6 +69,10 @@ class VanSimulation:
         # Optional RoadNetwork: when present, driving snaps to real roads instead
         # of free dead-reckoning. None (or not yet loaded) → dead reckon (offline).
         self._roads = roads
+        # Optional IntegrationManager: enabled integration drivers inject their
+        # characteristic raw signals each tick (Rule 1 — every integration runs
+        # against the twin). None → no integration signals.
+        self._integrations = integrations
         self._task: asyncio.Task | None = None
 
     async def step(self, dt: float) -> None:
@@ -75,6 +80,9 @@ class VanSimulation:
         await self._step_thermal(dt)
         await self._step_water(dt)
         await self._step_vehicle(dt)
+        # Integrations run last so they normalise from the freshly-evolved state.
+        if self._integrations is not None:
+            await self._integrations.simulate_all(dt)
 
     async def _step_clock(self, dt: float) -> None:
         """Advance the simulated clock and derive the sun/day-night state from it and

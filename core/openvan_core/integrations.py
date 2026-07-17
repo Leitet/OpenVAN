@@ -1,0 +1,270 @@
+"""Integration framework — the driver + descriptor layer.
+
+An **integration** connects OpenVan to a hardware *ecosystem* (Victron, ESPHome,
+Home Assistant/MQTT, Modbus, …) over one or more *transports*, and **normalises**
+what the devices report into the twin's raw-signal schema. Plugins
+(:mod:`~openvan_core.plugins`) then turn those signals into semantic entities.
+
+Two things travel together in every integration:
+
+* a machine-readable **descriptor** (:class:`IntegrationInfo`) — transport list,
+  local/offline flags, permissions, safety class, confidence/status, an optional
+  warning — so the UI can honestly show *how robust* the support is, and
+* a **driver** — on real hardware it talks the protocol; in simulation it
+  injects the characteristic raw signals a device of that type would emit, so the
+  integration is exercisable against the twin with no hardware (Rule 1).
+
+The full strategy (protocols, priorities, phases, top-10) lives in
+``docs/OPENVAN-INTEGRATION-LANDSCAPE.md``.
+
+Discovery mirrors :mod:`~openvan_core.plugins`: each folder under
+``integrations/`` that defines an :class:`Integration` subclass is imported, and
+subclasses self-register via ``__init_subclass__``.
+"""
+
+from __future__ import annotations
+
+import importlib
+import logging
+import sys
+from abc import ABC
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .events import EventBus
+    from .twin import VanTwin
+
+logger = logging.getLogger(__name__)
+
+
+# --- taxonomy (kept as plain strings so descriptors stay JSON-friendly) -------
+
+class Transport:
+    MQTT = "mqtt"
+    MODBUS_TCP = "modbus_tcp"
+    MODBUS_RTU = "modbus_rtu"
+    VE_DIRECT = "ve_direct"
+    BLE = "ble"
+    SERIAL = "serial"
+    HTTP = "http"
+    WEBSOCKET = "websocket"
+    CANBUS = "canbus"
+    RV_C = "rv_c"
+    NMEA2000 = "nmea2000"
+    SIGNALK = "signalk"
+    CLOUD_REST = "cloud_rest"
+    NATIVE_API = "native_api"
+    ZIGBEE = "zigbee"
+
+
+class Status:
+    """Confidence taxonomy, most robust → most fragile (what the user sees)."""
+
+    NATIVE = "native"
+    CERTIFIED = "certified"
+    OPEN = "open"
+    COMMUNITY = "community"
+    EXPERIMENTAL = "experimental"
+    REVERSE_ENGINEERED = "reverse_engineered"
+    CLOUD_DEPENDENT = "cloud_dependent"
+    READ_ONLY = "read_only"
+    UNSUPPORTED = "unsupported"
+
+
+@dataclass
+class Permissions:
+    """Each is ``True`` / ``False`` / the string ``"limited"``."""
+
+    read: Any = True
+    control: Any = False
+    configure: Any = False
+
+
+@dataclass
+class IntegrationInfo:
+    """The machine-readable descriptor an integration exposes."""
+
+    id: str
+    name: str
+    category: str  # matches the plugin categories: energy, climate, water, …
+    vendor: str = ""
+    transports: list[str] = field(default_factory=list)
+    local: bool = True
+    offline_capable: bool = True
+    discovery: str = ""  # mdns / dhcp / ble_scan / manual / ""
+    permissions: Permissions = field(default_factory=Permissions)
+    safety_class: int = 0  # 0 safest read-only … 4 critical / cloud / reverse-eng
+    status: str = Status.EXPERIMENTAL
+    priority: str = "P2"  # P0 launch … P3 niche
+    provides: list[str] = field(default_factory=list)  # normalised signal keys it feeds
+    description: str = ""
+    warning: str = ""  # honest caveat (fragile driver, cloud, reverse-engineered)
+
+    def to_dict(self) -> dict[str, Any]:
+        d = asdict(self)
+        return d
+
+
+_REGISTRY: list[type["Integration"]] = []
+
+
+def registered_integrations() -> list[type["Integration"]]:
+    return list(_REGISTRY)
+
+
+def clear_registry() -> None:
+    """Test helper — the registry is process-global."""
+    _REGISTRY.clear()
+
+
+class Integration(ABC):
+    """Base class for an ecosystem driver.
+
+    Subclasses set the :attr:`info` descriptor and, for Rule 1, implement
+    :meth:`simulate` to inject the raw signals a real device would emit. On real
+    hardware they'd instead open the transport in :meth:`async_setup` and stream
+    device data into the twin — the same normalised signal keys either way.
+    """
+
+    info: IntegrationInfo
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if getattr(cls, "info", None) is not None:
+            _REGISTRY.append(cls)
+
+    def __init__(self, twin: "VanTwin", bus: "EventBus", config: dict[str, Any] | None = None):
+        self.twin = twin
+        self.bus = bus
+        self.config = config or {}
+        self.enabled = False
+
+    async def async_setup(self) -> None:
+        """Open the transport / start streaming. No-op for the sim driver."""
+
+    async def async_teardown(self) -> None:
+        """Release resources (close sockets, unsubscribe)."""
+
+    async def simulate(self, dt: float) -> None:
+        """Inject the characteristic raw signals this ecosystem would produce.
+
+        Only called in simulation mode while the integration is enabled. Keep it
+        offline and deterministic (no wall-clock / RNG) so tests stay stable.
+        """
+
+
+class IntegrationManager:
+    """Discovers, enables/disables and ticks integrations.
+
+    Enabled state is persisted in the config store under the ``integrations``
+    namespace, so a user's choices survive restarts.
+    """
+
+    NS = "integrations"
+
+    def __init__(self, twin: "VanTwin", bus: "EventBus", store: Any = None) -> None:
+        self.twin = twin
+        self.bus = bus
+        self.store = store
+        self.integrations: dict[str, Integration] = {}
+
+    def get(self, integration_id: str) -> Integration | None:
+        return self.integrations.get(integration_id)
+
+    def discover(self, integrations_dir: Path | str) -> None:
+        integrations_dir = Path(integrations_dir)
+        if not integrations_dir.is_dir():
+            logger.warning("integrations directory %s does not exist", integrations_dir)
+            return
+        if str(integrations_dir) not in sys.path:
+            sys.path.insert(0, str(integrations_dir))
+        for child in sorted(integrations_dir.iterdir()):
+            if child.is_dir() and (child / "__init__.py").exists():
+                logger.info("loading integration package: %s", child.name)
+                importlib.import_module(child.name)
+
+    def _persisted_enabled(self) -> dict[str, bool]:
+        if self.store is None:
+            return {}
+        return {k: bool(v) for k, v in self.store.get_all(self.NS).items()}
+
+    async def setup_all(self) -> None:
+        """Instantiate every registered integration; enable those the user has
+        turned on (defaulting to the descriptor-implied default for un-set ones)."""
+        persisted = self._persisted_enabled()
+        for cls in registered_integrations():
+            info = cls.info
+            instance = cls(self.twin, self.bus, self._config_for(info.id))
+            self.integrations[info.id] = instance
+            want = persisted.get(info.id, _default_enabled(info))
+            if want:
+                await self._enable(instance)
+
+    def _config_for(self, integration_id: str) -> dict[str, Any]:
+        if self.store is None:
+            return {}
+        return self.store.get_all(f"{self.NS}:{integration_id}")
+
+    async def _enable(self, instance: Integration) -> None:
+        if instance.enabled:
+            return
+        instance.enabled = True
+        await instance.async_setup()
+        await self.bus.publish("integration.changed", self.describe(instance.info.id))
+
+    async def _disable(self, instance: Integration) -> None:
+        if not instance.enabled:
+            return
+        instance.enabled = False
+        await instance.async_teardown()
+        await self.bus.publish("integration.changed", self.describe(instance.info.id))
+
+    async def set_enabled(self, integration_id: str, enabled: bool) -> bool:
+        instance = self.integrations.get(integration_id)
+        if instance is None:
+            return False
+        if enabled:
+            await self._enable(instance)
+        else:
+            await self._disable(instance)
+        if self.store is not None:
+            self.store.set_many(self.NS, {integration_id: enabled})
+        return True
+
+    async def teardown_all(self) -> None:
+        for instance in self.integrations.values():
+            await instance.async_teardown()
+        self.integrations.clear()
+
+    async def simulate_all(self, dt: float) -> None:
+        """Tick every enabled integration's sim driver (called from the sim loop)."""
+        for instance in self.integrations.values():
+            if instance.enabled:
+                try:
+                    await instance.simulate(dt)
+                except Exception:  # pragma: no cover - a bad driver must not stall the loop
+                    logger.exception("integration %s simulate failed", instance.info.id)
+
+    def describe(self, integration_id: str) -> dict[str, Any] | None:
+        instance = self.integrations.get(integration_id)
+        if instance is None:
+            return None
+        d = instance.info.to_dict()
+        d["enabled"] = instance.enabled
+        return d
+
+    def list(self) -> list[dict[str, Any]]:
+        """All integrations with descriptor + live enabled state, sorted by
+        priority then name so P0 launch integrations lead the catalog."""
+        rows = [self.describe(i) for i in self.integrations]
+        rows = [r for r in rows if r is not None]
+        rows.sort(key=lambda r: (r.get("priority", "P9"), r.get("name", "")))
+        return rows
+
+
+def _default_enabled(info: IntegrationInfo) -> bool:
+    """A never-configured integration is off by default, except the always-on
+    built-in simulator reference (safety_class 0, id ``simulated_van``)."""
+    return info.id == "simulated_van"

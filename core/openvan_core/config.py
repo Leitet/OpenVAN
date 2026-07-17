@@ -110,6 +110,9 @@ class Config:
     host: str = "127.0.0.1"
     port: int = 8000
     plugins_dir: Path = field(default_factory=lambda: _REPO_ROOT / "plugins")
+    # Integration drivers (Victron, ESPHome, MQTT/HA, Modbus, …) — the layer that
+    # normalises hardware ecosystems into twin signals. Discovered like plugins.
+    integrations_dir: Path = field(default_factory=lambda: _REPO_ROOT / "integrations")
     # Local storage for things that must survive restarts (custom personalities,
     # the active choice). Offline-first: a plain local directory, no server.
     data_dir: Path = field(default_factory=lambda: _REPO_ROOT / "data")
@@ -211,6 +214,14 @@ class Config:
             "fridge.temp_c": 4.0,
             "fridge.door_open": False,
             "fridge.power": 45.0,
+            # Energy inputs integrations read (shore plug, inverter). Outputs an
+            # integration *provides* (solar yield, alternator, inverter temp) are
+            # deliberately not seeded — they appear only once a driver is enabled.
+            "shore.connected": False,
+            "inverter.on": False,
+            "inverter.ac_load": 0.0,
+            # Home-Assistant presence input (van parked on the home network).
+            "home_assistant.van_home": False,
             # Security — quiet by default.
             "security.door_open": False,
             "security.motion": False,
@@ -298,6 +309,8 @@ class Config:
         cfg.port = int(os.environ.get("OPENVAN_PORT", cfg.port))
         if os.environ.get("OPENVAN_PLUGINS_DIR"):
             cfg.plugins_dir = Path(os.environ["OPENVAN_PLUGINS_DIR"])
+        if os.environ.get("OPENVAN_INTEGRATIONS_DIR"):
+            cfg.integrations_dir = Path(os.environ["OPENVAN_INTEGRATIONS_DIR"])
         if os.environ.get("OPENVAN_DATA_DIR"):
             cfg.data_dir = Path(os.environ["OPENVAN_DATA_DIR"])
         if os.environ.get("OPENVAN_AI") is not None:

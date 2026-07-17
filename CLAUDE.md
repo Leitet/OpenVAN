@@ -92,16 +92,20 @@ make the assistant a hard requirement.
         │  safety.py     SafetyValidator + rules (allow / deny / modify)       │
         │  intents.py    Intent + IntentResolver (LLM-agnostic seam)           │
         │  plugins.py    Plugin base + directory-based PluginManager           │
+        │  integrations.py Integration base + descriptor + IntegrationManager  │
         │  entities.py   semantic, HA-style entities                           │
         │  events.py     async pub/sub EventBus (the spine)                    │
         │  backends.py   Backend seam:  SimBackend  ──▶  VanTwin               │
         │  twin.py       VanTwin: raw simulated hardware signals               │
         └─────────────────────────────────────────────────────────────────────┘
-              ▲
-              │ Backend interface (read / write / watch)
-        ┌─────┴───────────────┐
-        │  plugins/           │   battery_monitor · cabin_light · (your plugin)
-        └─────────────────────┘
+              ▲                                    ▲
+              │ Backend interface                  │ Integration drivers
+              │ (read / write / watch)             │ normalise ecosystems → twin
+        ┌─────┴───────────────┐            ┌───────┴─────────────────┐
+        │  plugins/           │            │  integrations/          │
+        │  battery_monitor ·  │            │  victron_venus · esphome │
+        │  cabin_light · …    │            │  mqtt_homeassistant · …  │
+        └─────────────────────┘            └─────────────────────────┘
 ```
 
 ### Two layers, one seam
@@ -116,6 +120,25 @@ make the assistant a hard requirement.
   A real deployment adds `VictronBackend`, `ModbusBackend`, `CanBackend`, … that
   implement the same `read` / `write` / `watch` interface. **This seam is why
   Rule 1 is cheap.**
+
+### Integrations — the ecosystem-driver layer (`integrations.py`)
+
+OpenVan supports **protocols and ecosystems, not one bespoke integration per
+model**. An `Integration` is a *driver + machine-readable descriptor*
+(`IntegrationInfo`: transports, `local`/`offline_capable`, `permissions`,
+`safety_class` 0–4, a confidence `status` — native…reverse_engineered — and an
+honest `warning`) that **normalises** a hardware ecosystem (Victron, ESPHome,
+MQTT/Home Assistant, Modbus, RuuviTag, Teltonika, Autoterm, …) into twin signals
+the plugins consume. `IntegrationManager` discovers `integrations/` like plugins,
+persists enable/disable to the store (`integrations` namespace), and — per Rule 1
+— ticks each enabled driver's `simulate(dt)` from the sim loop so it injects the
+raw signals real hardware would emit. The catalog (with status/transport/safety
+badges) is Settings → Integrations in the product UI, plus an Integrations card on
+the bench; API: `/api/integrations` (GET list, POST enable/disable). The full
+strategy map — priorities, phases, top-10, taxonomy — is
+[docs/OPENVAN-INTEGRATION-LANDSCAPE.md](docs/OPENVAN-INTEGRATION-LANDSCAPE.md).
+New integrations: add an `Integration` subclass under `integrations/<id>/` with an
+`info` descriptor and a `simulate()` that feeds the twin.
 
 ### Proactive companion (`notices.py`, `companion.py`)
 
@@ -250,12 +273,14 @@ openvan/
     pyproject.toml
   plugins/              one package per plugin
     battery_monitor/  cabin_light/  diesel_heater/  water_system/
+  integrations/         one package per ecosystem driver (Victron, ESPHome, …)
   ui/                   React + Vite — the product UI (OpenVan OS, :5173)
   bench/                React + Vite — the Hardware Bench (dev sim, :5174)
   shared/               api client, types, WebSocket hook (used by ui + bench)
   package.json          npm workspace root (ui + bench)
   docs/
     PLUGINS.md          how to write a plugin (+ bench/product support)
+    OPENVAN-INTEGRATION-LANDSCAPE.md  the ecosystem/protocol strategy map
   backlog.md            future ideas, deliberately not built yet
   CLAUDE.md             (this file)
   README.md

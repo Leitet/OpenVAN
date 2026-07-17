@@ -8,8 +8,10 @@ import {
   saveSettings,
   addCamera,
   removeCamera,
+  getIntegrations,
+  setIntegration,
 } from "@shared/api";
-import type { Weather } from "@shared/types";
+import type { Weather, IntegrationInfo } from "@shared/types";
 import { useVanState } from "@shared/useVanState";
 import { SignalSlider } from "./components/SignalSlider";
 import { VanView } from "./components/VanView";
@@ -155,6 +157,84 @@ function CameraAdder() {
         + add
       </button>
     </div>
+  );
+}
+
+// Integration drivers, as the bench sees them. Enabling one turns its driver on
+// in Core; in sim mode the driver injects the raw signals real hardware would emit
+// (Rule 1) — visible immediately in the Signal inspector below. A few integrations
+// also *read* bench inputs (shore plugged in, inverter running), toggled here.
+function IntegrationsPanel({ twin }: { twin: Record<string, unknown> }) {
+  const [items, setItems] = useState<IntegrationInfo[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    getIntegrations().then(setItems);
+  }, []);
+
+  const toggle = async (id: string, enabled: boolean) => {
+    setBusy(id);
+    try {
+      setItems(await setIntegration(id, enabled));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <>
+      <div className="bench-integrations">
+        {items.map((it) => (
+          <div key={it.id} className={"bench-int-row" + (it.enabled ? " on" : "")}>
+            <button
+              className={"toggle" + (it.enabled ? " on" : "")}
+              disabled={busy === it.id}
+              onClick={() => toggle(it.id, !it.enabled)}
+            >
+              {it.enabled ? "on" : "off"}
+            </button>
+            <div className="bench-int-meta">
+              <strong>{it.name}</strong>
+              <span className="note">
+                {it.status} · {it.transports.join(", ")} · safety {it.safety_class}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <h3>Device inputs (what drivers read)</h3>
+      <button
+        className={"toggle" + (twin["shore.connected"] ? " on" : "")}
+        onClick={() => injectSignal("shore.connected", !twin["shore.connected"])}
+      >
+        Shore power {twin["shore.connected"] ? "connected" : "unplugged"}
+      </button>
+      <button
+        className={"toggle" + (twin["inverter.on"] ? " on" : "")}
+        onClick={() => injectSignal("inverter.on", !twin["inverter.on"])}
+      >
+        Inverter {twin["inverter.on"] ? "on" : "off"}
+      </button>
+      <SignalSlider
+        label="Inverter AC load"
+        signalKey="inverter.ac_load"
+        value={num(twin["inverter.ac_load"])}
+        min={0}
+        max={2000}
+        step={50}
+        unit=" W"
+      />
+      <button
+        className={"toggle" + (twin["home_assistant.van_home"] ? " on" : "")}
+        onClick={() => injectSignal("home_assistant.van_home", !twin["home_assistant.van_home"])}
+      >
+        Van at home {twin["home_assistant.van_home"] ? "yes" : "no"}
+      </button>
+      <p className="note">
+        Enable an integration, then watch its normalised signals appear below. On a
+        real van these come from the actual device over its protocol.
+      </p>
+    </>
   );
 }
 
@@ -373,6 +453,11 @@ export function BenchApp() {
             The van as Core sees it right now — driven entirely by the signals
             above. On a real van this comes from actual hardware.
           </p>
+        </section>
+
+        <section className="card">
+          <h2>Integrations</h2>
+          <IntegrationsPanel twin={twin} />
         </section>
 
         <section className="card span-2">

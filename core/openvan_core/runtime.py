@@ -30,6 +30,7 @@ from .llm import (
     OpenAICompatibleClient,
     filter_chat_models,
 )
+from .integrations import IntegrationManager
 from .memory import TravelMemory
 from .maintenance import MaintenanceLog
 from .notices import AdvisorEngine, Intrusion, RainSoon, ServiceDue, default_advisors
@@ -108,6 +109,7 @@ class Core:
     backend: Backend
     hub: Hub
     plugins: PluginManager
+    integrations: IntegrationManager
     simulation: VanSimulation
     advisors: AdvisorEngine
     companion: Companion
@@ -146,6 +148,10 @@ class Core:
             for cls in registered_plugins()
         }
         await self.plugins.setup_all(plugin_configs)
+        # Integration drivers normalise hardware ecosystems into twin signals. In
+        # sim mode their enabled drivers inject characteristic signals each tick.
+        self.integrations.discover(self.config.integrations_dir)
+        await self.integrations.setup_all()
         await self.router.refresh()  # probe the effective model for the active profile
         if self.roads is not None:
             self.roads.load_cache()  # last-known road graph, for instant offline follow
@@ -171,6 +177,7 @@ class Core:
         if self.config.telemetry_enabled:
             await self.telemetry_recorder.stop()
             self.telemetry.close()
+        await self.integrations.teardown_all()
         await self.plugins.teardown_all()
         self.store.close()
 
@@ -282,6 +289,15 @@ class Core:
         self._save_settings()
         await self.bus.publish("settings.changed", {"settings": self.settings()})
         return self.vehicle_state()
+
+    # --- integrations (hardware ecosystem drivers) -----------------------
+    def integrations_list(self) -> list[dict[str, Any]]:
+        """The integration catalog: every driver's descriptor + live enabled state."""
+        return self.integrations.list()
+
+    async def set_integration_enabled(self, integration_id: str, enabled: bool) -> bool:
+        """Enable/disable an integration and persist the choice."""
+        return await self.integrations.set_enabled(integration_id, enabled)
 
     # --- cameras (dynamic) ----------------------------------------------
     def cameras(self) -> list[dict[str, str]]:
@@ -556,8 +572,10 @@ def build_core(config: Config | None = None) -> Core:
     resolver = LLMIntentResolver(router, fallback=IntentResolver())
     hub = Hub(bus, twin, safety, resolver)
     plugins = PluginManager(hub, backend)
+    store = ConfigStore(config.data_dir / "store.db")
+    integrations = IntegrationManager(twin, bus, store)
     roads = RoadNetwork(config) if config.roads_enabled else None
-    simulation = VanSimulation(bus, twin, roads=roads)
+    simulation = VanSimulation(bus, twin, roads=roads, integrations=integrations)
     weather = WeatherService(
         config,
         get_location=lambda: (twin.get("gps.lat"), twin.get("gps.lon")),
@@ -576,7 +594,6 @@ def build_core(config: Config | None = None) -> Core:
     )
     memory = TravelMemory(config, twin, weather=weather, telemetry=telemetry)
     companion = Companion(router, telemetry, weather, memory, config=config)
-    store = ConfigStore(config.data_dir / "store.db")
     camp = CampService(
         config,
         get_location=lambda: (twin.get("gps.lat"), twin.get("gps.lon")),
@@ -601,6 +618,7 @@ def build_core(config: Config | None = None) -> Core:
         backend=backend,
         hub=hub,
         plugins=plugins,
+        integrations=integrations,
         simulation=simulation,
         advisors=advisors,
         companion=companion,
