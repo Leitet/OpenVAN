@@ -37,6 +37,13 @@ const PATHS: Record<string, ReactNode> = {
   ),
   flame: <path d="M12 3s5 4 5 9a5 5 0 01-10 0c0-2 1-3 1-3s0 2 1.5 2S12 8 12 3z" />,
   drop: <path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z" />,
+  security: (
+    <>
+      <rect x="3" y="7" width="13" height="11" rx="2" />
+      <path d="M16 11l5-3v8l-5-3z" />
+      <circle cx="9" cy="12.5" r="2.2" />
+    </>
+  ),
 };
 
 export function NavIcon({ name }: { name: string }) {

@@ -737,6 +737,190 @@ body {
   min-width: 32px;
 }
 
+/* Security tab — cameras */
+.cam-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.cam-tile {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #05060a;
+}
+.cam-feed {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(160deg, #1a2433, #0a0e16);
+}
+.cam-feed.loc-rear {
+  background: linear-gradient(160deg, #22303f, #0b1119);
+}
+.cam-feed.loc-cabin {
+  background: linear-gradient(160deg, #2e2636, #120f18);
+}
+.cam-feed.loc-door {
+  background: linear-gradient(160deg, #223028, #0b1310);
+}
+.cam-feed.loc-awning {
+  background: linear-gradient(160deg, #2c2a1e, #12110a);
+}
+.cam-wm {
+  font-size: 46px;
+  opacity: 0.16;
+  filter: grayscale(1);
+}
+/* faint moving scanline so it reads as a live feed */
+.cam-scan {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    rgba(255, 255, 255, 0.03) 3px,
+    rgba(255, 255, 255, 0.03) 4px
+  );
+  animation: cam-scan 6s linear infinite;
+}
+@keyframes cam-scan {
+  to {
+    background-position: 0 120px;
+  }
+}
+.cam-sim,
+.cam-nosignal {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: "Courier New", monospace;
+}
+.cam-nosignal {
+  position: static;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  letter-spacing: 0.2em;
+}
+.cam-tile.offline .cam-feed {
+  filter: grayscale(1) brightness(0.5);
+}
+.cam-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: linear-gradient(rgba(0, 0, 0, 0.55), transparent);
+}
+.cam-name {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+.cam-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.cam-conn {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+.cam-rec {
+  font-size: 10px;
+  font-weight: 700;
+  color: #ff5252;
+  animation: cam-blink 1.2s step-end infinite;
+}
+.cam-live {
+  font-size: 10px;
+  font-weight: 700;
+  color: #26de81;
+}
+@keyframes cam-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+.cam-clock {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  font-size: 11px;
+  font-family: "Courier New", monospace;
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+.cam-motion-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #fff;
+  background: #ff3b3b;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+.cam-tile.motion {
+  border-color: #ff3b3b;
+  box-shadow: 0 0 0 2px #ff3b3b, 0 0 16px rgba(255, 59, 59, 0.5);
+  animation: cam-motion 1s ease-in-out infinite;
+}
+@keyframes cam-motion {
+  50% {
+    box-shadow: 0 0 0 2px #ff3b3b, 0 0 6px rgba(255, 59, 59, 0.3);
+  }
+}
+.sec-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .sec-bottom {
+    grid-template-columns: 1fr;
+  }
+}
+.sec-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sec-pill {
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.sec-pill.on {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+  background: color-mix(in srgb, var(--warn) 12%, var(--panel-2));
+}
+
 /* Security away mode */
 .security-btn {
   display: flex;

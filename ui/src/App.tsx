@@ -7,16 +7,25 @@ import { HomeTab } from "./tabs/HomeTab";
 import { PowerTab } from "./tabs/PowerTab";
 import { ComfortTab } from "./tabs/ComfortTab";
 import { JourneyTab } from "./tabs/JourneyTab";
+import { SecurityTab } from "./tabs/SecurityTab";
 import { AssistantTab } from "./tabs/AssistantTab";
 import { SettingsTab } from "./tabs/SettingsTab";
 
-type TabId = "home" | "power" | "comfort" | "journey" | "assistant" | "settings";
+type TabId =
+  | "home"
+  | "power"
+  | "comfort"
+  | "journey"
+  | "security"
+  | "assistant"
+  | "settings";
 
 const TABS: { id: TabId; labelKey: string; icon: string }[] = [
   { id: "home", labelKey: "nav.home", icon: "home" },
   { id: "power", labelKey: "nav.power", icon: "power" },
   { id: "comfort", labelKey: "nav.comfort", icon: "comfort" },
   { id: "journey", labelKey: "nav.journey", icon: "journey" },
+  { id: "security", labelKey: "nav.security", icon: "security" },
   { id: "assistant", labelKey: "nav.assistant", icon: "assistant" },
   { id: "settings", labelKey: "nav.settings", icon: "settings" },
 ];
@@ -65,6 +74,8 @@ function TabView({ tab }: { tab: TabId }) {
       return <ComfortTab />;
     case "journey":
       return <JourneyTab />;
+    case "security":
+      return <SecurityTab />;
     case "assistant":
       return <AssistantTab />;
     case "settings":

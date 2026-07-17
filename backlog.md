@@ -24,9 +24,17 @@ climate-extreme, scenes, leveling, propane and maintenance. Still open:
   (Overpass `amenity=sanitary_dump_station|drinking_water`, blocked in this env).
 - **Cost / trip stats** (#13) — fuel, camp fees, distance, nights; a simple trip
   ledger over telemetry + journal.
-- **Security / intrusion push** (#14) — arm/disarm + door/motion intrusion alarm
-  **shipped** (`security.py`); still to do: shock sensor, an optional siren, and a
-  remote "someone's at the van" push once a notification channel exists.
+- **Security / intrusion push** (#14) — arm/disarm + door/motion/**camera** intrusion
+  alarm **shipped** (`security.py`, `plugins/cameras`, Security tab); still to do:
+  shock sensor, an optional siren, and a remote "someone's at the van" push once a
+  notification channel exists.
+- **Real camera backends** — the camera *plugin + entity model + Security-tab UX*
+  shipped against the simulator (metadata + stylised placeholder feed). Real video
+  is a `Backend` job: RTSP/ONVIF snapshots & live streams; per-vendor cloud
+  (Reolink/Ring/Blink/Eufy) adapters; **local recording + a playback timeline**; a
+  **Frigate NVR bridge** (local AI object detection, HA-native); PTZ + two-way
+  audio; motion→auto-record when armed; snapshot thumbnails in the intrusion notice;
+  an interior-cam privacy shutter when disarmed. See `docs/CAMERAS.md`.
 - **Solar-orientation & load-timing advisor** (#15) — we already compute a
   weather-aware solar forecast; add "best window to run the kettle/charge" and
   "park nose-south for morning charge".

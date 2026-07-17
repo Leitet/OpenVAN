@@ -204,6 +204,19 @@ class Config:
             # Security — quiet by default.
             "security.door_open": False,
             "security.motion": False,
+            # Cameras — all online, no motion, not recording.
+            "camera.rear.online": True,
+            "camera.rear.motion": False,
+            "camera.rear.recording": False,
+            "camera.cabin.online": True,
+            "camera.cabin.motion": False,
+            "camera.cabin.recording": False,
+            "camera.entry.online": True,
+            "camera.entry.motion": False,
+            "camera.entry.recording": False,
+            "camera.awning.online": True,
+            "camera.awning.motion": False,
+            "camera.awning.recording": False,
             # Vehicle / GPS — starting parked in the Dolomites.
             "gps.lat": 46.5405,
             "gps.lon": 11.6553,

@@ -256,6 +256,42 @@ input[type="range"]::-moz-range-thumb {
   color: var(--amber);
   background: var(--amber-soft);
 }
+.cam-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.cam-row-label {
+  flex: 1;
+  font-size: 13px;
+}
+.chip {
+  padding: 4px 9px;
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+.chip:hover {
+  border-color: var(--muted);
+}
+.chip.on {
+  color: var(--good, #4ec9a0);
+  border-color: currentColor;
+}
+.chip.warn {
+  color: var(--amber);
+  border-color: currentColor;
+  background: var(--amber-soft);
+}
+.chip.rec {
+  color: #ff5b5b;
+  border-color: currentColor;
+}
 .scenario-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

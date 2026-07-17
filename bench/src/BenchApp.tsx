@@ -152,6 +152,39 @@ export function BenchApp() {
         </section>
 
         <section className="card">
+          <h2>Cameras</h2>
+          {[
+            ["rear", "Rear View"],
+            ["cabin", "Cabin"],
+            ["entry", "Entry / Door"],
+            ["awning", "Side / Awning"],
+          ].map(([id, label]) => (
+            <div className="cam-row" key={id}>
+              <span className="cam-row-label">{label}</span>
+              <button
+                className={"chip" + (twin[`camera.${id}.online`] ? " on" : "")}
+                onClick={() => injectSignal(`camera.${id}.online`, !twin[`camera.${id}.online`])}
+              >
+                {twin[`camera.${id}.online`] ? "online" : "offline"}
+              </button>
+              <button
+                className={"chip" + (twin[`camera.${id}.motion`] ? " warn" : "")}
+                onClick={() => injectSignal(`camera.${id}.motion`, !twin[`camera.${id}.motion`])}
+              >
+                motion
+              </button>
+              <button
+                className={"chip" + (twin[`camera.${id}.recording`] ? " rec" : "")}
+                onClick={() => injectSignal(`camera.${id}.recording`, !twin[`camera.${id}.recording`])}
+              >
+                rec
+              </button>
+            </div>
+          ))}
+          <p className="note">Motion on any camera while Away mode is armed trips the intrusion alarm.</p>
+        </section>
+
+        <section className="card">
           <h2>Leveling</h2>
           <SignalSlider label="Pitch (nose up +)" signalKey="imu.pitch_deg" value={num(twin["imu.pitch_deg"])} min={-8} max={8} step={0.1} unit="°" />
           <SignalSlider label="Roll (right low +)" signalKey="imu.roll_deg" value={num(twin["imu.roll_deg"])} min={-8} max={8} step={0.1} unit="°" />

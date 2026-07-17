@@ -482,13 +482,27 @@ class Intrusion(Advisor):
             return None
         door = hub.twin.get("security.door_open")
         motion = hub.twin.get("security.motion")
-        if not (door or motion):
+        # A camera seeing motion while armed is a tripwire too.
+        cam = next(
+            (
+                k.split(".")[1]
+                for k, v in hub.twin.snapshot().items()
+                if k.startswith("camera.") and k.endswith(".motion") and v
+            ),
+            None,
+        )
+        if not (door or motion or cam):
             return None
-        what = "a door opened" if door else "motion was seen"
+        if door:
+            what = "a door opened"
+        elif cam:
+            what = f"the {cam} camera saw motion"
+        else:
+            what = "motion was seen"
         return Notice(
             self.key, "warning", "safety", "Security alert",
-            f"While away mode is armed, {what} inside the van. Check on it.",
-            {"door": bool(door), "motion": bool(motion)},
+            f"While away mode is armed, {what}. Check on the van.",
+            {"door": bool(door), "motion": bool(motion), "camera": cam},
         )
 
 
