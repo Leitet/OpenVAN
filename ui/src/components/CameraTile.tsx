@@ -14,7 +14,8 @@ export function CameraTile({ entity }: { entity: Entity }) {
   // The sim clock drives day/night; interior cabin cam is unaffected by daylight.
   const phase = String(twin["environment.phase"] ?? "day");
   const loc0 = String((entity.attributes as Record<string, unknown>).location ?? "cabin");
-  const nightVision = loc0 !== "cabin" && (phase === "night" || phase === "dusk");
+  // Interior cabin cam is always lit; exterior cams go IR only at true night.
+  const nightVision = loc0 !== "cabin" && phase === "night";
 
   // Feed clock ticks off the simulated time, sped up by clock.rate.
   const epoch = typeof twin["clock.epoch"] === "number" ? (twin["clock.epoch"] as number) : null;
