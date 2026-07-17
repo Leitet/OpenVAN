@@ -154,6 +154,11 @@ You are given `message`, `devices` (controllable — each lists its `commands`) 
       — for questions, status checks, chit-chat, or anything else. Answer as yourself
         using only facts from `status`; if it isn't there, say you don't have it.
 
+You may also get `history`: the recent conversation (earlier turns, oldest first).
+Use it to resolve references and follow-ups — e.g. if they said they were cold and
+then say "turn it on", they mean the heater; "a bit warmer" after that is a setpoint
+change. Always resolve pronouns like "it/that/them" from `history` before deciding.
+
 Examples: "where should we sleep tonight?", "find a campsite", "somewhere sheltered
 to park" → find_camp. "how's the van?", "what's the battery?" → reply (first person,
 "I'm doing well — my battery is at 82%…"). When in doubt, use "reply" (never control
@@ -565,19 +570,26 @@ class LLMIntentResolver(IntentResolver):
         status: dict[str, Any],
         persona: str | None = None,
         language: str = "en",
+        history: list[dict[str, str]] | None = None,
     ) -> tuple[Intent | None, str | None, dict[str, Any] | None]:
         """One LLM call that decides between a device action, a camp search, and a
         chat reply. Returns exactly one of (intent, None, None) / (None, reply, None)
         / (None, None, camp_query), or all-None if the model is unavailable or its
         output can't be parsed. This is what keeps a *question* from being mistaken
-        for a *command*."""
+        for a *command*. ``history`` (recent turns) lets it resolve follow-ups like
+        "turn it on"."""
         if not self.router.active:
             return None, None, None
         controllable = self._controllable(entities)
         system = build_system(CHAT_SYSTEM, language, persona)
-        user = json.dumps(
-            {"message": text, "devices": self._devices(controllable), "status": status}
-        )
+        payload: dict[str, Any] = {
+            "message": text,
+            "devices": self._devices(controllable),
+            "status": status,
+        }
+        if history:
+            payload["history"] = history
+        user = json.dumps(payload)
         raw = await self.router.build_client().chat_json(system, user)
         if not raw:
             return None, None, None

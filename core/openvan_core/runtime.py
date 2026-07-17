@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from typing import Any
 
@@ -64,6 +64,9 @@ _CAMP_HINTS = (
 )
 _CAMP_RE = re.compile("|".join(re.escape(h) for h in _CAMP_HINTS), re.IGNORECASE)
 
+# How many chat messages (user+assistant) to keep as rolling context. ~5 turns.
+_MAX_CHAT_HISTORY = 10
+
 
 def _looks_like_camp_query(text: str) -> bool:
     return bool(_CAMP_RE.search(text))
@@ -89,6 +92,9 @@ class Core:
     camp: CampService
     store: ConfigStore
     roads: RoadNetwork | None = None
+    # Short rolling chat memory (role/content turns) so the assistant can resolve
+    # follow-ups like "turn it on". Kept server-side; trimmed to the last few turns.
+    chat_history: list[dict[str, str]] = field(default_factory=list)
 
     async def start(self) -> None:
         # The config store holds plugin / camp-source settings (incl. credentials).
@@ -159,39 +165,60 @@ class Core:
 
         language = self.config.language
 
+        # Snapshot the conversation so far (before this turn) for the model to use.
+        history = list(self.chat_history)
+
         # Camp queries route to a camp search regardless of model strength, so a weak
         # or offline model can't mistake "where should we sleep?" for a device command.
         if self.config.camp_enabled and _looks_like_camp_query(text):
-            return await self._chat_camp(
+            result = await self._chat_camp(
                 {"radius_km": None, "wants": []}, notices, persona, language, request=text
             )
+            return self._finish(text, result)
 
         if getattr(resolver, "active", False):
             status = self.companion.build_context(self.hub, notices)
             intent, reply, camp = await resolver.converse(
-                text, entities, status, persona, language
+                text, entities, status, persona, language, history=history
             )
             if intent is not None:
-                return await self._chat_action(intent)
+                return self._finish(text, await self._chat_action(intent))
             if camp is not None:
-                return await self._chat_camp(camp, notices, persona, language, request=text)
+                result = await self._chat_camp(camp, notices, persona, language, request=text)
+                return self._finish(text, result)
             if reply is not None:
-                return {"reply": reply, "action": False, "ok": True, "blocked_by_safety": False}
+                return self._finish(
+                    text, {"reply": reply, "action": False, "ok": True, "blocked_by_safety": False}
+                )
             # Model gave nothing usable — answer from state, don't guess a command.
             answer = await self.companion.answer(
                 self.hub, notices, text, use_llm=True, persona=persona, language=language
             )
-            return {"reply": answer, "action": False, "ok": True, "blocked_by_safety": False}
+            return self._finish(
+                text, {"reply": answer, "action": False, "ok": True, "blocked_by_safety": False}
+            )
 
         # Offline: the rule resolver is conservative (only known command phrases);
         # everything else gets a templated status answer.
         intent = await resolver.resolve(text, entities)
         if intent is not None:
-            return await self._chat_action(intent)
+            return self._finish(text, await self._chat_action(intent))
         answer = await self.companion.answer(
             self.hub, notices, text, use_llm=False, persona=persona, language=language
         )
-        return {"reply": answer, "action": False, "ok": True, "blocked_by_safety": False}
+        return self._finish(
+            text, {"reply": answer, "action": False, "ok": True, "blocked_by_safety": False}
+        )
+
+    def _finish(self, user_text: str, result: dict[str, Any]) -> dict[str, Any]:
+        """Record the turn in the rolling chat memory and return the result."""
+        self.chat_history.append({"role": "user", "content": user_text})
+        reply = result.get("reply")
+        if reply:
+            self.chat_history.append({"role": "assistant", "content": reply})
+        # Keep only the last few turns (an action confirmation counts as a turn).
+        del self.chat_history[: max(0, len(self.chat_history) - _MAX_CHAT_HISTORY)]
+        return result
 
     async def _chat_action(self, intent: Intent) -> dict[str, Any]:
         result = await self.hub.execute_intent(intent)
