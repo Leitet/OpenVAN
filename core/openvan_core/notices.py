@@ -537,6 +537,21 @@ def default_advisors(config: Any = None) -> list[Advisor]:
     def g(key: str, default: float) -> float:
         return config.tune(key) if config is not None else default
 
+    # Leveling geometry: prefer the real vehicle profile (mm → m), else tuning.
+    veh = (getattr(config, "vehicle", None) or {}) if config is not None else {}
+
+    def _dim_m(mm_key: str, tune_key: str, default: float) -> float:
+        try:
+            mm = float(veh[mm_key])
+            if mm > 0:
+                return mm / 1000.0
+        except (KeyError, TypeError, ValueError):
+            pass
+        return g(tune_key, default)
+
+    track_m = _dim_m("track_mm", "level_track_m", 2.0)
+    wheelbase_m = _dim_m("wheelbase_mm", "level_wheelbase_m", 3.6)
+
     return [
         LowFreshWater(g("fresh_water_low_pct", 15.0)),
         GreyWaterFull(g("grey_water_full_pct", 85.0)),
@@ -553,9 +568,7 @@ def default_advisors(config: Any = None) -> list[Advisor]:
         HighCO2(g("co2_high_ppm", 1500.0)),
         Condensation(g("condensation_humidity_pct", 60.0), g("condensation_margin_c", 1.5)),
         CabinClimateExtreme(g("cabin_cold_c", 3.0), g("cabin_hot_c", 30.0)),
-        NotLevel(
-            g("level_threshold_deg", 1.5), g("level_track_m", 2.0), g("level_wheelbase_m", 3.6)
-        ),
+        NotLevel(g("level_threshold_deg", 1.5), track_m, wheelbase_m),
     ]
 
 

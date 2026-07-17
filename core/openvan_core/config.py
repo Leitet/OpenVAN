@@ -14,8 +14,13 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+from .vehicle import PRESETS as _VEHICLE_PRESETS
+
 _CORE_DIR = Path(__file__).resolve().parent.parent  # .../core
 _REPO_ROOT = _CORE_DIR.parent  # repo root
+
+# Ship with a common European converted-van profile; the user picks their own.
+_DEFAULT_VEHICLE = dict(_VEHICLE_PRESETS["citroen_jumper_l3h2"])
 
 # Settings changed at runtime (Admin UI / API) that survive a restart. The API
 # key is deliberately NOT here — it stays in memory / env only, never on disk.
@@ -33,6 +38,7 @@ _PERSISTED_FIELDS = (
     "camp_search_radius_km",
     "tuning",
     "maintenance_intervals",
+    "vehicle",
 )
 
 # Feature thresholds/setpoints — sensible DEFAULTS that are all overridable at
@@ -143,6 +149,10 @@ class Config:
     # Per-item maintenance interval overrides, keyed by item id (km or days). Empty
     # = use the built-in defaults in maintenance.DEFAULT_ITEMS.
     maintenance_intervals: dict = field(default_factory=dict)
+    # The physical vehicle profile (dimensions, weight, fuel, tyres, category).
+    # Drives leveling geometry and gives the assistant decision context. Defaults to
+    # a common preset; the user picks their own in Settings > Vehicle.
+    vehicle: dict = field(default_factory=lambda: dict(_DEFAULT_VEHICLE))
     # Travel memory — auto-logs "stays" when parked. Offline-first, SQLite.
     memory_enabled: bool = True
     memory_dwell_s: float = 90.0  # parked this long before a stay is logged
@@ -247,9 +257,9 @@ class Config:
     def apply(self, data: dict) -> None:
         for f in _PERSISTED_FIELDS:
             if f in data and data[f] is not None:
-                # Dict settings (tuning, maintenance overrides) MERGE, so a partial
-                # update keeps the other defaults instead of wiping them.
-                if f in ("tuning", "maintenance_intervals") and isinstance(data[f], dict):
+                # Dict settings (tuning, maintenance overrides, vehicle) MERGE, so a
+                # partial update keeps the other fields instead of wiping them.
+                if f in ("tuning", "maintenance_intervals", "vehicle") and isinstance(data[f], dict):
                     getattr(self, f).update(data[f])
                 else:
                     setattr(self, f, data[f])

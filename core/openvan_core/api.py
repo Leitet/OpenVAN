@@ -113,6 +113,10 @@ class CameraBody(BaseModel):
     connection: str = "wifi"
 
 
+class VehicleBody(BaseModel):
+    profile: dict[str, Any]
+
+
 class ActivePersonalityBody(BaseModel):
     id: str
 
@@ -255,6 +259,14 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
         if not core.complete_maintenance(body.id):
             raise HTTPException(404, f"unknown maintenance item '{body.id}'")
         return {"items": core.maintenance_status()}
+
+    @app.get("/api/vehicle")
+    async def vehicle() -> dict[str, Any]:
+        return core.vehicle_state()
+
+    @app.post("/api/vehicle")
+    async def set_vehicle(body: VehicleBody) -> dict[str, Any]:
+        return await core.set_vehicle(body.profile)
 
     @app.get("/api/cameras")
     async def cameras() -> dict[str, Any]:

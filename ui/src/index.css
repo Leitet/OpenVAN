@@ -784,6 +784,90 @@ body {
   margin-top: 4px;
 }
 
+/* Vehicle settings */
+.veh-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.veh-head-ico {
+  width: 30px;
+  height: 30px;
+  color: var(--accent);
+  flex: none;
+}
+.veh-head strong {
+  display: block;
+  font-size: 16px;
+}
+.veh-head .veh-sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+.veh-preset {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+.veh-preset select,
+.veh-input select,
+.veh-input input {
+  padding: 6px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+}
+.veh-preset select {
+  min-width: 240px;
+}
+.veh-group {
+  margin-bottom: 14px;
+}
+.veh-group h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.veh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px 18px;
+}
+.veh-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+}
+.veh-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.veh-input input {
+  width: 96px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.veh-input input[type="text"],
+.veh-input select {
+  text-align: left;
+  min-width: 120px;
+}
+.veh-input em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 30px;
+}
+
 /* Tuning settings */
 .tuning-group {
   margin-bottom: 14px;

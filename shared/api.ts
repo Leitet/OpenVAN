@@ -250,7 +250,20 @@ export async function deletePersonality(id: string): Promise<void> {
   await fetch(`/api/personalities/${id}`, { method: "DELETE" });
 }
 
-import type { AssistantMemory, SceneInfo, MaintenanceItem } from "./types";
+import type { AssistantMemory, SceneInfo, MaintenanceItem, VehicleState, VehicleProfile } from "./types";
+
+export async function getVehicle(): Promise<VehicleState> {
+  return (await fetch("/api/vehicle")).json();
+}
+
+export async function setVehicle(profile: VehicleProfile): Promise<VehicleState> {
+  const res = await fetch("/api/vehicle", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ profile }),
+  });
+  return res.json();
+}
 
 export async function getMaintenance(): Promise<MaintenanceItem[]> {
   const data = await (await fetch("/api/maintenance")).json();

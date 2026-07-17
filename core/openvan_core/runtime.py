@@ -264,6 +264,25 @@ class Core:
         """Run a scene's steps through the safety-checked intent path."""
         return await self.scenes.run(scene_id)
 
+    # --- vehicle profile -------------------------------------------------
+    def vehicle_state(self) -> dict[str, Any]:
+        from .vehicle import CATEGORIES, presets_list
+
+        return {
+            "profile": dict(self.config.vehicle),
+            "presets": presets_list(),
+            "categories": CATEGORIES,
+        }
+
+    async def set_vehicle(self, profile: dict[str, Any]) -> dict[str, Any]:
+        """Replace the vehicle profile (drop blanks), persist it, and rebuild the
+        leveling advisor which uses the wheelbase/track."""
+        self.config.vehicle = {k: v for k, v in profile.items() if v not in (None, "")}
+        self._apply_tunables()  # leveling geometry comes from the vehicle now
+        self._save_settings()
+        await self.bus.publish("settings.changed", {"settings": self.settings()})
+        return self.vehicle_state()
+
     # --- cameras (dynamic) ----------------------------------------------
     def cameras(self) -> list[dict[str, str]]:
         plugin = self.plugins.get("cameras")
@@ -556,7 +575,7 @@ def build_core(config: Config | None = None) -> Core:
         rollup_retention_days=config.telemetry_rollup_days,
     )
     memory = TravelMemory(config, twin, weather=weather, telemetry=telemetry)
-    companion = Companion(router, telemetry, weather, memory)
+    companion = Companion(router, telemetry, weather, memory, config=config)
     store = ConfigStore(config.data_dir / "store.db")
     camp = CampService(
         config,

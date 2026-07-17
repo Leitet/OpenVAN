@@ -51,9 +51,11 @@ JSON, their message, and their durable `preferences` (how they like things). Ans
 directly and briefly (1-3 sentences) about YOURSELF, in the first person ("my battery
 is …", "I'm …"), using only facts from the status — if it isn't there, say you don't
 have it. Give friendly, practical suggestions, and lean on their preferences when
-relevant. You do NOT control anything in this reply; if they want an action, tell them
-to ask for it directly (e.g. "turn on the cabin light"). Plain natural speech — no
-lists, no markdown.
+relevant. `status.vehicle` describes the physical van (size in metres, gross weight)
+— use it for practical warnings like low bridges, height barriers, weight-limited
+roads, or whether a tight spot fits. You do NOT control anything in this reply; if
+they want an action, tell them to ask for it directly (e.g. "turn on the cabin
+light"). Plain natural speech — no lists, no markdown.
 """
 
 CAMP_SYSTEM = """\
@@ -127,11 +129,13 @@ class Companion:
         telemetry: "TelemetryStore | None" = None,
         weather: "WeatherService | None" = None,
         memory: "TravelMemory | None" = None,
+        config: Any = None,
     ) -> None:
         self.router = router
         self.telemetry = telemetry
         self.weather = weather
         self.memory = memory
+        self.config = config
 
     def build_context(
         self, hub: "Hub", notices: list[dict[str, Any]], *, hour: int | None = None
@@ -190,6 +194,7 @@ class Companion:
             "battery_days_left": battery_days,
             "battery_trend_pct_per_hour": battery_trend,
             "predictions": predictions,
+            "vehicle": _vehicle_summary(self.config),
             "fresh_water_pct": _num(twin.get("fresh_water.level_pct")),
             "grey_water_pct": _num(twin.get("grey_water.level_pct")),
             "diesel_pct": _num(twin.get("diesel_tank.level_pct")),
@@ -405,6 +410,14 @@ def _camp_needs(ctx: dict[str, Any]) -> list[dict[str, Any]]:
         )
 
     return needs
+
+
+def _vehicle_summary(config: Any) -> dict[str, Any] | None:
+    """The physical van (size/weight) for practical advice — low bridges, weight
+    limits, whether a tight pitch fits."""
+    from .vehicle import vehicle_summary
+
+    return vehicle_summary(getattr(config, "vehicle", None)) if config is not None else None
 
 
 def _local_hour(twin: Any) -> int:

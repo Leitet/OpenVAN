@@ -148,6 +148,14 @@ export interface SceneInfo {
   description: string;
 }
 
+export type VehicleProfile = Record<string, string | number>;
+
+export interface VehicleState {
+  profile: VehicleProfile;
+  presets: { id: string; name: string; spec: VehicleProfile }[];
+  categories: { id: string; label: string }[];
+}
+
 export interface CameraDef {
   id: string;
   label: string;

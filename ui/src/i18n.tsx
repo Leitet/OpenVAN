@@ -176,6 +176,10 @@ const T: Record<string, Entry> = {
   "security.tapArm": { en: "Tap to arm when you leave", sv: "Tryck för att aktivera", de: "Zum Aktivieren tippen" },
   "security.tapDisarm": { en: "Tap to disarm", sv: "Tryck för att stänga av", de: "Zum Deaktivieren tippen" },
   "settings.tuning": { en: "Tuning", sv: "Trösklar", de: "Schwellen" },
+  "settings.vehicle": { en: "Vehicle", sv: "Fordon", de: "Fahrzeug" },
+  "vehicle.preset": { en: "Load a model", sv: "Ladda en modell", de: "Modell laden" },
+  "vehicle.pick": { en: "Pick a model…", sv: "Välj en modell…", de: "Modell wählen…" },
+  "vehicle.untitled": { en: "My van", sv: "Min van", de: "Mein Van" },
   "tuning.hint": {
     en: "Thresholds and setpoints for the advisors and scenes. Defaults are sensible; edit to suit your van, or reset.",
     sv: "Trösklar och börvärden för rådgivarna och scenerna. Standard är rimliga; ändra efter din van, eller återställ.",
