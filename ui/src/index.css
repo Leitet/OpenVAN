@@ -704,6 +704,12 @@ body {
   background: var(--panel-2);
   z-index: 0;
 }
+/* Recolor the OSM basemap to the active persona. Only the tile pane is filtered,
+   so the track, van and camp markers (other panes) keep their crisp accent. */
+.journey-leaflet .leaflet-tile-pane {
+  filter: var(--map-filter);
+  transition: filter 0.35s ease;
+}
 .journey-map-empty {
   position: absolute;
   inset: 0;

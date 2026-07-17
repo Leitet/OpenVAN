@@ -34,6 +34,10 @@
   --ov-border:rgba(59,70,50,.16);
   --ov-statusbar-bg:#4c5a3f;
   --ov-statusbar-text:#ece7d7;
+  /* Recolors the OSM raster map to the persona (applied to the Leaflet tile pane).
+     Light personas: soften + tint toward the accent. Dark personas: invert to a
+     dark basemap, then tint. Default = SCOUT (sage). */
+  --map-filter:grayscale(.3) sepia(.45) hue-rotate(55deg) saturate(.75) brightness(1.05);
 }
 
 /* ============================ THEMES ============================ */
@@ -53,6 +57,7 @@
   --ov-border:rgba(59,51,87,.15);
   --ov-statusbar-bg:#4b3f63;
   --ov-statusbar-text:#ede7dc;
+  --map-filter:grayscale(.25) sepia(.5) hue-rotate(205deg) saturate(.7) brightness(1.03);
 }
 
 /* FORGE — The Systems Engineer · dark, amber/gold */
@@ -70,6 +75,7 @@
   --ov-border:rgba(224,166,43,.22);
   --ov-statusbar-bg:#16160f;
   --ov-statusbar-text:#ece6da;
+  --map-filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.92) sepia(.35) saturate(1.2) hue-rotate(-25deg);
 }
 
 /* NOMAD — The Storyteller Van · light, forest green */
@@ -87,6 +93,7 @@
   --ov-border:rgba(46,58,36,.15);
   --ov-statusbar-bg:#47543a;
   --ov-statusbar-text:#ede7d6;
+  --map-filter:grayscale(.3) sepia(.5) hue-rotate(50deg) saturate(.85) brightness(1.02);
 }
 
 /* PULSE — The Utility Van · dark, electric lime (mono voice) */
@@ -104,6 +111,7 @@
   --ov-border:rgba(155,214,46,.20);
   --ov-statusbar-bg:#141416;
   --ov-statusbar-text:#f2f2ef;
+  --map-filter:invert(1) hue-rotate(150deg) brightness(.82) contrast(.95) sepia(.3) saturate(1.35);
 }
 
 /* RANGER — The Expedition Van · dark, military olive + orange */
@@ -121,6 +129,7 @@
   --ov-border:rgba(156,162,75,.20);
   --ov-statusbar-bg:#191a13;
   --ov-statusbar-text:#d9d5c4;
+  --map-filter:invert(1) hue-rotate(170deg) brightness(.82) contrast(.9) sepia(.35) saturate(1.15) hue-rotate(-30deg);
 }
 
 /* SCOUT — The Everyday Explorer · light, sage (house default) */
@@ -138,4 +147,5 @@
   --ov-border:rgba(59,70,50,.16);
   --ov-statusbar-bg:#4c5a3f;
   --ov-statusbar-text:#ece7d7;
+  --map-filter:grayscale(.3) sepia(.45) hue-rotate(55deg) saturate(.75) brightness(1.05);
 }
