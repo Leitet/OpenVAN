@@ -24,12 +24,12 @@ climate-extreme, scenes, leveling, propane and maintenance. Still open:
   (Overpass `amenity=sanitary_dump_station|drinking_water`, blocked in this env).
 - **Cost / trip stats** (#13) — fuel, camp fees, distance, nights; a simple trip
   ledger over telemetry + journal.
-- **Security / intrusion** (#14) — motion/door/shock sensors → armed "away" mode,
-  alert + optional siren; a "someone's at the van" push. Needs sensors + push.
+- **Security / intrusion push** (#14) — arm/disarm + door/motion intrusion alarm
+  **shipped** (`security.py`); still to do: shock sensor, an optional siren, and a
+  remote "someone's at the van" push once a notification channel exists.
 - **Solar-orientation & load-timing advisor** (#15) — we already compute a
   weather-aware solar forecast; add "best window to run the kettle/charge" and
   "park nose-south for morning charge".
-- **Fridge plugin** (#16) — compressor draw, door-ajar alert, food-safety temp log.
 - **Black / cassette toilet** (#17) — mirror the grey-tank advisor; cassette-full
   reminder + dump finder.
 - **Pet mode** — an explicit "pet aboard" toggle that tightens the cabin-temp

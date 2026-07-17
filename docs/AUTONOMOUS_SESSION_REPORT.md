@@ -7,12 +7,13 @@ what you don't build." Worked unattended, committing after each feature.
 ## TL;DR
 
 Researched everyday van-dweller pain points (`docs/RESEARCH.md`), then shipped
-**five features across the biggest ones** — safety, damp, ergonomics, leveling,
-gas and upkeep — each with bench signal injection, a product-UI surface, and tests,
-following every rule in CLAUDE.md. Everything deferred is in `backlog.md`.
+**seven features across the biggest ones** — safety, damp, ergonomics, leveling,
+gas, upkeep, food/fridge and security — each with bench signal injection, a
+product-UI surface, and tests, following every rule in CLAUDE.md. Everything
+deferred is in `backlog.md`.
 
-- **Tests:** 145 → **171 passing** (+26), whole suite green.
-- **Commits:** 7 (research + 5 features + backlog/report), each merged to `main`
+- **Tests:** 145 → **177 passing** (+32), whole suite green.
+- **Commits:** 9 (research + 7 features + backlog/report), each merged to `main`
   and pushed.
 - **Live-verified:** CO alarm, condensation and leveling advisories fire and show
   in the companion + Comfort panel; scenes apply through safety; maintenance shows
@@ -27,6 +28,8 @@ following every rule in CLAUDE.md. Everything deferred is in `backlog.md`.
 | 3 | **Leveling assistant** — pitch/roll + "raise this side N cm" | Parking flat | `plugins/leveling` + `NotLevel` advisor + geometry helper | Leveling card | Journey bubble-level | 5 |
 | 4 | **Propane / LPG level** | Cooking-gas runout | `plugins/propane` + `LowPropane` | Propane slider | Comfort propane gauge | 2 |
 | 5 | **Maintenance reminders** — odometer + date, one-tap done | Upkeep drift | `maintenance.py` + `ServiceDue` advisor | (uses odometer) | Power "Maintenance" panel | 5 |
+| 6 | **Fridge monitor** — temp, door-ajar, compressor draw | Food safety + draw | `plugins/fridge` + `FridgeWarm`/`FridgeDoorOpen` | temp slider + door toggle | Power fridge + draw gauges | 3 |
+| 7 | **Security away-mode** — arm/disarm + intrusion alarm | Feeling unsafe | `security.py` + `Intrusion` advisor | door + motion toggles | Home "Away mode" panel | 3 |
 
 All new sensors are edge-deterministic and offline-first; the AI only rewords the
 facts. Safety-critical alarms (CO/gas/smoke) never touch a model (Rule 2). Scenes
