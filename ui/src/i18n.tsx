@@ -50,6 +50,11 @@ const T: Record<string, Entry> = {
   "status.water": { en: "water", sv: "vatten", de: "Wasser" },
   "status.cabin": { en: "cabin", sv: "kupé", de: "Kabine" },
   "status.core": { en: "Core", sv: "Core", de: "Core" },
+  "status.coreHint": {
+    en: "Connected to OpenVan Core — the van's local system",
+    sv: "Ansluten till OpenVan Core — vanens lokala system",
+    de: "Mit OpenVan Core verbunden — dem lokalen System des Vans",
+  },
   "status.reconnecting": { en: "Reconnecting…", sv: "Återansluter…", de: "Verbinde neu…" },
   "ai.prefix": { en: "AI", sv: "AI", de: "KI" },
   "ai.local": { en: "local", sv: "lokal", de: "lokal" },

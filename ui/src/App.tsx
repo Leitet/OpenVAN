@@ -11,8 +11,6 @@ import {
   Sparkles,
   Cloud,
   Cpu,
-  Wifi,
-  WifiOff,
 } from "lucide-react";
 import { useVanState } from "@shared/useVanState";
 import { VanProvider, useVan, num } from "./state";
@@ -104,9 +102,13 @@ function StatusBar() {
             <span className="sb-ai-model">{t("ai.rulesOnly")}</span>
           )}
         </span>
-        <span className="sb-chip sb-core" data-on={connected} title={connected ? t("status.core") : t("status.reconnecting")}>
-          {connected ? <Wifi className="sb-ico" /> : <WifiOff className="sb-ico" />}
-          <span>{t("status.core")}</span>
+        <span
+          className="sb-conn"
+          data-on={connected}
+          title={connected ? t("status.coreHint") : t("status.reconnecting")}
+        >
+          <span className="sb-conn-dot" />
+          {connected ? t("status.core") : t("status.reconnecting")}
         </span>
       </div>
     </header>
