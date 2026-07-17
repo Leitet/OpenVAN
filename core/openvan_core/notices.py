@@ -13,6 +13,7 @@ briefing) is a separate, optional LLM layer — see ``companion.py``.
 
 from __future__ import annotations
 
+import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable
@@ -190,8 +191,185 @@ class RainSoon(Advisor):
         )
 
 
+def _twin_float(hub: "Hub", signal: str) -> float | None:
+    raw = hub.twin.get(signal)
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _dew_point_c(temp_c: float, rh_pct: float) -> float:
+    """Dew point (°C) via the Magnus formula. Below this, surfaces sweat."""
+    rh = max(1.0, min(100.0, rh_pct))
+    a, b = 17.62, 243.12
+    gamma = math.log(rh / 100.0) + (a * temp_c) / (b + temp_c)
+    return (b * gamma) / (a - gamma)
+
+
+class CarbonMonoxide(Advisor):
+    """The life-critical one. CO is odourless; a sealed cabin fills fast, so this
+    is a deterministic edge alarm — never gated on a model (Rule 2)."""
+
+    key = "carbon_monoxide"
+
+    def __init__(self, warn_ppm: float = 35.0, danger_ppm: float = 70.0) -> None:
+        self.warn_ppm = warn_ppm
+        self.danger_ppm = danger_ppm
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        ppm = _twin_float(hub, "air.co_ppm")
+        if ppm is None or ppm < self.warn_ppm:
+            return None
+        danger = ppm >= self.danger_ppm
+        msg = (
+            f"Carbon monoxide is {ppm:.0f} ppm — get fresh air NOW, open up and turn "
+            f"off any burner or heater."
+            if danger
+            else f"Carbon monoxide detected ({ppm:.0f} ppm). Ventilate and check your "
+            f"heater/stove."
+        )
+        return Notice(
+            self.key, "warning", "safety", "Carbon monoxide", msg,
+            {"ppm": ppm, "danger": danger},
+        )
+
+
+class GasLeak(Advisor):
+    """LPG/propane leak — % of the Lower Explosive Limit. An explosive-atmosphere
+    alarm, so warn well below the LEL."""
+
+    key = "gas_leak"
+
+    def __init__(self, threshold_lel: float = 10.0) -> None:
+        self.threshold_lel = threshold_lel
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        lel = _twin_float(hub, "air.lpg_pct_lel")
+        if lel is None or lel < self.threshold_lel:
+            return None
+        return Notice(
+            self.key, "warning", "safety", "Gas leak",
+            f"Propane at {lel:.0f}% LEL — shut the gas off at the bottle, no flames "
+            f"or switches, and ventilate.",
+            {"pct_lel": lel},
+        )
+
+
+class Smoke(Advisor):
+    key = "smoke"
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        if not hub.twin.get("air.smoke"):
+            return None
+        return Notice(
+            self.key, "warning", "safety", "Smoke detected",
+            "Smoke in the cabin — check for fire, and ventilate.",
+            {},
+        )
+
+
+class HighCO2(Advisor):
+    """Stuffy air. Not dangerous like CO, but 1500 ppm+ means poor sleep and
+    headaches — the fix is simply to crack a vent."""
+
+    key = "co2_high"
+
+    def __init__(self, threshold_ppm: float = 1500.0) -> None:
+        self.threshold_ppm = threshold_ppm
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        ppm = _twin_float(hub, "air.co2_ppm")
+        if ppm is None or ppm < self.threshold_ppm:
+            return None
+        return Notice(
+            self.key, "suggestion", "climate", "Air getting stuffy",
+            f"CO₂ is up to {ppm:.0f} ppm. Crack a window or roof vent for fresher air.",
+            {"ppm": ppm},
+        )
+
+
+class Condensation(Advisor):
+    """The most *common* van problem: moist cabin air on cold surfaces → damp →
+    mould. Fires when the humidity is high and the coldest surface (approximated by
+    the outside temperature the walls track) is at or below the dew point."""
+
+    key = "condensation_risk"
+
+    def __init__(self, humidity_floor: float = 60.0, margin_c: float = 1.5) -> None:
+        self.humidity_floor = humidity_floor
+        self.margin_c = margin_c
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        rh = _twin_float(hub, "cabin.humidity_pct")
+        cabin = _twin_float(hub, "cabin.temperature")
+        surface = _twin_float(hub, "outside.temperature")  # walls ~ outside temp
+        if rh is None or cabin is None or surface is None:
+            return None
+        if rh < self.humidity_floor:
+            return None
+        dew = _dew_point_c(cabin, rh)
+        if surface > dew + self.margin_c:
+            return None
+        return Notice(
+            self.key, "suggestion", "climate", "Condensation likely",
+            f"Cabin humidity is {rh:.0f}% and surfaces are near the dew point "
+            f"({dew:.0f}°C) — expect sweaty windows. Ventilate, or cook/dry outside "
+            f"to cut moisture.",
+            {"humidity": rh, "dew_point_c": round(dew, 1), "surface_c": surface},
+        )
+
+
+class CabinClimateExtreme(Advisor):
+    """When the van is parked, warn on a cabin cold enough to freeze pipes or hot
+    enough to endanger pets/passengers left inside."""
+
+    key = "cabin_climate_extreme"
+
+    def __init__(self, cold_c: float = 3.0, hot_c: float = 30.0) -> None:
+        self.cold_c = cold_c
+        self.hot_c = hot_c
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        if hub.twin.get("vehicle.ignition"):
+            return None  # driving — climate is being managed
+        cabin = _twin_float(hub, "cabin.temperature")
+        if cabin is None:
+            return None
+        if cabin <= self.cold_c:
+            return Notice(
+                self.key, "warning", "climate", "Cabin freezing",
+                f"It's {cabin:.0f}°C inside — risk to water pipes (and anyone/anything "
+                f"aboard). Consider some heat.",
+                {"cabin_c": cabin, "kind": "cold"},
+            )
+        if cabin >= self.hot_c:
+            return Notice(
+                self.key, "warning", "climate", "Cabin too hot",
+                f"It's {cabin:.0f}°C inside — dangerous for pets or passengers. "
+                f"Ventilate or move to shade.",
+                {"cabin_c": cabin, "kind": "hot"},
+            )
+        return None
+
+
 def default_advisors() -> list[Advisor]:
-    return [LowFreshWater(), GreyWaterFull(), LowDiesel(), BatteryRuntime(), LongDrive()]
+    return [
+        LowFreshWater(),
+        GreyWaterFull(),
+        LowDiesel(),
+        BatteryRuntime(),
+        LongDrive(),
+        # Air & safety (life-critical → most-common)
+        CarbonMonoxide(),
+        GasLeak(),
+        Smoke(),
+        HighCO2(),
+        Condensation(),
+        CabinClimateExtreme(),
+    ]
 
 
 class AdvisorEngine:

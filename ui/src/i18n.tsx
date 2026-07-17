@@ -150,6 +150,13 @@ const T: Record<string, Entry> = {
   },
 
   // --- journey ---
+  "comfort.airSafety": { en: "Air & Safety", sv: "Luft & säkerhet", de: "Luft & Sicherheit" },
+  "label.co": { en: "Carbon monoxide", sv: "Kolmonoxid", de: "Kohlenmonoxid" },
+  "label.lpg": { en: "Propane", sv: "Gasol", de: "Propan" },
+  "label.co2": { en: "CO₂", sv: "CO₂", de: "CO₂" },
+  "label.humidity": { en: "Humidity", sv: "Luftfuktighet", de: "Luftfeuchtigkeit" },
+  "safety.allClear": { en: "All clear", sv: "Allt lugnt", de: "Alles in Ordnung" },
+  "safety.smoke": { en: "Smoke", sv: "Rök", de: "Rauch" },
   "memory.title": { en: "What I've learned", sv: "Vad jag har lärt mig", de: "Was ich gelernt habe" },
   "memory.empty": {
     en: "Nothing yet — chat with me and I'll learn how you like things.",

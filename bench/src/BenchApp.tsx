@@ -27,6 +27,10 @@ const SCENARIOS: Array<{ label: string; signals: Array<[string, number | boolean
   { label: "Full sun", signals: [["solar.power", 550]] },
   { label: "Freezing night", signals: [["outside.temperature", -8], ["solar.power", 0]] },
   { label: "Empty fresh tank", signals: [["fresh_water.level_pct", 2]] },
+  { label: "CO alarm", signals: [["air.co_ppm", 120]] },
+  { label: "Gas leak", signals: [["air.lpg_pct_lel", 25]] },
+  { label: "Condensation", signals: [["cabin.humidity_pct", 80], ["outside.temperature", 4]] },
+  { label: "Clear the air", signals: [["air.co_ppm", 0], ["air.lpg_pct_lel", 0], ["air.co2_ppm", 600], ["air.smoke", false]] },
 ];
 
 function fmt(v: number | boolean | string): string {
@@ -106,6 +110,24 @@ export function BenchApp() {
             but it drives the real twin: throttle sets <code>vehicle.speed_kmh</code>,
             the wheel integrates <code>vehicle.heading</code>, so the van dead-reckons
             and the product-UI map traces your route as you pass cars.
+          </p>
+        </section>
+
+        <section className="card">
+          <h2>Air &amp; Safety</h2>
+          <SignalSlider label="Carbon monoxide" signalKey="air.co_ppm" value={num(twin["air.co_ppm"])} min={0} max={200} step={5} unit=" ppm" />
+          <SignalSlider label="LPG / propane" signalKey="air.lpg_pct_lel" value={num(twin["air.lpg_pct_lel"])} min={0} max={100} unit=" %LEL" />
+          <SignalSlider label="CO₂" signalKey="air.co2_ppm" value={num(twin["air.co2_ppm"])} min={400} max={3000} step={50} unit=" ppm" />
+          <SignalSlider label="Cabin humidity" signalKey="cabin.humidity_pct" value={num(twin["cabin.humidity_pct"])} min={0} max={100} unit="%" />
+          <button
+            className={"toggle" + (twin["air.smoke"] ? " on" : "")}
+            onClick={() => injectSignal("air.smoke", !twin["air.smoke"])}
+          >
+            {twin["air.smoke"] ? "Smoke: DETECTED" : "Smoke: clear"}
+          </button>
+          <p className="note">
+            CO/gas/smoke trip deterministic edge alarms in Core (no model in the danger
+            path). Condensation fires from humidity vs. the dew point on cold walls.
           </p>
         </section>
 

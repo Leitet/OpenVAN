@@ -4,6 +4,7 @@ import { useT } from "../i18n";
 import { Gauge } from "../components/Gauge";
 import { HeaterControl } from "../components/HeaterControl";
 import { QuickToggle } from "../components/QuickToggle";
+import { AirSafety } from "../components/AirSafety";
 
 export function ComfortTab() {
   const { entities, twin } = useVan();
@@ -38,6 +39,10 @@ export function ComfortTab() {
           onClick={() => sendIntent("switch.water_pump", pumpOn ? "turn_off" : "turn_on")}
         />
       </section>
+
+      <div className="span2">
+        <AirSafety />
+      </div>
     </div>
   );
 }

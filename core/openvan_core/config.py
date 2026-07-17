@@ -140,6 +140,12 @@ class Config:
             "water_pump.on": False,
             "cabin.temperature": 19.5,
             "outside.temperature": 11.0,
+            # Air quality & safety — healthy defaults (CO2 ~600 indoors, RH ~55%).
+            "air.co_ppm": 0.0,
+            "air.lpg_pct_lel": 0.0,
+            "air.co2_ppm": 600.0,
+            "air.smoke": False,
+            "cabin.humidity_pct": 55.0,
             "cabin_light.on": False,
             "diesel_heater.on": False,
             "diesel_heater.setpoint": 20.0,
