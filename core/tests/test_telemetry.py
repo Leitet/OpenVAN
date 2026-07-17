@@ -63,6 +63,29 @@ def test_rate_per_hour(tmp_path):
     store.close()
 
 
+def test_rate_per_hour_ignores_step_changes(tmp_path):
+    store = _store(tmp_path)
+    # Steady at 55%, then a manual step down to 9% (a refill/injection, not a drain).
+    store.record("fresh_water.level_pct", 55.0, 0.0)
+    store.record("fresh_water.level_pct", 55.0, 1800.0)
+    store.record("fresh_water.level_pct", 9.0, 1810.0)  # -46 in 10s: a discontinuity
+    store.record("fresh_water.level_pct", 9.0, 3600.0)
+    # Endpoint view sees the big drop; step-aware view ignores it → ~no trend.
+    assert store.rate_per_hour("fresh_water.level_pct", 0) < -10
+    assert store.rate_per_hour("fresh_water.level_pct", 0, ignore_steps=True) == pytest.approx(0.0)
+    store.close()
+
+
+def test_rate_per_hour_keeps_gradual_change(tmp_path):
+    store = _store(tmp_path)
+    # A real gradual drain (small steps) is preserved with ignore_steps.
+    for i in range(7):
+        store.record("fresh_water.level_pct", 60.0 - i * 5.0, i * 600.0)  # -5%/10min
+    rate = store.rate_per_hour("fresh_water.level_pct", 0, ignore_steps=True)
+    assert rate == pytest.approx(-30.0, abs=0.5)  # -5% per 10 min = -30%/h
+    store.close()
+
+
 def test_export_rows(tmp_path):
     store = _store(tmp_path)
     store.record("solar.power", 100.0, 100.0)

@@ -114,10 +114,26 @@ class TelemetryStore:
                 ).fetchall()
         return [{"t": round(r[0], 3), "v": r[1]} for r in rows]
 
-    def rate_per_hour(self, key: str, since_ts: float) -> float | None:
-        """Change in ``key`` per hour over the window (first vs latest sample)."""
+    def rate_per_hour(
+        self,
+        key: str,
+        since_ts: float,
+        *,
+        ignore_steps: bool = False,
+        step_threshold: float = 20.0,
+    ) -> float | None:
+        """Change in ``key`` per hour over the window.
+
+        Default: first vs latest sample. With ``ignore_steps`` the rate is built
+        only from *gradual* movement — any jump of ≥ ``step_threshold`` between two
+        consecutive samples (a refill, a grey dump, a manual injection) is treated
+        as a discontinuity and excluded, so a step change can't masquerade as a
+        steep drain and produce an implausible ETA.
+        """
         if self._conn is None:
             return None
+        if ignore_steps:
+            return self._gradual_rate(key, since_ts, step_threshold)
         with self._lock:
             first = self._conn.execute(
                 "SELECT ts, value FROM samples WHERE key = ? AND ts >= ? "
@@ -134,6 +150,35 @@ class TelemetryStore:
         if hours <= 0:
             return None
         return (last[1] - first[1]) / hours
+
+    # A trend is only trustworthy over a decent span; below this we don't
+    # extrapolate (avoids a couple of noisy seconds implying a wild rate).
+    _MIN_TREND_SECONDS = 120.0
+
+    def _gradual_rate(self, key: str, since_ts: float, step_threshold: float) -> float | None:
+        """Rate over the most recent *continuous* run — i.e. since the last
+        discontinuity (a refill, dump or manual set of ≥ ``step_threshold``). A
+        step resets the trend, so right after one there's no history to extrapolate
+        and no ETA is produced; a genuine gradual drain still yields its rate."""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT ts, value FROM samples WHERE key = ? AND ts >= ? ORDER BY ts",
+                (key, since_ts),
+            ).fetchall()
+        if len(rows) < 2:
+            return None
+        # Restart the segment at each step; keep only the most recent run.
+        start = 0
+        for i in range(1, len(rows)):
+            if abs(rows[i][1] - rows[i - 1][1]) >= step_threshold:
+                start = i
+        seg = rows[start:]
+        if len(seg) < 2:
+            return None  # only the post-step point — no trend yet
+        span = seg[-1][0] - seg[0][0]
+        if span < self._MIN_TREND_SECONDS:
+            return None
+        return (seg[-1][1] - seg[0][1]) / (span / 3600.0)
 
     def export(
         self,

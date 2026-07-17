@@ -96,7 +96,9 @@ def compute_predictions(
         return out
 
     def _hours_to(key: str, current: float | None, target: float, rising: bool):
-        rate = telemetry.rate_per_hour(key, now - _HOUR)  # units per hour
+        # ignore_steps: a refill/dump/manual jump is a discontinuity, not a trend —
+        # excluding it stops step-changes producing implausibly short ETAs.
+        rate = telemetry.rate_per_hour(key, now - _HOUR, ignore_steps=True)
         if current is None or rate is None:
             return None
         if rising and rate > 0.05:
@@ -106,7 +108,7 @@ def compute_predictions(
         return None
 
     soc = _num(twin.get("house_battery.soc"))
-    battery_rate = telemetry.rate_per_hour("house_battery.soc", now - _HOUR)
+    battery_rate = telemetry.rate_per_hour("house_battery.soc", now - _HOUR, ignore_steps=True)
     if soc is not None and battery_rate is not None:
         out["battery_soc_pct"] = soc
         out["battery_rate_pct_per_hour"] = round(battery_rate, 2)

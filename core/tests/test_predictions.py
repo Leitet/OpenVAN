@@ -38,6 +38,23 @@ def test_battery_and_water_etas(tmp_path):
     store.close()
 
 
+def test_step_change_does_not_produce_an_eta(tmp_path):
+    # A manual/refill step (55% -> 9% in seconds) must not be read as a drain and
+    # yield an implausible "empties in minutes" ETA.
+    store = TelemetryStore(tmp_path / "t.db")
+    store.open()
+    now = 100_000.0
+    store.record("fresh_water.level_pct", 55.0, now - 3600)
+    store.record("fresh_water.level_pct", 55.0, now - 60)
+    store.record("fresh_water.level_pct", 9.0, now - 50)  # step down
+    store.record("fresh_water.level_pct", 9.0, now)
+
+    twin = FakeTwin({"fresh_water.level_pct": 9.0})
+    p = compute_predictions(twin, store, now=now)
+    assert "fresh_water_empty_hours" not in p  # no spurious ETA from the step
+    store.close()
+
+
 def test_solar_energy_integral(tmp_path):
     store = TelemetryStore(tmp_path / "t.db")
     store.open()
