@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Entity } from "@shared/types";
+import { useVan } from "../state";
 import { useT } from "../i18n";
 
 const LOC_ICON: Record<string, string> = { rear: "🛣️", cabin: "🛋️", door: "🚪", awning: "⛺" };
@@ -9,11 +10,17 @@ const CONN: Record<string, string> = { wired: "WIRED", wifi: "WI-FI", "4g": "4G 
 // real video); a real RTSP/ONVIF backend would drop its stream/snapshot in here.
 export function CameraTile({ entity }: { entity: Entity }) {
   const t = useT();
-  const [clock, setClock] = useState("");
+  const { twin } = useVan();
+  // The sim clock drives day/night; interior cabin cam is unaffected by daylight.
+  const phase = String(twin["environment.phase"] ?? "day");
+  const loc0 = String((entity.attributes as Record<string, unknown>).location ?? "cabin");
+  const nightVision = loc0 !== "cabin" && (phase === "night" || phase === "dusk");
+
+  // Feed clock ticks off the simulated time, sped up by clock.rate.
+  const epoch = typeof twin["clock.epoch"] === "number" ? (twin["clock.epoch"] as number) : null;
+  const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    const tick = () => setClock(new Date().toLocaleTimeString());
-    tick();
-    const id = setInterval(tick, 1000);
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -21,18 +28,21 @@ export function CameraTile({ entity }: { entity: Entity }) {
   const a = entity.attributes as Record<string, unknown>;
   const motion = Boolean(a.motion);
   const recording = Boolean(a.recording);
-  const loc = String(a.location ?? "cabin");
+  const loc = loc0;
   const conn = String(a.connection ?? "wifi");
+  const clock = epoch
+    ? new Date(epoch * 1000).toUTCString().slice(17, 25)
+    : new Date(now).toLocaleTimeString();
 
   return (
     <div className={"cam-tile" + (offline ? " offline" : "") + (motion ? " motion" : "")}>
-      <div className={"cam-feed loc-" + loc}>
+      <div className={"cam-feed loc-" + loc + " ph-" + phase + (nightVision ? " nightvision" : "")}>
         <div className="cam-scan" />
         <span className="cam-wm">{LOC_ICON[loc] ?? "📷"}</span>
         {offline ? (
           <div className="cam-nosignal">{t("cam.nosignal")}</div>
         ) : (
-          <span className="cam-sim">SIMULATED FEED</span>
+          <span className="cam-sim">{nightVision ? "◉ NIGHT VISION" : "SIMULATED FEED"}</span>
         )}
       </div>
       <div className="cam-top">

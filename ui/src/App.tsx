@@ -30,12 +30,17 @@ const TABS: { id: TabId; labelKey: string; icon: string }[] = [
   { id: "settings", labelKey: "nav.settings", icon: "settings" },
 ];
 
+const PHASE_ICON: Record<string, string> = { day: "☀️", night: "🌙", dawn: "🌅", dusk: "🌆" };
+
 function StatusBar() {
   const { twin, assistant, connected } = useVan();
   const t = useT();
   const soc = num(twin["house_battery.soc"]);
   const water = num(twin["fresh_water.level_pct"]);
   const cabin = num(twin["cabin.temperature"]);
+  const epoch = num(twin["clock.epoch"]);
+  const phase = String(twin["environment.phase"] ?? "day");
+  const clock = epoch ? new Date(epoch * 1000).toUTCString().slice(5, 22) : null;
   const aiLabel =
     (assistant.llm
       ? `${t("ai.prefix")} · ${assistant.connectivity === "online" ? t("ai.cloud") : t("ai.local")} · ${assistant.model}`
@@ -55,6 +60,11 @@ function StatusBar() {
         </span>
       </div>
       <div className="sb-right">
+        {clock && (
+          <span className="sb-clock" title={phase}>
+            {PHASE_ICON[phase] ?? "🕒"} {clock}
+          </span>
+        )}
         <span className={"conn" + (assistant.llm ? " up" : "")}>{aiLabel}</span>
         <span className={"conn" + (connected ? " up" : " down")}>
           {connected ? t("status.core") : t("status.reconnecting")}

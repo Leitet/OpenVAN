@@ -124,6 +124,13 @@ body {
 .sb-right {
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+.sb-clock {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .tabview {
   flex: 1;
@@ -811,6 +818,80 @@ body {
 }
 .cam-tile.offline .cam-feed {
   filter: grayscale(1) brightness(0.5);
+}
+/* day/night from the sim clock: IR night vision on exterior cams after dark */
+.cam-feed.nightvision {
+  filter: grayscale(1) sepia(1) hue-rotate(55deg) saturate(3) brightness(0.75) contrast(1.1);
+}
+.cam-feed.nightvision .cam-scan {
+  animation-duration: 3s;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2px,
+    rgba(120, 255, 160, 0.05) 2px,
+    rgba(120, 255, 160, 0.05) 3px
+  );
+}
+.cam-feed.ph-dawn:not(.nightvision) {
+  filter: sepia(0.35) brightness(0.82) hue-rotate(-12deg);
+}
+/* the placement diagram */
+.vcm-svg {
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  display: block;
+  margin: 4px auto 0;
+}
+.vcm-van {
+  fill: var(--panel-2);
+  stroke: var(--line);
+  stroke-width: 2;
+}
+.vcm-glass {
+  fill: color-mix(in srgb, var(--accent) 18%, var(--panel-2));
+}
+.vcm-wheel {
+  fill: #23232b;
+  stroke: var(--line);
+  stroke-width: 2;
+}
+.vcm-ground {
+  stroke: var(--line);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+.vcm-fov {
+  opacity: 0.18;
+}
+.vcm-fov.on {
+  fill: var(--good);
+}
+.vcm-fov.motion {
+  fill: var(--warn);
+  opacity: 0.32;
+}
+.vcm-fov.off {
+  fill: var(--muted);
+  opacity: 0.1;
+}
+.vcm-dot.on {
+  fill: var(--good);
+}
+.vcm-dot.motion {
+  fill: var(--warn);
+}
+.vcm-dot.off {
+  fill: var(--muted);
+}
+.vcm-dot.motion {
+  animation: air-pulse 1s ease-in-out infinite;
+}
+.vcm-label {
+  fill: var(--muted);
+  font-size: 8.5px;
+  font-weight: 600;
 }
 .cam-top {
   position: absolute;

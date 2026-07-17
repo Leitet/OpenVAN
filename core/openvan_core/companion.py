@@ -13,7 +13,7 @@ only rewords facts we give it — it never invents data or controls anything).
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from .llm import build_system
@@ -137,7 +137,8 @@ class Companion:
         self, hub: "Hub", notices: list[dict[str, Any]], *, hour: int | None = None
     ) -> dict[str, Any]:
         twin = hub.twin
-        hour = datetime.now().hour if hour is None else hour
+        if hour is None:
+            hour = _local_hour(twin)
 
         soc = _num(twin.get("house_battery.soc"))
         current = _num(twin.get("house_battery.current"))
@@ -404,6 +405,17 @@ def _camp_needs(ctx: dict[str, Any]) -> list[dict[str, Any]]:
         )
 
     return needs
+
+
+def _local_hour(twin: Any) -> int:
+    """Hour of day for the greeting — from the simulated clock (local solar time via
+    longitude) when present, else the real wall clock."""
+    epoch = _num(twin.get("clock.epoch"))
+    if epoch is None:
+        return datetime.now().hour
+    lon = _num(twin.get("gps.lon")) or 0.0
+    utc = datetime.fromtimestamp(epoch, tz=timezone.utc)
+    return int((utc.hour + utc.minute / 60.0 + lon / 15.0) % 24)
 
 
 def _num(value: object) -> float | None:

@@ -31,6 +31,7 @@ const T: Record<string, Entry> = {
   "nav.security": { en: "Security", sv: "Säkerhet", de: "Sicherheit" },
   "nav.assistant": { en: "Assistant", sv: "Assistent", de: "Assistent" },
   "cam.title": { en: "Cameras", sv: "Kameror", de: "Kameras" },
+  "cam.placement": { en: "Camera placement", sv: "Kameraplacering", de: "Kamerastandorte" },
   "cam.none": { en: "No cameras configured.", sv: "Inga kameror konfigurerade.", de: "Keine Kameras konfiguriert." },
   "cam.nosignal": { en: "NO SIGNAL", sv: "INGEN SIGNAL", de: "KEIN SIGNAL" },
   "cam.motion": { en: "MOTION", sv: "RÖRELSE", de: "BEWEGUNG" },

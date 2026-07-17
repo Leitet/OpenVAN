@@ -17,6 +17,78 @@ function num(v: unknown): number | undefined {
   return typeof v === "number" ? v : undefined;
 }
 
+const RATES: [string, number][] = [
+  ["Pause", 0],
+  ["1×", 1],
+  ["60×", 60],
+  ["1800×", 1800],
+];
+const JUMPS: [string, number][] = [
+  ["🌅 Dawn", 5],
+  ["☀ Day", 12],
+  ["🌆 Dusk", 19],
+  ["🌙 Night", 0],
+];
+
+// Drives the simulated clock (clock.epoch as UTC seconds) + rate. The sim derives
+// the sun and day/night phase, which the product UI reads.
+function TimePanel({ twin }: { twin: Record<string, unknown> }) {
+  const epoch = num(twin["clock.epoch"]) ?? 0;
+  const rate = num(twin["clock.rate"]) ?? 1;
+  const phase = String(twin["environment.phase"] ?? "—");
+  const elev = num(twin["sun.elevation_deg"]);
+  const inputValue = epoch ? new Date(epoch * 1000).toISOString().slice(0, 16) : "";
+  const dayStart = Math.floor(epoch / 86400) * 86400;
+
+  return (
+    <div className="time-panel">
+      <div className="time-readout">
+        <strong>{epoch ? new Date(epoch * 1000).toUTCString() : "—"}</strong>
+        <span className={"phase phase-" + phase}>
+          {phase}
+          {elev !== undefined ? ` · sun ${elev.toFixed(0)}°` : ""}
+        </span>
+      </div>
+      <input
+        type="datetime-local"
+        value={inputValue}
+        onChange={(e) => {
+          const t = Date.parse(e.target.value + ":00Z");
+          if (!Number.isNaN(t)) injectSignal("clock.epoch", t / 1000);
+        }}
+      />
+      <div className="time-row">
+        <span className="time-lbl">Rate</span>
+        {RATES.map(([label, r]) => (
+          <button
+            key={label}
+            className={"chip" + (rate === r ? " on" : "")}
+            onClick={() => injectSignal("clock.rate", r)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="time-row">
+        <span className="time-lbl">Jump</span>
+        {JUMPS.map(([label, h]) => (
+          <button
+            key={label}
+            className="chip"
+            onClick={() => injectSignal("clock.epoch", dayStart + h * 3600)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <p className="note">
+        Set a rate above 1× to watch a day go by; the camera feeds switch to night
+        vision after dark.
+      </p>
+    </div>
+  );
+}
+
 // Fire a batch of raw signals at Core — the bench's whole job.
 function apply(signals: Array<[string, number | boolean]>) {
   for (const [key, value] of signals) injectSignal(key, value);
@@ -83,6 +155,11 @@ export function BenchApp() {
       </header>
 
       <main className="bench-grid">
+        <section className="card">
+          <h2>Time</h2>
+          <TimePanel twin={twin} />
+        </section>
+
         <section className="card">
           <h2>Signals</h2>
           <SignalSlider label="Battery SoC" signalKey="house_battery.soc" value={num(twin["house_battery.soc"])} min={0} max={100} unit="%" />

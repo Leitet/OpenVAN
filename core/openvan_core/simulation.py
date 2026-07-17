@@ -17,9 +17,11 @@ from __future__ import annotations
 import asyncio
 import math
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 
 from .events import EventBus
+from .predictions import _solar_elevation_sin
 from .twin import VanTwin
 
 
@@ -69,9 +71,43 @@ class VanSimulation:
         self._task: asyncio.Task | None = None
 
     async def step(self, dt: float) -> None:
+        await self._step_clock(dt)
         await self._step_thermal(dt)
         await self._step_water(dt)
         await self._step_vehicle(dt)
+
+    async def _step_clock(self, dt: float) -> None:
+        """Advance the simulated clock and derive the sun/day-night state from it and
+        the van's location. `clock.rate` is a time multiplier (0 = paused, 60 = a
+        minute per second) so you can watch a full day go by on the bench."""
+        epoch = _as_float(self._twin.get("clock.epoch"))
+        if epoch is None:
+            return
+        rate = _as_float(self._twin.get("clock.rate"))
+        rate = 1.0 if rate is None else rate
+        epoch += dt * rate
+        await self._twin.set_signal("clock.epoch", round(epoch, 1))
+        await self.update_sun(epoch)
+
+    async def update_sun(self, epoch: float) -> None:
+        """Set sun elevation + day/night phase from the epoch and GPS. Local solar
+        time is approximated from longitude (15° per hour) — no timezone db needed."""
+        lat = _as_float(self._twin.get("gps.lat")) or 0.0
+        lon = _as_float(self._twin.get("gps.lon")) or 0.0
+        utc = datetime.fromtimestamp(epoch, tz=timezone.utc)
+        doy = utc.timetuple().tm_yday
+        solar_hour = (utc.hour + utc.minute / 60.0 + utc.second / 3600.0 + lon / 15.0) % 24
+        s = _solar_elevation_sin(lat, doy, solar_hour)
+        elev = math.degrees(math.asin(max(-1.0, min(1.0, s))))
+        if s > 0.10:
+            phase = "day"
+        elif s < -0.10:
+            phase = "night"
+        else:
+            phase = "dawn" if solar_hour < 12 else "dusk"
+        await self._twin.set_signal("sun.elevation_deg", round(elev, 1))
+        await self._twin.set_signal("environment.is_day", s > 0.0)
+        await self._twin.set_signal("environment.phase", phase)
 
     async def _step_thermal(self, dt: float) -> None:
         cabin = _as_float(self._twin.get("cabin.temperature"))

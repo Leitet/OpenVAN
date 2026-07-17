@@ -217,6 +217,13 @@ class Config:
             "camera.awning.online": True,
             "camera.awning.motion": False,
             "camera.awning.recording": False,
+            # Simulated clock — ~2026-07-14 12:00 UTC (midday). clock.rate is a time
+            # multiplier (0 = paused). The sim derives sun/day-night from it + GPS.
+            "clock.epoch": 1784030400.0,
+            "clock.rate": 1.0,
+            "sun.elevation_deg": 40.0,
+            "environment.is_day": True,
+            "environment.phase": "day",
             # Vehicle / GPS — starting parked in the Dolomites.
             "gps.lat": 46.5405,
             "gps.lon": 11.6553,
