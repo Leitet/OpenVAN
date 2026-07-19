@@ -158,9 +158,11 @@ threshold checks over live state (low fresh water, grey tank full, battery
 runtime, low diesel); the `AdvisorEngine` is edge-triggered — it emits
 `notice.created` when a condition starts and `notice.cleared` when it stops, so
 the companion never nags every tick. `Companion` composes a warm briefing from the
-same facts: LLM-phrased when a model is available, templated otherwise (Rule 3).
-Like the intent path, the AI only rewords facts we give it — it invents nothing
-and controls nothing. New advisors: add an `Advisor` subclass to `default_advisors`.
+same facts — live state, predictions (incl. the solar window), active notices, and a
+recap of the **trip so far** (distance/nights/places from the `TripLedger`): LLM-phrased
+when a model is available, templated otherwise (Rule 3). Like the intent path, the AI
+only rewords facts we give it — it invents nothing and controls nothing. New advisors:
+add an `Advisor` subclass to `default_advisors`.
 
 ### Travel memory (`memory.py`)
 

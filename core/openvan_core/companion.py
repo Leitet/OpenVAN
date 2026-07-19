@@ -30,8 +30,9 @@ BRIEFING_SYSTEM = """\
 Your task: given your current status as JSON, write a short, friendly spoken briefing
 of 2-4 sentences about how YOU are doing, in the first person ("I'm at 82%…"). Greet
 by time of day. Mention only what is relevant or noteworthy (especially anything in
-`notices`). Never invent data beyond what is given. Plain natural speech — no lists,
-no markdown, no headings.
+`notices`). If `trip` is present you may add one warm line about the journey so far
+(distance, nights, places). Never invent data beyond what is given. Plain natural
+speech — no lists, no markdown, no headings.
 """
 
 # Localised deterministic reply for when no model can generate (offline, or the
@@ -130,12 +131,14 @@ class Companion:
         weather: "WeatherService | None" = None,
         memory: "TravelMemory | None" = None,
         config: Any = None,
+        trip: Any = None,
     ) -> None:
         self.router = router
         self.telemetry = telemetry
         self.weather = weather
         self.memory = memory
         self.config = config
+        self.trip = trip
 
     def build_context(
         self, hub: "Hub", notices: list[dict[str, Any]], *, hour: int | None = None
@@ -177,8 +180,25 @@ class Companion:
                     }
                 )
 
+        # The journey so far — so the companion can speak to the trip, not just now.
+        trip = None
+        if self.trip is not None:
+            try:
+                t = self.trip.stats()
+                if t.get("distance_km") or t.get("nights"):
+                    trip = {
+                        "distance_km": t.get("distance_km"),
+                        "nights": t.get("nights"),
+                        "days": t.get("days"),
+                        "places": t.get("places", [])[:4],
+                        "solar_wh": t.get("solar_wh"),
+                    }
+            except Exception:  # pragma: no cover - the briefing must never fail on this
+                trip = None
+
         return {
             "recent_stays": recent_stays,
+            "trip": trip,
             "weather": {
                 "condition": (weather.get("current") or {}).get("condition"),
                 "outside_temp_c": (weather.get("current") or {}).get("temp_c"),
@@ -363,6 +383,18 @@ class Companion:
         if rain_eta is not None and rain_eta <= 2:
             when = "shortly" if rain_eta < 0.5 else f"in about {rain_eta:g} hour(s)"
             parts.append(f"Rain is expected {when}.")
+
+        trip = ctx.get("trip")
+        if trip and (trip.get("distance_km") or 0) >= 10:
+            bits = [f"{trip['distance_km']:.0f} km"]
+            nights = trip.get("nights") or 0
+            if nights:
+                bits.append(f"{nights} night{'s' if nights != 1 else ''}")
+            places = trip.get("places") or []
+            recap = f"This trip: {', '.join(bits)} so far"
+            if places:
+                recap += f" — {', '.join(places)}"
+            parts.append(recap + ".")
 
         for notice in ctx.get("notices", []):
             parts.append(notice["message"])

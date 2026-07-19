@@ -631,7 +631,8 @@ def build_core(config: Config | None = None) -> Core:
         rollup_retention_days=config.telemetry_rollup_days,
     )
     memory = TravelMemory(config, twin, weather=weather, telemetry=telemetry)
-    companion = Companion(router, telemetry, weather, memory, config=config)
+    trip = TripLedger(store, twin, memory=memory, telemetry=telemetry)
+    companion = Companion(router, telemetry, weather, memory, config=config, trip=trip)
     camp = CampService(
         config,
         get_location=lambda: (twin.get("gps.lat"), twin.get("gps.lon")),
@@ -648,7 +649,6 @@ def build_core(config: Config | None = None) -> Core:
     )
     security = SecuritySystem()
     coverage = CoverageMemory(bus, twin)
-    trip = TripLedger(store, twin, memory=memory, telemetry=telemetry)
     # Build the full advisor set from config-driven thresholds (nothing hardcoded).
     advisors.advisors = _build_advisors(config, weather, maintenance, security, coverage)
     return Core(

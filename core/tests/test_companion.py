@@ -80,6 +80,21 @@ async def test_context_includes_predictions(core):
     assert "solar_wh_24h" in ctx["predictions"]
 
 
+async def test_trip_absent_until_meaningful(core):
+    # Fresh trip (0 km, 0 nights) → no journey recap to add.
+    assert core.companion.build_context(core.hub, [])["trip"] is None
+
+
+async def test_briefing_recaps_the_journey(core):
+    start_odo = core.twin.get("vehicle.odometer_km")
+    await core.twin.set_signal("vehicle.odometer_km", start_odo + 25.0)
+    ctx = core.companion.build_context(core.hub, [])
+    assert ctx["trip"] is not None and ctx["trip"]["distance_km"] == 25.0
+    # Offline template surfaces it (Rule 3 — works with no model).
+    text = await core.companion.briefing(core.hub, [], use_llm=False)
+    assert "This trip" in text and "25 km" in text
+
+
 def test_template_starts_with_greeting():
     from openvan_core.companion import Companion
 
