@@ -297,6 +297,10 @@ reference plugins:
   advisor nudges when offline or signal is weak, and — via `coverage.py`'s trail of
   where signal was strong — points back to the nearest recent good spot
   ("you had 88% about 330 m south of here").
+- `plugins/device_sensors/` — **auto-surfaces** an integration's arbitrary readings
+  (RuuviTag, ESPHome nodes, …) as `sensor.*` entities, guessing unit + name from the
+  key, via the Backend's `watch_prefix` / `snapshot`. "Protocols not per-model",
+  extended from signals to entities; shown on the Comfort tab's Device-sensors panel.
 - `plugins/cabin_light/` — controllable **actuator** pattern (with safety).
 - `plugins/diesel_heater/` — **climate** actuator with a setpoint; exercises both
   the battery load-shedding and fuel-required safety rules.

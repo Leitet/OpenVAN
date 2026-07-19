@@ -35,6 +35,16 @@ class Backend(ABC):
     def watch(self, key: str, handler: SignalHandler) -> Callable[[], None]:
         """Call ``handler(key, value)`` whenever ``key`` changes. Returns unwatch."""
 
+    @abstractmethod
+    def watch_prefix(self, prefix: str, handler: SignalHandler) -> Callable[[], None]:
+        """Like :meth:`watch`, but fires for *any* key starting with ``prefix`` — for
+        dynamic device sensors whose exact keys aren't known ahead of time (e.g. an
+        ESPHome node's user-defined entities). Returns unwatch."""
+
+    @abstractmethod
+    def snapshot(self) -> dict[str, Any]:
+        """Every currently-known signal (key → value), for initial discovery."""
+
 
 class SimBackend(Backend):
     """Backend implementation driven by the simulated van twin."""
@@ -57,3 +67,14 @@ class SimBackend(Backend):
                 await handler(key, event.data.get("value"))
 
         return self._bus.subscribe(SIGNAL_CHANGED, _on_event)
+
+    def watch_prefix(self, prefix: str, handler: SignalHandler) -> Callable[[], None]:
+        async def _on_event(event) -> None:
+            key = event.data.get("key")
+            if isinstance(key, str) and key.startswith(prefix):
+                await handler(key, event.data.get("value"))
+
+        return self._bus.subscribe(SIGNAL_CHANGED, _on_event)
+
+    def snapshot(self) -> dict[str, Any]:
+        return self._twin.snapshot()

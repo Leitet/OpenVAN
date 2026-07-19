@@ -162,11 +162,13 @@ maxheight/maxweight on the road ahead) also landed. Remaining:
   - **MQTT SUBACK** — the client subscribes fire-and-forget; award/log a rejected
     subscription (SUBACK failure 0x80) instead of silently never yielding.
   - **Discovery** auto-fills host/port (mDNS for GX/ESPHome) so the user rarely types an IP.
-  - **Normalised entities — energy landed.** The DC energy system (solar yield,
-    alternator, shore, inverter) is now environment physics in `simulation.py` and
-    surfaced by the `energy_system` plugin on the Power tab (+ a bench Energy card).
-    Still to surface as entities: `connectivity.*` (Teltonika), `ruuvitag.*`,
-    `esphome.*` on the relevant tabs.
+  - **Normalised entities — landed.** The DC energy system (solar yield, alternator,
+    shore, inverter) is environment physics in `simulation.py` surfaced by the
+    `energy_system` plugin (Power tab); `connectivity.*` by the `connectivity` plugin;
+    and the *dynamic* device readings (`ruuvitag.*`, `esphome.*`, `signalk.*`) are
+    auto-surfaced by `device_sensors` (Backend `watch_prefix`/`snapshot`) on the Comfort
+    tab. Still open: a **controllable** device entity (an ESPHome switch/light) through
+    the safety layer — device_sensors is read-only.
   - **Fas 2–4** (see the landscape doc): JK/JBD BMS, EPEver, EcoFlow, Mopeka, Shelly,
     Signal K, OBD-II; then OEM buses (CI-BUS, RV-C, NMEA 2000, Truma/Dometic); then
     vendor partnerships.

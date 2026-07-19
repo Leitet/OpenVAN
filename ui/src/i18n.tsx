@@ -191,6 +191,7 @@ const T: Record<string, Entry> = {
   // --- comfort ---
   "comfort.climate": { en: "Climate", sv: "Klimat", de: "Klima" },
   "comfort.water": { en: "Water", sv: "Vatten", de: "Wasser" },
+  "comfort.sensors": { en: "Device sensors", sv: "Enhetssensorer", de: "Gerätesensoren" },
   "comfort.setpoint": { en: "Setpoint", sv: "Börvärde", de: "Sollwert" },
   "heater.heating": {
     en: "Diesel heater: HEATING",
