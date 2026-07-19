@@ -19,6 +19,11 @@ dev = [
 mcp = [
     "mcp>=1.2",
 ]
+# ESPHome native-API transport. Optional: without it the ESPHome integration runs
+# in sim; install to talk to a real node (`pip install -e ".[esphome]"`).
+esphome = [
+    "aioesphomeapi>=24",
+]
 
 [project.scripts]
 openvan-core = "openvan_core.__main__:main"

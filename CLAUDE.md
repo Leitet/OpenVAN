@@ -149,7 +149,12 @@ signals while `live`; when the device is unreachable it falls straight back to
 (`AsyncModbusTcpClient`, `AsyncMqttClient`), each verified against an in-process
 loopback server in tests. Victron ships all three modes: `sim` (default),
 `modbus_tcp` (poll the GX register block), `mqtt` (subscribe to Venus `N/<portal>/…`);
-host/port/mode are set from the library (`/api/integrations/config`).
+host/port/mode are set from the library (`/api/integrations/config`). **ESPHome**
+adds a `native_api` mode over **aioesphomeapi** (an *optional* extra —
+`pip install -e ".[esphome]"`): it lists a node's entities and streams their state
+into the twin as `esphome.<device>.<object_id>` signals, falling back to sim when the
+library is absent or the node is unreachable. The vendor surface is isolated behind a
+thin adapter (`_open_client`) so the transport loop is testable with a fake client.
 
 ### Proactive companion (`notices.py`, `companion.py`)
 

@@ -144,9 +144,12 @@ maxheight/maxweight on the road ahead) also landed. Remaining:
     and the MQTT topic map are per Victron's published lists but *unverified on a real
     GX*. Confirm on a device before trusting values (simulators are not reality).
   - **VE.Direct (USB serial)** for Victron products without a GX.
-  - **ESPHome native API** — protobuf-over-TCP with a handshake. Bigger than Modbus/MQTT;
-    decide stdlib protobuf codec vs. optional `aioesphomeapi` extra, then add the
-    `run_transport()` path (ESPHome can also come in over the MQTT client today).
+  - **ESPHome native API — landed** (`native_api` mode over the optional
+    `aioesphomeapi` extra; streams a node's entities into `esphome.<device>.<entity>`
+    signals, sim fallback, adapter-isolated + fake-client tested). Remaining: **validate
+    against a real node** (unvalidated here — no device/library in this env); surface the
+    dynamic `esphome.*` signals as semantic entities on a tab; support **control**
+    (switches/lights) back through the safety layer.
   - **MQTT broker + Home Assistant discovery** (import *and* export), Teltonika RutOS
     Web API, RuuviTag BLE scan, Autoterm UART (through the safety layer).
   - **Writes/control** — the transports are read-only so far; actuation (set inverter,
