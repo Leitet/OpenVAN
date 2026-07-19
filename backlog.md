@@ -106,9 +106,11 @@ maxheight/maxweight on the road ahead) also landed. Remaining:
   offline / permissions / safety_class / status / warning), a status-badged catalog
   (Settings → Integrations + a bench card), enable/disable persistence, and
   sim-backed reference drivers for the launch set (Victron Venus, ESPHome, MQTT/HA,
-  Modbus, RuuviTag, Teltonika, Autoterm, Renogy). Strategy map in
-  `docs/OPENVAN-INTEGRATION-LANDSCAPE.md`. Remaining — turn the sim drivers into
-  **real transports** against hardware:
+  Modbus, RuuviTag, Teltonika, Autoterm, Renogy). A **searchable/filterable library**
+  (Settings → Integrations → Browse) landed too: a minimal standard set installed by
+  default (just the simulator, a non-removable built-in), everything else opt-in.
+  Strategy map in `docs/OPENVAN-INTEGRATION-LANDSCAPE.md`. Remaining — turn the sim
+  drivers into **real transports** against hardware:
   - **Fas 1 real transports**: Victron local MQTT + Modbus-TCP + VE.Direct; ESPHome
     native API; a local MQTT broker + HA discovery (import *and* export); Teltonika
     RutOS Web API; RuuviTag BLE scan; Autoterm UART (through the safety layer).
@@ -122,6 +124,23 @@ maxheight/maxweight on the road ahead) also landed. Remaining:
     enable themselves when the hardware is present.
   - **Safety-class-4 gating**: locks / gas valves need strong auth + audit +
     isolation before any such integration ships (never free LLM access).
+  - **Library at scale (thousands of integrations)** — today the library filters
+    client-side over the full catalog the API returns (fine into the low hundreds).
+    For thousands:
+    - A **metadata registry / manifest** decoupled from driver code — the catalog is
+      descriptors (id, name, category, transport, status, safety, vendor, logo),
+      *not* thousands of shipped Python packages. Driver code is fetched/loaded only
+      when an integration is added.
+    - **Server-side search + pagination + facet counts** behind the same UI
+      (`/api/integrations/library?q=&category=&status=&transport=&page=`), so the
+      client never holds the whole catalog. Keep `/api/integrations` for the small
+      installed set.
+    - **Signed, versioned integration packages** + an update channel (community vs.
+      certified), and a way to install a driver from the registry on demand.
+    - **Per-integration logos/branding** and richer detail pages (setup steps,
+      required credentials, supported models) in the library.
+    - **Fuzzy search + synonyms** (users search "cerbo", "smartshunt", "batteri")
+      and popularity/sort signals.
 
 ## Telemetry & data
 Local time-series storage complete: SQLite recording, read-time downsampling,
