@@ -48,10 +48,22 @@ async def test_descriptor_is_machine_readable(core):
     assert "enabled" in victron
 
 
-async def test_simulated_van_on_by_default_others_off(core):
-    rows = {r["id"]: r["enabled"] for r in core.integrations_list()}
-    assert rows["simulated_van"] is True
-    assert rows["victron_venus"] is False
+async def test_only_simulator_installed_by_default(core):
+    rows = {r["id"]: r for r in core.integrations_list()}
+    # The simulator is the one standard/built-in integration; everything else is
+    # opt-in from the library.
+    assert rows["simulated_van"]["installed"] is True
+    assert rows["simulated_van"]["builtin"] is True
+    assert rows["victron_venus"]["installed"] is False
+    assert rows["victron_venus"]["builtin"] is False
+    installed = [r["id"] for r in core.integrations_list() if r["installed"]]
+    assert installed == ["simulated_van"]
+
+
+async def test_builtin_cannot_be_removed(core):
+    # A remove request on the built-in simulator is a no-op, not an error.
+    assert await core.set_integration_enabled("simulated_van", False) is True
+    assert core.integrations.get("simulated_van").enabled is True
 
 
 async def test_catalog_sorted_by_priority(core):

@@ -334,6 +334,62 @@ const T: Record<string, Entry> = {
     sv: "Hårdvaruekosystem som OpenVan kan prata med. Var och en visar hur robust stödet är (status), hur den ansluter (transport) och hur riskabel styrningen är (säkerhet). Aktivera de din bil har — de körs mot simulatorn tills riktig hårdvara ansluts.",
     de: "Hardware-Ökosysteme, mit denen OpenVan sprechen kann. Jedes zeigt, wie robust die Unterstützung ist (Status), wie es verbindet (Transport) und wie riskant die Steuerung ist (Sicherheit). Aktiviere die, die dein Van hat — sie laufen gegen den Simulator, bis echte Hardware angeschlossen ist.",
   },
+  "integrations.installed": {
+    en: "Your integrations",
+    sv: "Dina integrationer",
+    de: "Deine Integrationen",
+  },
+  "integrations.browse": {
+    en: "Browse library",
+    sv: "Bläddra i biblioteket",
+    de: "Bibliothek durchsuchen",
+  },
+  "integrations.back": {
+    en: "Your integrations",
+    sv: "Dina integrationer",
+    de: "Deine Integrationen",
+  },
+  "integrations.library": {
+    en: "Integration library",
+    sv: "Integrationsbibliotek",
+    de: "Integrationsbibliothek",
+  },
+  "integrations.search": {
+    en: "Search integrations…",
+    sv: "Sök integrationer…",
+    de: "Integrationen suchen…",
+  },
+  "integrations.add": { en: "Add", sv: "Lägg till", de: "Hinzufügen" },
+  "integrations.added": { en: "Added", sv: "Tillagd", de: "Hinzugefügt" },
+  "integrations.remove": { en: "Remove", sv: "Ta bort", de: "Entfernen" },
+  "integrations.builtin": { en: "Built-in", sv: "Inbyggd", de: "Integriert" },
+  "integrations.allCategories": {
+    en: "All categories",
+    sv: "Alla kategorier",
+    de: "Alle Kategorien",
+  },
+  "integrations.allStatus": { en: "All status", sv: "All status", de: "Alle Status" },
+  "integrations.allTransports": {
+    en: "All transports",
+    sv: "Alla transporter",
+    de: "Alle Transporte",
+  },
+  "integrations.offlineOnly": {
+    en: "Offline-capable only",
+    sv: "Endast offline-kapabla",
+    de: "Nur offline-fähige",
+  },
+  "integrations.none": {
+    en: "No integrations added yet — open the library to add one.",
+    sv: "Inga integrationer tillagda än — öppna biblioteket för att lägga till en.",
+    de: "Noch keine Integrationen hinzugefügt — öffne die Bibliothek, um eine hinzuzufügen.",
+  },
+  "integrations.noResults": {
+    en: "No integrations match your search.",
+    sv: "Inga integrationer matchar din sökning.",
+    de: "Keine Integrationen entsprechen deiner Suche.",
+  },
+  "integrations.count": { en: "found", sv: "hittade", de: "gefunden" },
   "settings.camping": { en: "Camping", sv: "Camping", de: "Camping" },
   "settings.campingNote": {
     en: "Sources for places to stay. The van proposes camp spots from the enabled ones — add more by dropping a source package under campsources/.",

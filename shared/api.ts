@@ -302,7 +302,10 @@ export async function removeCamera(id: string): Promise<CameraDef[]> {
 import type { IntegrationInfo } from "./types";
 
 export async function getIntegrations(): Promise<IntegrationInfo[]> {
-  return (await (await fetch("/api/integrations")).json()).integrations as IntegrationInfo[];
+  // Tolerate an older Core without this endpoint (404) — never crash the UI over it.
+  const res = await fetch("/api/integrations");
+  if (!res.ok) return [];
+  return ((await res.json()).integrations ?? []) as IntegrationInfo[];
 }
 
 export async function setIntegration(
@@ -314,7 +317,8 @@ export async function setIntegration(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, enabled }),
   });
-  return (await res.json()).integrations as IntegrationInfo[];
+  if (!res.ok) return [];
+  return ((await res.json()).integrations ?? []) as IntegrationInfo[];
 }
 
 export async function getSecurity(): Promise<{ armed: boolean }> {

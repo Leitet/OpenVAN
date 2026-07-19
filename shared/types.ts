@@ -187,7 +187,9 @@ export interface IntegrationInfo {
   provides: string[];
   description: string;
   warning: string;
-  enabled: boolean;
+  enabled: boolean; // alias of installed, kept for back-compat
+  installed: boolean; // added by the user (or built-in)
+  builtin: boolean; // part of the platform, can't be removed (the simulator)
 }
 
 export interface MaintenanceItem {

@@ -107,6 +107,13 @@ class IntegrationInfo:
         return d
 
 
+# Built-in integrations are installed out of the box and can't be removed — they're
+# part of the platform, not optional add-ons. The simulator (the twin itself) is the
+# one standard integration every install needs. Everything else is opt-in from the
+# library. Keep this set tiny: only what is genuinely universal and always-present.
+BUILTIN: frozenset[str] = frozenset({"simulated_van"})
+
+
 _REGISTRY: list[type["Integration"]] = []
 
 
@@ -225,6 +232,10 @@ class IntegrationManager:
         instance = self.integrations.get(integration_id)
         if instance is None:
             return False
+        # Built-ins are always installed — a request to remove one is a no-op, not
+        # an error (the UI hides its remove control, but guard the API too).
+        if not enabled and integration_id in BUILTIN:
+            return True
         if enabled:
             await self._enable(instance)
         else:
@@ -252,7 +263,11 @@ class IntegrationManager:
         if instance is None:
             return None
         d = instance.info.to_dict()
+        # "installed" == added by the user (or built-in); "enabled" kept as an alias
+        # so existing consumers don't break. "builtin" ones can't be removed.
         d["enabled"] = instance.enabled
+        d["installed"] = instance.enabled
+        d["builtin"] = instance.info.id in BUILTIN
         return d
 
     def list(self) -> list[dict[str, Any]]:
@@ -265,6 +280,6 @@ class IntegrationManager:
 
 
 def _default_enabled(info: IntegrationInfo) -> bool:
-    """A never-configured integration is off by default, except the always-on
-    built-in simulator reference (safety_class 0, id ``simulated_van``)."""
-    return info.id == "simulated_van"
+    """A never-configured integration is not installed by default — the user adds it
+    from the library. Only the built-in standard set (the simulator) ships installed."""
+    return info.id in BUILTIN

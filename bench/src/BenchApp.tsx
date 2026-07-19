@@ -181,27 +181,39 @@ function IntegrationsPanel({ twin }: { twin: Record<string, unknown> }) {
     }
   };
 
+  // Only the installed set — the full searchable library lives in the product UI.
+  const installed = items.filter((it) => it.installed);
+
   return (
     <>
       <div className="bench-integrations">
-        {items.map((it) => (
-          <div key={it.id} className={"bench-int-row" + (it.enabled ? " on" : "")}>
-            <button
-              className={"toggle" + (it.enabled ? " on" : "")}
-              disabled={busy === it.id}
-              onClick={() => toggle(it.id, !it.enabled)}
-            >
-              {it.enabled ? "on" : "off"}
-            </button>
-            <div className="bench-int-meta">
-              <strong>{it.name}</strong>
-              <span className="note">
-                {it.status} · {it.transports.join(", ")} · safety {it.safety_class}
-              </span>
+        {installed.length === 0 ? (
+          <p className="note">No integrations installed.</p>
+        ) : (
+          installed.map((it) => (
+            <div key={it.id} className={"bench-int-row" + (it.enabled ? " on" : "")}>
+              <button
+                className={"toggle" + (it.enabled ? " on" : "")}
+                disabled={busy === it.id || it.builtin}
+                title={it.builtin ? "Built-in — always on" : "Remove"}
+                onClick={() => toggle(it.id, !it.enabled)}
+              >
+                {it.builtin ? "built-in" : "remove"}
+              </button>
+              <div className="bench-int-meta">
+                <strong>{it.name}</strong>
+                <span className="note">
+                  {it.status} · {it.transports.join(", ")} · safety {it.safety_class}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
+      <p className="note">
+        Installed integrations only — add more from the product UI (Settings →
+        Integrations → Browse library).
+      </p>
       <h3>Device inputs (what drivers read)</h3>
       <button
         className={"toggle" + (twin["shore.connected"] ? " on" : "")}
