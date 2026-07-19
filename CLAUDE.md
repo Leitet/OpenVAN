@@ -208,8 +208,10 @@ powers the simulator's sparklines (`/api/telemetry/series`) and feeds the
 companion real drain-rate trends, not just instantaneous readings. `predictions.py`
 turns it into ETAs (battery/water/diesel) plus a **weather-aware solar forecast**
 (`solar_forecast_wh`: expected Wh from the forecast cloud cover × the sun's
-elevation × `Config.solar_capacity_w`) — surfaced on the Power tab and fed to the
-companion.
+elevation × `Config.solar_capacity_w`) and a **best solar window** (`solar_window`:
+the next strong solar stretch from the hourly curve) — surfaced on the Power tab and
+fed to the companion. The `SolarWindow` advisor uses it to suggest *when* to run
+high-draw loads or top up (on-brand: help time energy use to the sun).
 
 ### Environment simulation (`simulation.py`)
 

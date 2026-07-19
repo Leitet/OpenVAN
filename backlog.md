@@ -46,9 +46,15 @@ climate-extreme, scenes, leveling, propane and maintenance. Still open:
   **Frigate NVR bridge** (local AI object detection, HA-native); PTZ + two-way
   audio; motion→auto-record when armed; snapshot thumbnails in the intrusion notice;
   an interior-cam privacy shutter when disarmed. See `docs/CAMERAS.md`.
-- **Solar-orientation & load-timing advisor** (#15) — we already compute a
-  weather-aware solar forecast; add "best window to run the kettle/charge" and
-  "park nose-south for morning charge".
+- **Solar load-timing advisor (#15) — landed.** `solar_window` picks the next strong
+  solar stretch from the hourly forecast; the `SolarWindow` advisor suggests running
+  high-draw loads / topping up during it (gated on battery having room), and the Power
+  tab's Predictions show "Best solar window: 08:00–16:00 · 456 W". Remaining:
+  - **"Run it now" precision** — fire when the *current* hour is in the window (needs
+    the sim clock and the weather forecast to share a timebase; today the sim forecast
+    uses wall-clock while the twin clock is simulated).
+  - **Park nose-south for morning charge** — an orientation hint (needs panel azimuth
+    + the sun's azimuth, not just elevation).
 - **Black / cassette toilet** (#17) — mirror the grey-tank advisor; cassette-full
   reminder + dump finder.
 - **Pet mode** — an explicit "pet aboard" toggle that tightens the cabin-temp

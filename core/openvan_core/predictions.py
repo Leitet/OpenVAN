@@ -43,38 +43,85 @@ def _solar_elevation_sin(lat_deg: float, day_of_year: int, solar_hour: float) ->
     return math.sin(lat) * math.sin(decl) + math.cos(lat) * math.cos(decl) * math.cos(hour_angle)
 
 
-def solar_forecast_wh(
+def solar_hourly_forecast(
     weather: dict[str, Any] | None,
     capacity_w: float,
     horizon_hours: int = 24,
-) -> float | None:
-    """Weather-aware expected solar energy (Wh) over the next ``horizon_hours``.
-
-    For each forecast hour: clear-sky output ≈ ``capacity_w · sin(elevation)``,
-    scaled by a cloud factor (heavy cloud ≈ -75%). Night hours contribute 0.
-    Returns None if we lack a location or an hourly forecast.
-    """
+) -> list[dict[str, Any]]:
+    """Expected PV power per forecast hour: clear-sky ≈ ``capacity_w · sin(elevation)``
+    scaled by a cloud factor (heavy cloud ≈ -75%); night hours are 0. The building
+    block for the daily total and the best-window pick. ``[]`` if no location/forecast."""
     if not weather or capacity_w <= 0:
-        return None
+        return []
     loc = weather.get("location") or {}
     lat = loc.get("lat")
     hourly = weather.get("hourly") or []
     if lat is None or not hourly:
-        return None
+        return []
 
-    total = 0.0
+    out: list[dict[str, Any]] = []
     for h in hourly[:horizon_hours]:
         try:
             dt = datetime.fromisoformat(h.get("t"))
         except (TypeError, ValueError):
             continue
         elev = _solar_elevation_sin(float(lat), dt.timetuple().tm_yday, dt.hour + 0.5)
-        if elev <= 0:
-            continue  # night — no generation
-        cloud_frac = (_num(h.get("cloud_pct")) or 0.0) / 100.0
-        cloud_factor = max(0.1, 1.0 - _CLOUD_LOSS * cloud_frac)
-        total += capacity_w * min(1.0, elev) * cloud_factor  # W · 1h = Wh
-    return round(total, 0)
+        watts = 0.0
+        if elev > 0:
+            cloud_frac = (_num(h.get("cloud_pct")) or 0.0) / 100.0
+            cloud_factor = max(0.1, 1.0 - _CLOUD_LOSS * cloud_frac)
+            watts = capacity_w * min(1.0, elev) * cloud_factor
+        out.append({"t": h.get("t"), "hour": dt.hour, "watts": round(watts, 0)})
+    return out
+
+
+def solar_forecast_wh(
+    weather: dict[str, Any] | None,
+    capacity_w: float,
+    horizon_hours: int = 24,
+) -> float | None:
+    """Weather-aware expected solar energy (Wh) over the next ``horizon_hours`` —
+    the integral of :func:`solar_hourly_forecast` (each hour's W is 1 h of Wh).
+    Returns None if we lack a location or an hourly forecast."""
+    hrs = solar_hourly_forecast(weather, capacity_w, horizon_hours)
+    if not hrs:
+        return None
+    return round(sum(h["watts"] for h in hrs), 0)
+
+
+def solar_window(
+    weather: dict[str, Any] | None,
+    capacity_w: float,
+    horizon_hours: int = 24,
+    *,
+    good_frac: float = 0.6,
+) -> dict[str, Any] | None:
+    """The next strong solar stretch — so the van can suggest *when* to run high-draw
+    loads or expect to charge. Takes the first daylight run in the forecast (the next
+    daytime period), and reports the contiguous hours at ≥ ``good_frac`` of its peak.
+    ``None`` if there's no meaningful sun ahead."""
+    hrs = solar_hourly_forecast(weather, capacity_w, horizon_hours)
+    # The first contiguous run of daylight hours (solar is unimodal within a day).
+    run: list[dict[str, Any]] = []
+    for h in hrs:
+        if h["watts"] > 0:
+            run.append(h)
+        elif run:
+            break
+    if not run:
+        return None
+    peak = max(h["watts"] for h in run)
+    if peak <= 0:
+        return None
+    good = [h for h in run if h["watts"] >= peak * good_frac]
+    peak_hour = max(run, key=lambda h: h["watts"])["hour"]
+    return {
+        "start_hour": good[0]["hour"],
+        "end_hour": good[-1]["hour"] + 1,  # through the end of that hour
+        "peak_hour": peak_hour,
+        "peak_w": round(peak),
+        "wh": round(sum(h["watts"] for h in run)),
+    }
 
 
 def compute_predictions(
@@ -91,6 +138,12 @@ def compute_predictions(
     fc = solar_forecast_wh(weather, solar_capacity_w)
     if fc is not None:
         out["solar_forecast_wh"] = fc
+    # Best solar window today (flattened to numbers for the predictions surface).
+    win = solar_window(weather, solar_capacity_w)
+    if win is not None:
+        out["solar_window_start"] = win["start_hour"]
+        out["solar_window_end"] = win["end_hour"]
+        out["solar_peak_w"] = win["peak_w"]
 
     if telemetry is None:
         return out

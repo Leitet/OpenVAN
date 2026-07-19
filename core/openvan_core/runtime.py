@@ -34,7 +34,15 @@ from .integrations import IntegrationManager
 from .memory import TravelMemory
 from .maintenance import MaintenanceLog
 from .coverage import CoverageMemory
-from .notices import AdvisorEngine, Intrusion, RainSoon, ServiceDue, WeakSignal, default_advisors
+from .notices import (
+    AdvisorEngine,
+    Intrusion,
+    RainSoon,
+    ServiceDue,
+    SolarWindow,
+    WeakSignal,
+    default_advisors,
+)
 from .personalities import PersonalityStore
 from .plugins import PluginManager, registered_plugins
 from .safety import (
@@ -100,6 +108,12 @@ def _build_advisors(config, weather, maintenance, security, coverage):
         ServiceDue(maintenance),
         Intrusion(security),
         WeakSignal(config.tune("signal_weak_pct"), coverage),
+        SolarWindow(
+            weather,
+            config.solar_capacity_w,
+            min_w=config.tune("solar_window_min_w"),
+            soc_pct=config.tune("solar_window_soc_pct"),
+        ),
     ]
 
 

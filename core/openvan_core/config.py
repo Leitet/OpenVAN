@@ -53,6 +53,8 @@ DEFAULT_TUNING = {
     "long_drive_hours": 2.0,
     "rain_soon_hours": 2.0,
     "signal_weak_pct": 25.0,
+    "solar_window_min_w": 200.0,
+    "solar_window_soc_pct": 80.0,
     # Air & safety
     "co_warn_ppm": 35.0,
     "co_danger_ppm": 70.0,

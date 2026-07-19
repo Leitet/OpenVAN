@@ -213,6 +213,37 @@ class WeakSignal(Advisor):
         )
 
 
+class SolarWindow(Advisor):
+    """Smart, on-brand: help time energy use to the sun. When there's a strong solar
+    stretch ahead and the battery has room to benefit, suggest running high-draw
+    appliances (kettle, induction, charging) during it, rather than off the battery.
+    Deterministic — it only reads the weather-aware forecast, never invents numbers."""
+
+    key = "solar_window"
+
+    def __init__(self, weather: Any, capacity_w: float, *, min_w: float = 200.0, soc_pct: float = 80.0) -> None:
+        self.weather = weather
+        self.capacity_w = capacity_w
+        self.min_w = min_w
+        self.soc_pct = soc_pct
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        from .predictions import solar_window
+
+        win = solar_window(self.weather.snapshot(), self.capacity_w)
+        if win is None or win["peak_w"] < self.min_w:
+            return None
+        soc = _twin_float(hub, "house_battery.soc")
+        if soc is None or soc >= self.soc_pct:
+            return None  # battery already full enough — no need to chase the sun
+        return Notice(
+            self.key, "suggestion", "energy", "Good sun today",
+            f"Sunniest stretch is around {win['start_hour']:02d}:00–{win['end_hour']:02d}:00 "
+            f"(up to ~{win['peak_w']:.0f} W). A good window to run high-draw appliances or top up.",
+            {"window": win, "soc": soc},
+        )
+
+
 class LowPropane(Advisor):
     key = "propane_low"
 

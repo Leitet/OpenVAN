@@ -39,6 +39,14 @@ export function Predictions() {
     rows.push({ label: t("predictions.solar24h"), value: `${p.solar_wh_24h.toFixed(0)} Wh` });
   if (p.solar_forecast_wh !== undefined)
     rows.push({ label: t("predictions.solarForecast"), value: `${p.solar_forecast_wh.toFixed(0)} Wh` });
+  if (p.solar_window_start !== undefined && p.solar_window_end !== undefined) {
+    const pad = (h: number) => String(h).padStart(2, "0");
+    const peak = p.solar_peak_w !== undefined ? ` · ${p.solar_peak_w.toFixed(0)} W` : "";
+    rows.push({
+      label: t("predictions.solarWindow"),
+      value: `${pad(p.solar_window_start)}:00–${pad(p.solar_window_end)}:00${peak}`,
+    });
+  }
 
   return (
     <section className="panel">
