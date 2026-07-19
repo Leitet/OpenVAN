@@ -125,6 +125,8 @@ const T: Record<string, Entry> = {
   "state.disconnected": { en: "Off", sv: "Av", de: "Aus" },
   "state.on": { en: "On", sv: "På", de: "An" },
   "state.off": { en: "Off", sv: "Av", de: "Aus" },
+  "connectivity.offline": { en: "Offline — no signal", sv: "Offline — ingen signal", de: "Offline — kein Signal" },
+  "connectivity.off": { en: "Off", sv: "Av", de: "Aus" },
   "predictions.title": { en: "Predictions", sv: "Prognoser", de: "Prognosen" },
   "predictions.batteryEmpty": {
     en: "Battery empty in",

@@ -52,6 +52,7 @@ DEFAULT_TUNING = {
     "battery_low_hours": 24.0,
     "long_drive_hours": 2.0,
     "rain_soon_hours": 2.0,
+    "signal_weak_pct": 25.0,
     # Air & safety
     "co_warn_ppm": 35.0,
     "co_danger_ppm": 70.0,
@@ -226,6 +227,14 @@ class Config:
             "solar.yield_today_wh": 0.0,
             # Home-Assistant presence input (van parked on the home network).
             "home_assistant.van_home": False,
+            # Connectivity — a physical fact of the van (it has a link, or it
+            # doesn't). The simulation/bench drive it; a router integration
+            # (Teltonika, Starlink, …) reads it on real hardware. Offline-first:
+            # Core never depends on this being True.
+            "connectivity.online": True,
+            "connectivity.network": "LTE",  # LTE | 5G | WiFi | Starlink | none
+            "connectivity.signal_pct": 74.0,
+            "connectivity.has_gps_fix": True,
             # Security — quiet by default.
             "security.door_open": False,
             "security.motion": False,

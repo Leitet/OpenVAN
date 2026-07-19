@@ -11,6 +11,8 @@ import {
   Sparkles,
   Cloud,
   Cpu,
+  Signal,
+  SignalZero,
 } from "lucide-react";
 import { useVanState } from "@shared/useVanState";
 import { VanProvider, useVan, num } from "./state";
@@ -51,6 +53,10 @@ function StatusBar() {
   const soc = num(twin["house_battery.soc"]);
   const water = num(twin["fresh_water.level_pct"]);
   const cabin = num(twin["cabin.temperature"]);
+  const online = twin["connectivity.online"] !== false && twin["connectivity.online"] !== undefined;
+  const signal = num(twin["connectivity.signal_pct"]);
+  const network = String(twin["connectivity.network"] ?? "");
+  const signalWeak = online && signal !== undefined && signal < 25;
   const epoch = num(twin["clock.epoch"]);
   const phase = String(twin["environment.phase"] ?? "day");
   const clock = epoch ? new Date(epoch * 1000).toUTCString().slice(5, 22) : null;
@@ -78,6 +84,25 @@ function StatusBar() {
           <Thermometer className="sb-ico" />
           <b>{cabin?.toFixed(0) ?? "—"}</b>
           <i>°</i>
+        </span>
+        <span
+          className="sb-stat"
+          title={
+            online
+              ? `${network || t("nav.journey")} · ${signal?.toFixed(0) ?? "—"}%`
+              : t("connectivity.offline")
+          }
+        >
+          {online ? (
+            <Signal
+              className="sb-ico"
+              style={{ color: signalWeak ? "var(--warn)" : undefined }}
+            />
+          ) : (
+            <SignalZero className="sb-ico" style={{ color: "var(--muted)" }} />
+          )}
+          <b>{online ? (signal?.toFixed(0) ?? "—") : t("connectivity.off")}</b>
+          {online && <i>%</i>}
         </span>
       </div>
       <div className="sb-right">

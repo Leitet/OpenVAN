@@ -282,6 +282,56 @@ function EnergyPanel({ twin }: { twin: Record<string, unknown> }) {
   );
 }
 
+// The van's link to the outside world — core state a router integration reads on
+// real hardware. Drive it here to exercise the connectivity entities + weak-signal
+// advisor (offline-first: Core keeps working with no signal).
+const NETWORKS = ["LTE", "5G", "WiFi", "Starlink", "none"];
+
+function ConnectivityPanel({ twin }: { twin: Record<string, unknown> }) {
+  const online = twin["connectivity.online"] !== false;
+  return (
+    <>
+      <button
+        className={"toggle" + (online ? " on" : "")}
+        onClick={() => injectSignal("connectivity.online", !online)}
+      >
+        Internet {online ? "online" : "offline"}
+      </button>
+      <div className="signal-row" style={{ margin: "8px 0" }}>
+        <span className="sig-k">Network</span>
+        <select
+          value={String(twin["connectivity.network"] ?? "LTE")}
+          onChange={(e) => injectSignal("connectivity.network", e.target.value)}
+        >
+          {NETWORKS.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </div>
+      <SignalSlider
+        label="Signal strength"
+        signalKey="connectivity.signal_pct"
+        value={num(twin["connectivity.signal_pct"])}
+        min={0}
+        max={100}
+        unit="%"
+      />
+      <button
+        className={"toggle" + (twin["connectivity.has_gps_fix"] ? " on" : "")}
+        onClick={() => injectSignal("connectivity.has_gps_fix", !twin["connectivity.has_gps_fix"])}
+      >
+        GPS fix {twin["connectivity.has_gps_fix"] ? "locked" : "none"}
+      </button>
+      <p className="note">
+        Drop the signal below 25% for the weak-signal hint; go offline to see the
+        van stay fully usable (cloud is only an enhancement).
+      </p>
+    </>
+  );
+}
+
 export function BenchApp() {
   const { twin, connected, entities } = useVanState();
   const [wx, setWx] = useState<Weather>({});
@@ -502,6 +552,11 @@ export function BenchApp() {
         <section className="card">
           <h2>Energy system</h2>
           <EnergyPanel twin={twin} />
+        </section>
+
+        <section className="card">
+          <h2>Connectivity</h2>
+          <ConnectivityPanel twin={twin} />
         </section>
 
         <section className="card">

@@ -14,10 +14,17 @@ an issue/branch and delete it here.
 From `docs/RESEARCH.md`. The session shipped air/CO safety, condensation,
 climate-extreme, scenes, leveling, propane and maintenance. Still open:
 
-- **Connectivity plugin** (#11) — Starlink/LTE/Wi-Fi status + signal strength as
-  sensors; a "weak signal, better spot 300 m back" hint. Needs a modem/router
-  integration (Teltonika, GL.iNet, Starlink API); build the sensor seam + a sim
-  source first.
+- **Connectivity plugin (#11) — core landed.** Internet/signal/network/GPS-fix are
+  now core twin state (seeded, bench-driven, read by a router integration on real
+  hardware), surfaced by `plugins/connectivity` as entities + a status-bar chip, with
+  a `WeakSignal` advisor (offline / weak-signal, offline-first framing). Remaining:
+  - **"Better spot 300 m back" locator** — the headline hint. Needs a small stateful
+    history of (GPS, signal) samples so it can point back to the nearest recent
+    strong-coverage spot when signal drops (haversine in `camp.py`). Doesn't fit the
+    stateless-advisor model — likely a tiny service the advisor reads.
+  - **Real transports**: Teltonika RutOS Web API, Starlink gRPC, GL.iNet — stream
+    signal/network/data-usage/GPS in via `run_transport()`.
+  - Data-usage / per-SIM stats; a "you're roaming" cost hint.
 - **Services layer on the map/route** (#12) — water refill, dump/black, LPG,
   fuel points from OSM/Park4Night along the route, and "grey tank full → dump 4 km
   ahead". Framework exists (camp sources + roads); needs a services data source

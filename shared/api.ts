@@ -2,7 +2,7 @@
 
 export async function injectSignal(
   key: string,
-  value: number | boolean,
+  value: number | boolean | string,
 ): Promise<void> {
   await fetch("/api/sim/signal", {
     method: "POST",

@@ -150,6 +150,39 @@ class FridgeDoorOpen(Advisor):
         )
 
 
+class WeakSignal(Advisor):
+    """Connectivity is a van-life pain point: you plan around coverage. This nudges
+    when the van is offline or the mobile signal is weak — offline-first framing, so
+    it never implies the van itself has stopped working (cloud is only an enhancement,
+    Rule 3)."""
+
+    key = "connectivity"
+
+    def __init__(self, weak_pct: float = 25.0) -> None:
+        self.weak_pct = weak_pct
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        online = hub.twin.get("connectivity.online")
+        if online is None:
+            return None
+        if not online:
+            return Notice(
+                self.key, "suggestion", "journey", "Offline here",
+                "No mobile signal at this spot — cloud features are paused, but the "
+                "van keeps running as normal.",
+                {"online": False},
+            )
+        signal = _twin_float(hub, "connectivity.signal_pct")
+        if signal is None or signal >= self.weak_pct:
+            return None
+        network = hub.twin.get("connectivity.network") or "mobile"
+        return Notice(
+            self.key, "info", "journey", "Weak signal",
+            f"Only {signal:.0f}% {network} signal here — calls and uploads may struggle.",
+            {"signal_pct": signal, "network": network},
+        )
+
+
 class LowPropane(Advisor):
     key = "propane_low"
 
@@ -625,6 +658,7 @@ def default_advisors(config: Any = None) -> list[Advisor]:
         FridgeDoorOpen(),
         BatteryRuntime(low_hours=g("battery_low_hours", 24.0)),
         LongDrive(g("long_drive_hours", 2.0) * 3600.0),
+        WeakSignal(g("signal_weak_pct", 25.0)),
         # Air & safety (life-critical → most-common)
         CarbonMonoxide(g("co_warn_ppm", 35.0), g("co_danger_ppm", 70.0)),
         GasLeak(g("gas_leak_lel", 10.0)),
