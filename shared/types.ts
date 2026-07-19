@@ -195,6 +195,16 @@ export interface IntegrationInfo {
   config: IntegrationConfigField[]; // connection settings the user can fill in
 }
 
+export interface TripStats {
+  started_at: number | null;
+  days: number;
+  distance_km: number;
+  nights: number;
+  places: string[];
+  place_count: number;
+  solar_wh: number | null;
+}
+
 export interface IntegrationConfigField {
   key: string;
   label: string;

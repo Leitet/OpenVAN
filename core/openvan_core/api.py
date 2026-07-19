@@ -270,6 +270,14 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
             raise HTTPException(404, f"unknown maintenance item '{body.id}'")
         return {"items": core.maintenance_status()}
 
+    @app.get("/api/trip")
+    async def trip() -> dict[str, Any]:
+        return {"trip": core.trip_stats()}
+
+    @app.post("/api/trip/reset")
+    async def reset_trip() -> dict[str, Any]:
+        return {"trip": core.reset_trip()}
+
     @app.get("/api/vehicle")
     async def vehicle() -> dict[str, Any]:
         return core.vehicle_state()

@@ -993,6 +993,31 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 12px;
 }
+.trip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.trip-head h2 {
+  margin: 0;
+}
+.trip-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.trip-places {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
 .energy-stat {
   display: flex;
   align-items: center;

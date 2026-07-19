@@ -270,6 +270,16 @@ export async function getMaintenance(): Promise<MaintenanceItem[]> {
   return data.items as MaintenanceItem[];
 }
 
+import type { TripStats } from "./types";
+
+export async function getTrip(): Promise<TripStats> {
+  return (await (await fetch("/api/trip")).json()).trip as TripStats;
+}
+
+export async function resetTrip(): Promise<TripStats> {
+  return (await (await fetch("/api/trip/reset", { method: "POST" })).json()).trip as TripStats;
+}
+
 export async function completeMaintenance(id: string): Promise<MaintenanceItem[]> {
   const res = await fetch("/api/maintenance/complete", {
     method: "POST",

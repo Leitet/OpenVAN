@@ -1,5 +1,6 @@
 import { useVan } from "../state";
 import { Journey } from "../components/Journey";
+import { Trip } from "../components/Trip";
 import { Weather } from "../components/Weather";
 import { Journal } from "../components/Journal";
 import { Leveling } from "../components/Leveling";
@@ -9,6 +10,7 @@ export function JourneyTab() {
   return (
     <div className="tab-grid stack journey-tab">
       <Journey twin={twin} />
+      <Trip />
       <Leveling />
       <Weather />
       <Journal />

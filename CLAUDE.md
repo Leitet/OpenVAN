@@ -171,6 +171,15 @@ from telemetry). Users add notes, name places, or bookmark the current spot
 instantly. Local SQLite (`data/journal.db`), surfaced to the companion for recall
 ("remember that lake?"). API: `/api/memory/*`.
 
+### Trip ledger (`trip.py`)
+
+A journey stats-book. `TripLedger` composes "this trip" — distance (odometer delta),
+nights + places (from the journal), days and solar harvested (telemetry integral of
+`solar.power`) — relative to a resettable **start marker** kept in the config store
+(`trip` namespace). It *records nothing new*, just reads what OpenVan already keeps,
+all on wall-clock (matching the journal + telemetry). Surfaced as the Journey tab's
+"This trip" panel; API `/api/trip` (GET stats, POST `/reset`).
+
 ### Conversation memory (`conversation.py`)
 
 So the van *learns how you want it*. `ChatMemory` holds three horizons: **turns**

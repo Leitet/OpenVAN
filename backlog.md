@@ -33,8 +33,12 @@ climate-extreme, scenes, leveling, propane and maintenance. Still open:
   fuel points from OSM/Park4Night along the route, and "grey tank full → dump 4 km
   ahead". Framework exists (camp sources + roads); needs a services data source
   (Overpass `amenity=sanitary_dump_station|drinking_water`, blocked in this env).
-- **Cost / trip stats** (#13) — fuel, camp fees, distance, nights; a simple trip
-  ledger over telemetry + journal.
+- **Trip stats (#13) — v1 landed.** `trip.py` (`TripLedger`) composes distance
+  (odometer delta), nights + places (journal), days and solar harvested (telemetry
+  integral) from a resettable start marker; Journey-tab "This trip" panel + `/api/trip`
+  (GET stats, POST /reset). Remaining: **costs** — fuel used × price and per-stay camp
+  fees (needs a diesel-consumption estimate + a place to enter fees/price); a per-day
+  breakdown / trip history; and folding the summary into the companion briefing.
 - **Security / intrusion push** (#14) — arm/disarm + door/motion/**camera** intrusion
   alarm **shipped** (`security.py`, `plugins/cameras`, Security tab); still to do:
   shock sensor, an optional siren, and a remote "someone's at the van" push once a

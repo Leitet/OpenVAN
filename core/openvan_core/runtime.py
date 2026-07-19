@@ -57,6 +57,7 @@ from .security import SecuritySystem
 from .simulation import VanSimulation
 from .store import ConfigStore
 from .telemetry import TelemetryRecorder, TelemetryStore
+from .trip import TripLedger
 from .twin import VanTwin
 from .weather import WeatherService
 
@@ -142,6 +143,7 @@ class Core:
     maintenance: MaintenanceLog
     security: SecuritySystem
     coverage: CoverageMemory
+    trip: TripLedger
     roads: RoadNetwork | None = None
 
     async def start(self) -> None:
@@ -158,6 +160,8 @@ class Core:
         # Seed the twin first so plugins read sensible values on setup.
         for key, value in self.config.seed_twin.items():
             await self.twin.set_signal(key, value, source="seed")
+        # Pin the trip start on first run (odometer is seeded now).
+        self.trip.load()
         self.plugins.discover(self.config.plugins_dir)
         # Plugin config comes from the store (namespace "plugin:<domain>"), not env.
         plugin_configs = {
@@ -342,6 +346,14 @@ class Core:
             return False
         self.store.set_many("plugin:cameras", {"list": plugin.list()})
         return True
+
+    # --- trip ledger -----------------------------------------------------
+    def trip_stats(self) -> dict[str, Any]:
+        return self.trip.stats()
+
+    def reset_trip(self) -> dict[str, Any]:
+        self.trip.reset()
+        return self.trip.stats()
 
     def maintenance_status(self) -> list[dict[str, Any]]:
         from datetime import datetime
@@ -636,6 +648,7 @@ def build_core(config: Config | None = None) -> Core:
     )
     security = SecuritySystem()
     coverage = CoverageMemory(bus, twin)
+    trip = TripLedger(store, twin, memory=memory, telemetry=telemetry)
     # Build the full advisor set from config-driven thresholds (nothing hardcoded).
     advisors.advisors = _build_advisors(config, weather, maintenance, security, coverage)
     return Core(
@@ -661,6 +674,7 @@ def build_core(config: Config | None = None) -> Core:
         maintenance=maintenance,
         security=security,
         coverage=coverage,
+        trip=trip,
         router=router,
         roads=roads,
     )
