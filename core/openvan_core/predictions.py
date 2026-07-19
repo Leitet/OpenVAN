@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import math
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -31,6 +31,13 @@ def _num(value: object) -> float | None:
         return float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError):
         return None
+
+
+def local_solar_datetime(epoch: float, lon: float) -> datetime:
+    """Naive local *solar* time at longitude ``lon`` for a UTC ``epoch`` (15°/hour).
+    The one timebase the sim's sun, day/night and solar forecast all share."""
+    utc = datetime.fromtimestamp(epoch, tz=timezone.utc)
+    return (utc + timedelta(hours=lon / 15.0)).replace(tzinfo=None)
 
 
 def _solar_elevation_sin(lat_deg: float, day_of_year: int, solar_hour: float) -> float:

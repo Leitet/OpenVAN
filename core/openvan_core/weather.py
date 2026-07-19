@@ -57,9 +57,14 @@ class WeatherService:
         get_location: Callable[[], Location],
         bus: Any = None,
         fetcher: Callable[[float, float], Awaitable[dict | None]] | None = None,
+        get_clock: Callable[[], Any] | None = None,
     ) -> None:
         self.config = config
         self.get_location = get_location
+        # Optional: the twin's simulated clock (epoch). When present, the synthetic
+        # forecast is built on it — so sim time, the sun and the forecast share one
+        # timebase, instead of the forecast drifting to wall-clock.
+        self.get_clock = get_clock
         self.bus = bus
         self._fetcher = fetcher or self._fetch_open_meteo
         self._snapshot: dict[str, Any] | None = None
@@ -106,9 +111,26 @@ class WeatherService:
         await self._set(self._parse(raw, (lat, lon)))
         self._save_cache()
 
+    def _forecast_base(self, lon: Any) -> datetime:
+        """The top-of-hour the synthetic forecast starts at: local solar time from the
+        sim clock when we have one, else the machine's wall clock (backwards-compatible)."""
+        epoch = self.get_clock() if self.get_clock is not None else None
+        try:
+            if epoch is not None:
+                from .predictions import local_solar_datetime
+
+                dt = local_solar_datetime(float(epoch), float(lon or 0.0))
+                return dt.replace(minute=0, second=0, microsecond=0)
+        except (TypeError, ValueError):
+            pass
+        return datetime.now().replace(minute=0, second=0, microsecond=0)
+
     async def simulate(self, scenario: str = "rain") -> dict[str, Any]:
-        """Inject a synthetic forecast (for offline demos / tests)."""
-        base = datetime.now().replace(minute=0, second=0, microsecond=0)
+        """Inject a synthetic forecast (for offline demos / tests). Anchored to the
+        van's simulated clock when available, so the forecast hours line up with the
+        sun the sim is showing (not the machine's wall clock)."""
+        lat, lon = self.get_location()
+        base = self._forecast_base(lon)
         raining = scenario == "rain"
         hourly = []
         for i in range(24):
@@ -122,7 +144,6 @@ class WeatherService:
                     "cloud_pct": 90 if wet else 20,
                 }
             )
-        lat, lon = self.get_location()
         snap = {
             "source": "simulated",
             "online": False,

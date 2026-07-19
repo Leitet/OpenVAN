@@ -68,22 +68,26 @@ class _FakeWeather:
         return self._snap
 
 
-class _FakeHub:
-    def __init__(self, soc):
-        self.twin = _FakeTwin(soc)
-
-
 class _FakeTwin:
-    def __init__(self, soc):
-        self._soc = soc
+    def __init__(self, **signals):
+        self._signals = signals
 
     def get(self, key, default=None):
-        return self._soc if key == "house_battery.soc" else default
+        return self._signals.get(key, default)
+
+
+class _FakeHub:
+    def __init__(self, **signals):
+        self.twin = _FakeTwin(**signals)
+
+
+# 2026-07-14 12:00 UTC — at lon 0 this is local solar hour 12 (inside the day window).
+_MIDDAY_EPOCH = 1784030400.0
 
 
 def test_advisor_suggests_window_when_battery_has_room():
     adv = SolarWindow(_FakeWeather(_clear_day()), 600.0, min_w=200.0, soc_pct=80.0)
-    notice = adv.evaluate(_FakeHub(soc=55.0))
+    notice = adv.evaluate(_FakeHub(**{"house_battery.soc": 55.0}))
     assert notice is not None
     assert notice.key == "solar_window" and notice.level == "suggestion"
     assert "W" in notice.message and notice.data["window"]["peak_w"] > 200
@@ -91,10 +95,29 @@ def test_advisor_suggests_window_when_battery_has_room():
 
 def test_advisor_quiet_when_battery_full():
     adv = SolarWindow(_FakeWeather(_clear_day()), 600.0, min_w=200.0, soc_pct=80.0)
-    assert adv.evaluate(_FakeHub(soc=92.0)) is None
+    assert adv.evaluate(_FakeHub(**{"house_battery.soc": 92.0})) is None
 
 
 def test_advisor_quiet_when_sun_is_weak():
     # Deep overcast → peak below the min-watts threshold.
     adv = SolarWindow(_FakeWeather(_clear_day(cloud_pct=100)), 300.0, min_w=200.0, soc_pct=80.0)
-    assert adv.evaluate(_FakeHub(soc=40.0)) is None
+    assert adv.evaluate(_FakeHub(**{"house_battery.soc": 40.0})) is None
+
+
+def test_advisor_frames_now_when_clock_is_in_the_window():
+    adv = SolarWindow(_FakeWeather(_clear_day()), 600.0, min_w=200.0, soc_pct=80.0)
+    # Clock at local midday (in the window) → "right now" framing.
+    inside = adv.evaluate(
+        _FakeHub(**{"house_battery.soc": 55.0, "clock.epoch": _MIDDAY_EPOCH, "gps.lon": 0.0})
+    )
+    assert inside is not None
+    assert inside.data["now_in_window"] is True
+    assert "right now" in inside.message.lower()
+    # Clock at 03:00 local (before the window) → "coming later today" framing.
+    before = adv.evaluate(
+        _FakeHub(
+            **{"house_battery.soc": 55.0, "clock.epoch": _MIDDAY_EPOCH - 9 * 3600, "gps.lon": 0.0}
+        )
+    )
+    assert before is not None and before.data["now_in_window"] is False
+    assert "around" in before.message.lower()

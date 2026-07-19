@@ -605,6 +605,7 @@ def build_core(config: Config | None = None) -> Core:
         config,
         get_location=lambda: (twin.get("gps.lat"), twin.get("gps.lon")),
         bus=bus,
+        get_clock=lambda: twin.get("clock.epoch"),
     )
     advisors = AdvisorEngine(bus, hub, [])
     telemetry = TelemetryStore(

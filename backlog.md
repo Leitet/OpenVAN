@@ -50,9 +50,10 @@ climate-extreme, scenes, leveling, propane and maintenance. Still open:
   solar stretch from the hourly forecast; the `SolarWindow` advisor suggests running
   high-draw loads / topping up during it (gated on battery having room), and the Power
   tab's Predictions show "Best solar window: 08:00–16:00 · 456 W". Remaining:
-  - **"Run it now" precision** — fire when the *current* hour is in the window (needs
-    the sim clock and the weather forecast to share a timebase; today the sim forecast
-    uses wall-clock while the twin clock is simulated).
+  - **"Run it now" precision — landed.** The simulated forecast is now anchored to the
+    twin's clock (`local_solar_datetime`), so the `SolarWindow` advisor knows whether
+    *now* is in the window and switches to a "Sun's out — strong sun right now" framing
+    (vs. "sunniest stretch is around HH:00–HH:00" when it's still coming).
   - **Park nose-south for morning charge** — an orientation hint (needs panel azimuth
     + the sun's azimuth, not just elevation).
 - **Black / cassette toilet** (#17) — mirror the grey-tank advisor; cassette-full

@@ -84,6 +84,19 @@ async def test_simulate_rain(tmp_path):
     assert clear["rain_eta_hours"] is None
 
 
+async def test_simulated_forecast_anchors_to_sim_clock(tmp_path):
+    # 2026-07-14 12:00 UTC; at lon 0 that's local solar hour 12 → forecast starts 12:00.
+    svc = WeatherService(
+        _config(tmp_path),
+        lambda: (46.5, 0.0),
+        fetcher=lambda _l, _o: None,
+        get_clock=lambda: 1784030400.0,
+    )
+    snap = await svc.simulate("clear")
+    first = snap["hourly"][0]["t"]
+    assert first.startswith("2026-07-14T12:00")  # sim clock, not the machine's wall clock
+
+
 class _FakeWeather:
     def __init__(self, eta):
         self._eta = eta

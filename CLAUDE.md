@@ -192,7 +192,10 @@ Assistant tab's "What I've learned".
 Location-aware, offline-first. `WeatherService` fetches the forecast for the
 van's current GPS (from the vehicle plugin) via **open-meteo** (keyless), caches
 it to `data/weather.json`, and serves the last-known forecast when offline (cloud
-enhances, never required). Feeds the `RainSoon` advisor, the companion briefing
+enhances, never required). The **simulated** forecast (`simulate()`) is anchored to
+the van's simulated clock (`clock.epoch` via `get_clock`) using
+`predictions.local_solar_datetime` — so sim time, the sun (`update_sun`) and the
+solar forecast/window all share one timebase instead of drifting to wall-clock. Feeds the `RainSoon` advisor, the companion briefing
 ("rain expected in an hour"), and the simulator's weather panel. A `simulate()`
 path injects a synthetic forecast so the rain behaviour works offline/in tests.
 

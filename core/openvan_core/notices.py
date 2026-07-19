@@ -228,7 +228,7 @@ class SolarWindow(Advisor):
         self.soc_pct = soc_pct
 
     def evaluate(self, hub: "Hub") -> Notice | None:
-        from .predictions import solar_window
+        from .predictions import local_solar_datetime, solar_window
 
         win = solar_window(self.weather.snapshot(), self.capacity_w)
         if win is None or win["peak_w"] < self.min_w:
@@ -236,11 +236,30 @@ class SolarWindow(Advisor):
         soc = _twin_float(hub, "house_battery.soc")
         if soc is None or soc >= self.soc_pct:
             return None  # battery already full enough — no need to chase the sun
+
+        # If the sim clock puts us inside the window, frame it as "now"; else "coming".
+        now_hour = None
+        epoch = _twin_float(hub, "clock.epoch")
+        if epoch is not None:
+            lon = _twin_float(hub, "gps.lon") or 0.0
+            now_hour = local_solar_datetime(epoch, lon).hour
+        in_window = now_hour is not None and win["start_hour"] <= now_hour < win["end_hour"]
+
+        if in_window:
+            title = "Sun's out"
+            message = (
+                f"Strong sun right now (up to ~{win['peak_w']:.0f} W, through {win['end_hour']:02d}:00). "
+                f"A good moment to run high-draw appliances or top up the battery."
+            )
+        else:
+            title = "Good sun today"
+            message = (
+                f"Sunniest stretch is around {win['start_hour']:02d}:00–{win['end_hour']:02d}:00 "
+                f"(up to ~{win['peak_w']:.0f} W). A good window to run high-draw appliances or top up."
+            )
         return Notice(
-            self.key, "suggestion", "energy", "Good sun today",
-            f"Sunniest stretch is around {win['start_hour']:02d}:00–{win['end_hour']:02d}:00 "
-            f"(up to ~{win['peak_w']:.0f} W). A good window to run high-draw appliances or top up.",
-            {"window": win, "soc": soc},
+            self.key, "suggestion", "energy", title, message,
+            {"window": win, "soc": soc, "now_in_window": in_window},
         )
 
 
