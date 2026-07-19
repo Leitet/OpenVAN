@@ -190,6 +190,19 @@ export interface IntegrationInfo {
   enabled: boolean; // alias of installed, kept for back-compat
   installed: boolean; // added by the user (or built-in)
   builtin: boolean; // part of the platform, can't be removed (the simulator)
+  mode: string; // "sim" | "modbus_tcp" | "mqtt" | … — the active transport
+  live: boolean; // connected to real hardware (vs. simulated)
+  config: IntegrationConfigField[]; // connection settings the user can fill in
+}
+
+export interface IntegrationConfigField {
+  key: string;
+  label: string;
+  type: string; // text | select
+  options: string[];
+  secret: boolean;
+  set: boolean; // a value is stored (used for secrets, which aren't echoed)
+  value?: string | number; // omitted for secrets
 }
 
 export interface MaintenanceItem {

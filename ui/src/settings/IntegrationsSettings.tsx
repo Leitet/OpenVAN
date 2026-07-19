@@ -12,8 +12,11 @@ import {
   Plus,
   Check,
   Lock,
+  Settings2,
+  Radio,
+  FlaskConical,
 } from "lucide-react";
-import { getIntegrations, setIntegration } from "@shared/api";
+import { getIntegrations, setIntegration, setIntegrationConfig } from "@shared/api";
 import type { IntegrationInfo } from "@shared/types";
 import { useT } from "../i18n";
 
@@ -81,10 +84,14 @@ function IntegrationCard({
   it,
   busy,
   action,
+  status,
+  footer,
 }: {
   it: IntegrationInfo;
   busy: boolean;
   action: React.ReactNode;
+  status?: React.ReactNode;
+  footer?: React.ReactNode;
 }) {
   const tone = STATUS_TONE[it.status] ?? "warn";
   const safetyTone = it.safety_class >= 3 ? "bad" : it.safety_class >= 2 ? "warn" : "good";
@@ -104,6 +111,7 @@ function IntegrationCard({
       {it.description && <p className="integration-desc">{it.description}</p>}
 
       <div className="integration-badges">
+        {status}
         <span className={`badge badge-${tone}`} title="Support status">
           {STATUS_LABEL[it.status] ?? it.status}
         </span>
@@ -133,6 +141,62 @@ function IntegrationCard({
           <AlertTriangle size={13} /> {it.warning}
         </p>
       )}
+
+      {footer}
+    </div>
+  );
+}
+
+// Connection editor for an installed integration that can point at real hardware.
+// Fields come from the descriptor (mode/host/port/…); saving reconnects the driver.
+function ConfigEditor({
+  it,
+  onSave,
+  saving,
+}: {
+  it: IntegrationInfo;
+  onSave: (values: Record<string, string>) => void;
+  saving: boolean;
+}) {
+  const t = useT();
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const field = (k: string, v: string) => setDraft((d) => ({ ...d, [k]: v }));
+
+  return (
+    <div className="integration-config">
+      {it.config.map((f) => (
+        <div className="setting-row" key={f.key}>
+          <label htmlFor={`${it.id}-${f.key}`}>{f.label}</label>
+          {f.type === "select" ? (
+            <select
+              id={`${it.id}-${f.key}`}
+              value={draft[f.key] ?? String(f.value ?? "")}
+              onChange={(e) => field(f.key, e.target.value)}
+            >
+              {f.options.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              id={`${it.id}-${f.key}`}
+              type={f.secret ? "password" : "text"}
+              value={draft[f.key] ?? (f.secret ? "" : String(f.value ?? ""))}
+              placeholder={f.secret && f.set ? "••••••• (stored)" : ""}
+              autoComplete="off"
+              onChange={(e) => field(f.key, e.target.value)}
+            />
+          )}
+        </div>
+      ))}
+      <div className="setting-row">
+        <span />
+        <button className="mini primary" disabled={saving} onClick={() => onSave(draft)}>
+          {saving ? t("common.saving") : t("common.save")}
+        </button>
+      </div>
     </div>
   );
 }
@@ -149,6 +213,7 @@ export function IntegrationsSettings() {
   const [status, setStatus] = useState("");
   const [transport, setTransport] = useState("");
   const [offlineOnly, setOfflineOnly] = useState(false);
+  const [configOpen, setConfigOpen] = useState<string | null>(null);
 
   useEffect(() => {
     getIntegrations().then(setItems);
@@ -163,6 +228,27 @@ export function IntegrationsSettings() {
       setBusy(null);
     }
   };
+
+  const saveConfig = async (id: string, values: Record<string, string>) => {
+    setBusy(id);
+    try {
+      const next = await setIntegrationConfig(id, values);
+      if (next.length) setItems(next);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const statusBadge = (it: IntegrationInfo) =>
+    it.live ? (
+      <span className="badge badge-good" title={t("integrations.connected")}>
+        <Radio size={12} /> {it.mode}
+      </span>
+    ) : it.config.length > 0 ? (
+      <span className="badge badge-line" title={t("integrations.simulated")}>
+        <FlaskConical size={12} /> {t("integrations.simulated")}
+      </span>
+    ) : undefined;
 
   const installed = useMemo(() => items.filter((i) => i.installed), [items]);
 
@@ -224,20 +310,41 @@ export function IntegrationsSettings() {
                   key={it.id}
                   it={it}
                   busy={busy === it.id}
+                  status={statusBadge(it)}
                   action={
                     it.builtin ? (
                       <span className="badge badge-line" title={t("integrations.builtin")}>
                         <Lock size={12} /> {t("integrations.builtin")}
                       </span>
                     ) : (
-                      <button
-                        className="mini danger"
-                        disabled={busy === it.id}
-                        onClick={() => set(it.id, false)}
-                      >
-                        {t("integrations.remove")}
-                      </button>
+                      <div className="integration-actions">
+                        {it.config.length > 0 && (
+                          <button
+                            className={"mini" + (configOpen === it.id ? " primary" : "")}
+                            onClick={() => setConfigOpen(configOpen === it.id ? null : it.id)}
+                            title={t("integrations.configure")}
+                          >
+                            <Settings2 size={13} />
+                          </button>
+                        )}
+                        <button
+                          className="mini danger"
+                          disabled={busy === it.id}
+                          onClick={() => set(it.id, false)}
+                        >
+                          {t("integrations.remove")}
+                        </button>
+                      </div>
                     )
+                  }
+                  footer={
+                    configOpen === it.id && it.config.length > 0 ? (
+                      <ConfigEditor
+                        it={it}
+                        saving={busy === it.id}
+                        onSave={(values) => saveConfig(it.id, values)}
+                      />
+                    ) : undefined
                   }
                 />
               ))}

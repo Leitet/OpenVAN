@@ -390,6 +390,14 @@ const T: Record<string, Entry> = {
     de: "Keine Integrationen entsprechen deiner Suche.",
   },
   "integrations.count": { en: "found", sv: "hittade", de: "gefunden" },
+  "integrations.simulated": { en: "Simulated", sv: "Simulerad", de: "Simuliert" },
+  "integrations.connected": {
+    en: "Connected to hardware",
+    sv: "Ansluten till hårdvara",
+    de: "Mit Hardware verbunden",
+  },
+  "integrations.configure": { en: "Configure", sv: "Konfigurera", de: "Konfigurieren" },
+  "integrations.connection": { en: "Connection", sv: "Anslutning", de: "Verbindung" },
   "settings.camping": { en: "Camping", sv: "Camping", de: "Camping" },
   "settings.campingNote": {
     en: "Sources for places to stay. The van proposes camp spots from the enabled ones — add more by dropping a source package under campsources/.",

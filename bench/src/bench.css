@@ -392,6 +392,18 @@ input[type="range"]::-moz-range-thumb {
 .bench-int-meta strong {
   font-size: 12px;
 }
+.bench-int-live {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 500;
+}
+.bench-int-live.on {
+  color: var(--good, #37d67a);
+  border-color: color-mix(in srgb, var(--good, #37d67a) 45%, transparent);
+}
 .scenario-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

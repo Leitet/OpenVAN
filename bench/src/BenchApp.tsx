@@ -201,7 +201,12 @@ function IntegrationsPanel({ twin }: { twin: Record<string, unknown> }) {
                 {it.builtin ? "built-in" : "remove"}
               </button>
               <div className="bench-int-meta">
-                <strong>{it.name}</strong>
+                <strong>
+                  {it.name}{" "}
+                  <span className={"bench-int-live " + (it.live ? "on" : "sim")}>
+                    {it.live ? `live · ${it.mode}` : "sim"}
+                  </span>
+                </strong>
                 <span className="note">
                   {it.status} · {it.transports.join(", ")} · safety {it.safety_class}
                 </span>

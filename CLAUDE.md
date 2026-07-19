@@ -132,13 +132,24 @@ MQTT/Home Assistant, Modbus, RuuviTag, Teltonika, Autoterm, …) into twin signa
 the plugins consume. `IntegrationManager` discovers `integrations/` like plugins,
 persists enable/disable to the store (`integrations` namespace), and — per Rule 1
 — ticks each enabled driver's `simulate(dt)` from the sim loop so it injects the
-raw signals real hardware would emit. The catalog (with status/transport/safety
-badges) is Settings → Integrations in the product UI, plus an Integrations card on
-the bench; API: `/api/integrations` (GET list, POST enable/disable). The full
+raw signals real hardware would emit. The catalog is a **searchable library**
+(Settings → Integrations → Browse) — a minimal standard set is installed by default
+(just the simulator, a non-removable built-in), everything else is opt-in. API:
+`/api/integrations` (GET list, POST enable/disable, POST `/config`). The full
 strategy map — priorities, phases, top-10, taxonomy — is
 [docs/OPENVAN-INTEGRATION-LANDSCAPE.md](docs/OPENVAN-INTEGRATION-LANDSCAPE.md).
 New integrations: add an `Integration` subclass under `integrations/<id>/` with an
 `info` descriptor and a `simulate()` that feeds the twin.
+
+**Real transports** (`transports/`): a driver moves from sim to hardware by
+overriding `run_transport()` and picking a `mode` in its config. The base runs a
+reconnecting supervisor and — offline-first (Rule 3) — a driver only owns the
+signals while `live`; when the device is unreachable it falls straight back to
+`simulate()`. The transport clients are **pure-stdlib, no vendor SDKs**
+(`AsyncModbusTcpClient`, `AsyncMqttClient`), each verified against an in-process
+loopback server in tests. Victron ships all three modes: `sim` (default),
+`modbus_tcp` (poll the GX register block), `mqtt` (subscribe to Venus `N/<portal>/…`);
+host/port/mode are set from the library (`/api/integrations/config`).
 
 ### Proactive companion (`notices.py`, `companion.py`)
 
@@ -269,6 +280,7 @@ reference plugins:
 openvan/
   core/                 Python Core (offline-first brain)
     openvan_core/       the package
+      transports/       pure-stdlib wire clients (Modbus-TCP, MQTT) — no vendor SDKs
     tests/              pytest — the AI feedback loop
     pyproject.toml
   plugins/              one package per plugin

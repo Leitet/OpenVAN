@@ -3,6 +3,9 @@ the sim drivers normalising signals into the twin (Rule 1)."""
 
 from __future__ import annotations
 
+import asyncio
+import struct
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -146,3 +149,125 @@ def test_integrations_http_surface(tmp_path):
 
         # Unknown id → 404.
         assert client.post("/api/integrations", json={"id": "nope", "enabled": True}).status_code == 404
+
+
+# --- real transports (Victron) -----------------------------------------------
+
+async def _modbus_server(registers: dict[int, int]):
+    """A tiny in-process Modbus-TCP server that answers read-registers requests —
+    stands in for a real Cerbo GX so the driver's transport is verifiable offline."""
+    async def handle(reader, writer):
+        try:
+            while True:
+                header = await reader.readexactly(7)
+                tid, _pid, length, unit = struct.unpack(">HHHB", header)
+                _fc, addr, count = struct.unpack(">BHH", await reader.readexactly(length - 1))
+                data = b"".join(struct.pack(">H", registers.get(addr + i, 0)) for i in range(count))
+                body = bytes([0x03, len(data)]) + data
+                writer.write(struct.pack(">HHHB", tid, 0, len(body) + 1, unit) + body)
+                await writer.drain()
+        except (asyncio.IncompleteReadError, ConnectionError):
+            pass
+
+    server = await asyncio.start_server(handle, "127.0.0.1", 0)
+    return server, server.sockets[0].getsockname()[1]
+
+
+async def _wait_for(predicate, timeout=3.0):
+    for _ in range(int(timeout / 0.05)):
+        if predicate():
+            return True
+        await asyncio.sleep(0.05)
+    return False
+
+
+def test_victron_normalisers(core):
+    import victron_venus as vv  # discovered onto sys.path by core.start()
+
+    # A raw 840-block read (voltage×100, current×10 signed, SoC, PV W at offset 10).
+    block = [1310, 65486, 0, 77, 0, 0, 0, 0, 0, 0, 305]
+    assert vv.normalise_registers(block) == {
+        "house_battery.voltage": 13.1,
+        "house_battery.current": -5.0,
+        "house_battery.soc": 77.0,
+        "solar.power": 305.0,
+    }
+    assert vv.normalise_topic("N/x/system/0/Dc/Battery/Soc", b'{"value": 91}') == (
+        "house_battery.soc",
+        91.0,
+    )
+    assert vv.normalise_topic("N/x/system/0/Dc/Battery/Soc", b'{"value": null}') is None
+    assert vv.normalise_topic("N/x/unrelated/topic", b'{"value": 1}') is None
+
+
+async def test_victron_modbus_real_path_drives_signals(core):
+    # NB: close the server with server.close() only — the driver keeps its poll
+    # connection open, so server.wait_closed() would block until teardown.
+    server, port = await _modbus_server({840: 1310, 841: 65486, 843: 77, 850: 305})
+    try:
+        await core.set_integration_enabled("victron_venus", True)
+        # Point it at the loopback GX — set_config restarts the transport live.
+        await core.set_integration_config(
+            "victron_venus",
+            {"mode": "modbus_tcp", "host": "127.0.0.1", "port": str(port)},
+        )
+        got = await _wait_for(lambda: core.twin.get("house_battery.soc") == 77.0)
+        assert got, "modbus poll did not update the twin"
+
+        inst = core.integrations.get("victron_venus")
+        assert inst.live is True
+        assert core.twin.get("house_battery.voltage") == 13.1
+        assert core.twin.get("solar.power") == 305.0
+        # A live driver owns the signals — the sim fallback must not run.
+        row = next(r for r in core.integrations_list() if r["id"] == "victron_venus")
+        assert row["mode"] == "modbus_tcp" and row["live"] is True
+    finally:
+        server.close()
+
+
+async def test_live_driver_skips_simulation(core):
+    server, port = await _modbus_server({840: 1310, 843: 77})
+    try:
+        await core.set_integration_enabled("victron_venus", True)
+        await core.set_integration_config(
+            "victron_venus", {"mode": "modbus_tcp", "host": "127.0.0.1", "port": str(port)}
+        )
+        assert await _wait_for(lambda: core.integrations.get("victron_venus").live)
+        # simulate_all must skip the live driver — its sim-only yield stays absent.
+        await core.integrations.simulate_all(3600.0)
+        assert core.twin.get("solar.yield_today_wh") is None
+    finally:
+        server.close()
+
+
+async def test_unreachable_host_falls_back_to_sim(core):
+    await core.set_integration_enabled("victron_venus", True)
+    # Nothing is listening here → transport can't connect, stays not-live.
+    await core.set_integration_config(
+        "victron_venus", {"mode": "modbus_tcp", "host": "127.0.0.1", "port": "1"}
+    )
+    await asyncio.sleep(0.2)
+    inst = core.integrations.get("victron_venus")
+    assert inst.live is False
+    # Sim fallback still provides signals.
+    await core.integrations.simulate_all(3600.0)
+    assert core.twin.get("solar.yield_today_wh") is not None
+
+
+def test_integration_config_http(tmp_path):
+    cfg = Config(ai_enabled=False, weather_enabled=False, memory_enabled=False,
+                 telemetry_enabled=False, simulate=False, data_dir=tmp_path)
+    with TestClient(build_app(cfg)) as client:
+        client.post("/api/integrations", json={"id": "victron_venus", "enabled": True})
+        out = client.post(
+            "/api/integrations/config",
+            json={"id": "victron_venus", "values": {"mode": "modbus_tcp", "host": "10.0.0.5"}},
+        )
+        assert out.status_code == 200
+        row = next(r for r in out.json()["integrations"] if r["id"] == "victron_venus")
+        assert row["mode"] == "modbus_tcp"
+        host_field = next(f for f in row["config"] if f["key"] == "host")
+        assert host_field["value"] == "10.0.0.5"
+        assert client.post(
+            "/api/integrations/config", json={"id": "nope", "values": {}}
+        ).status_code == 404

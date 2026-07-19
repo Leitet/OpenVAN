@@ -24,6 +24,7 @@ subclasses self-register via ``__init_subclass__``.
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 import logging
 import sys
@@ -37,6 +38,10 @@ if TYPE_CHECKING:  # pragma: no cover
     from .twin import VanTwin
 
 logger = logging.getLogger(__name__)
+
+# Reconnect backoff for a real transport that drops or can't be reached (seconds).
+_RECONNECT_MIN = 3.0
+_RECONNECT_MAX = 60.0
 
 
 # --- taxonomy (kept as plain strings so descriptors stay JSON-friendly) -------
@@ -101,6 +106,10 @@ class IntegrationInfo:
     provides: list[str] = field(default_factory=list)  # normalised signal keys it feeds
     description: str = ""
     warning: str = ""  # honest caveat (fragile driver, cloud, reverse-engineered)
+    # Connection settings the user fills in to point the driver at real hardware
+    # (host, port, mode, credentials). Each: {key, label, type, options?, secret?}.
+    # Empty → the integration is sim-only for now.
+    config_fields: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -147,18 +156,71 @@ class Integration(ABC):
         self.bus = bus
         self.config = config or {}
         self.enabled = False
+        # True while a real transport is connected and owns the signals; the sim
+        # driver stands down (offline-first: sim only fills in when no hardware).
+        self.live = False
+        self._transport_task: asyncio.Task | None = None
+
+    def transport_mode(self) -> str:
+        """The configured connection mode. ``"sim"`` (the default) means no real
+        transport — the driver's :meth:`simulate` provides the signals."""
+        return str(self.config.get("mode", "sim") or "sim")
 
     async def async_setup(self) -> None:
-        """Open the transport / start streaming. No-op for the sim driver."""
+        """Start the real transport if one is configured; otherwise stay in sim."""
+        await self.start_transport()
 
     async def async_teardown(self) -> None:
         """Release resources (close sockets, unsubscribe)."""
+        await self.stop_transport()
+
+    async def start_transport(self) -> None:
+        if self.transport_mode() == "sim" or self._transport_task is not None:
+            return
+        self._transport_task = asyncio.create_task(self._transport_supervisor())
+
+    async def stop_transport(self) -> None:
+        self.live = False
+        task, self._transport_task = self._transport_task, None
+        if task is not None:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+    async def _transport_supervisor(self) -> None:
+        """Keep the real transport connected, reconnecting with backoff. On a clean
+        offline fallback (driver has no real path) it steps aside for the sim."""
+        backoff = _RECONNECT_MIN
+        while True:
+            try:
+                await self.run_transport()
+            except asyncio.CancelledError:
+                raise
+            except NotImplementedError:
+                logger.info("integration %s has no real transport yet — staying simulated", self.info.id)
+                self.live = False
+                return
+            except Exception as exc:  # pragma: no cover - network/hardware paths
+                logger.warning("integration %s transport error: %s", self.info.id, exc)
+            self.live = False
+            await self.bus.publish("integration.changed", {"id": self.info.id, "live": False})
+            await asyncio.sleep(backoff)
+            backoff = min(_RECONNECT_MAX, backoff * 2)
+
+    async def run_transport(self) -> None:
+        """Override to connect the real device: set ``self.live = True`` once
+        connected and stream normalised signals into the twin until it drops.
+        The default raises so sim-only integrations fall back cleanly."""
+        raise NotImplementedError
 
     async def simulate(self, dt: float) -> None:
         """Inject the characteristic raw signals this ecosystem would produce.
 
-        Only called in simulation mode while the integration is enabled. Keep it
-        offline and deterministic (no wall-clock / RNG) so tests stay stable.
+        Only called while enabled *and not live* — real hardware, when connected,
+        owns the signals. Keep it offline and deterministic (no wall-clock / RNG)
+        so tests stay stable.
         """
 
 
@@ -249,10 +311,28 @@ class IntegrationManager:
             await instance.async_teardown()
         self.integrations.clear()
 
+    async def set_config(self, integration_id: str, values: dict[str, Any]) -> bool:
+        """Persist a driver's connection settings (host, port, mode, credentials)
+        and reconnect its transport so a change takes effect live."""
+        instance = self.integrations.get(integration_id)
+        if instance is None:
+            return False
+        # Drop blank values so clearing a field falls back to the default.
+        clean = {k: v for k, v in values.items() if v not in (None, "")}
+        instance.config.update(clean)
+        if self.store is not None:
+            self.store.set_many(f"{self.NS}:{integration_id}", clean)
+        if instance.enabled:
+            await instance.stop_transport()
+            await instance.start_transport()
+        await self.bus.publish("integration.changed", self.describe(integration_id))
+        return True
+
     async def simulate_all(self, dt: float) -> None:
-        """Tick every enabled integration's sim driver (called from the sim loop)."""
+        """Tick each enabled *simulated* driver (called from the sim loop). A driver
+        connected to real hardware (``live``) owns its signals, so it's skipped."""
         for instance in self.integrations.values():
-            if instance.enabled:
+            if instance.enabled and not instance.live:
                 try:
                     await instance.simulate(dt)
                 except Exception:  # pragma: no cover - a bad driver must not stall the loop
@@ -268,6 +348,10 @@ class IntegrationManager:
         d["enabled"] = instance.enabled
         d["installed"] = instance.enabled
         d["builtin"] = instance.info.id in BUILTIN
+        # Live transport state: "sim" (driver-simulated), or connected to hardware.
+        d["mode"] = instance.transport_mode()
+        d["live"] = instance.live
+        d["config"] = _config_view(instance.info.config_fields, instance.config)
         return d
 
     def list(self) -> list[dict[str, Any]]:
@@ -277,6 +361,27 @@ class IntegrationManager:
         rows = [r for r in rows if r is not None]
         rows.sort(key=lambda r: (r.get("priority", "P9"), r.get("name", "")))
         return rows
+
+
+def _config_view(fields: list[dict[str, Any]], values: dict[str, Any]) -> list[dict[str, Any]]:
+    """Merge a driver's declared config fields with the stored values for the UI.
+    Secrets are write-only — never echoed; we only report whether one is set."""
+    view: list[dict[str, Any]] = []
+    for f in fields:
+        key = f["key"]
+        secret = bool(f.get("secret"))
+        entry = {
+            "key": key,
+            "label": f.get("label", key),
+            "type": f.get("type", "text"),
+            "options": f.get("options", []),
+            "secret": secret,
+            "set": key in values and values[key] not in (None, ""),
+        }
+        if not secret:
+            entry["value"] = values.get(key, f.get("default", ""))
+        view.append(entry)
+    return view
 
 
 def _default_enabled(info: IntegrationInfo) -> bool:

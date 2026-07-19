@@ -109,19 +109,34 @@ maxheight/maxweight on the road ahead) also landed. Remaining:
   Modbus, RuuviTag, Teltonika, Autoterm, Renogy). A **searchable/filterable library**
   (Settings → Integrations → Browse) landed too: a minimal standard set installed by
   default (just the simulator, a non-removable built-in), everything else opt-in.
-  Strategy map in `docs/OPENVAN-INTEGRATION-LANDSCAPE.md`. Remaining — turn the sim
-  drivers into **real transports** against hardware:
-  - **Fas 1 real transports**: Victron local MQTT + Modbus-TCP + VE.Direct; ESPHome
-    native API; a local MQTT broker + HA discovery (import *and* export); Teltonika
-    RutOS Web API; RuuviTag BLE scan; Autoterm UART (through the safety layer).
+  Strategy map in `docs/OPENVAN-INTEGRATION-LANDSCAPE.md`.
+
+  **Real transports — the seam + Victron landed.** `transports/` holds pure-stdlib
+  async clients (`AsyncModbusTcpClient`, `AsyncMqttClient`, no vendor SDKs), each
+  verified against an in-process loopback server. The `Integration` base runs a
+  reconnecting transport supervisor with offline-first sim fallback (a driver only
+  owns the signals while `live`). **Victron** ships `sim` / `modbus_tcp` (GX register
+  block) / `mqtt` (Venus `N/<portal>/…`), configured from the library
+  (`/api/integrations/config`). Remaining:
+  - **Validate against real hardware** — the Modbus register addresses/scale factors
+    and the MQTT topic map are per Victron's published lists but *unverified on a real
+    GX*. Confirm on a device before trusting values (simulators are not reality).
+  - **VE.Direct (USB serial)** for Victron products without a GX.
+  - **ESPHome native API** — protobuf-over-TCP with a handshake. Bigger than Modbus/MQTT;
+    decide stdlib protobuf codec vs. optional `aioesphomeapi` extra, then add the
+    `run_transport()` path (ESPHome can also come in over the MQTT client today).
+  - **MQTT broker + Home Assistant discovery** (import *and* export), Teltonika RutOS
+    Web API, RuuviTag BLE scan, Autoterm UART (through the safety layer).
+  - **Writes/control** — the transports are read-only so far; actuation (set inverter,
+    charge limits, heater setpoint) must route through `Hub.execute_intent` → safety,
+    never a bare transport write.
+  - **Discovery** auto-fills host/port (mDNS for GX/ESPHome) so the user rarely types an IP.
   - **Normalised entities**: add plugins that turn the new integration signals
     (`solar.yield_today_wh`, `alternator.power`, `inverter.*`, `connectivity.*`,
     `ruuvitag.*`) into semantic entities on the product UI (energy/connectivity tabs).
   - **Fas 2–4** (see the landscape doc): JK/JBD BMS, EPEver, EcoFlow, Mopeka, Shelly,
     Signal K, OBD-II; then OEM buses (CI-BUS, RV-C, NMEA 2000, Truma/Dometic); then
     vendor partnerships.
-  - **Discovery**: mDNS / DHCP / BLE scan auto-detect so integrations offer to
-    enable themselves when the hardware is present.
   - **Safety-class-4 gating**: locks / gas valves need strong auth + audit +
     isolation before any such integration ships (never free LLM access).
   - **Library at scale (thousands of integrations)** — today the library filters

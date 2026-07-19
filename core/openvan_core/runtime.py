@@ -299,6 +299,11 @@ class Core:
         """Enable/disable an integration and persist the choice."""
         return await self.integrations.set_enabled(integration_id, enabled)
 
+    async def set_integration_config(self, integration_id: str, values: dict[str, Any]) -> bool:
+        """Persist a driver's connection settings (host/port/mode/credentials) and
+        reconnect its transport so the change takes effect live."""
+        return await self.integrations.set_config(integration_id, values)
+
     # --- cameras (dynamic) ----------------------------------------------
     def cameras(self) -> list[dict[str, str]]:
         plugin = self.plugins.get("cameras")

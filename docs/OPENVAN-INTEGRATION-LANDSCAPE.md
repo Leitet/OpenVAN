@@ -28,8 +28,12 @@ device protocol → OpenVan integration (driver) → normalised entity
   provides the signals. Unchanged.
 
 Every integration ships a **simulation provider** so it's exercisable against the
-twin with no hardware (Rule 1). Real transports (MQTT, Modbus, VE.Direct) slot into
-the same driver later.
+twin with no hardware (Rule 1). Real transports slot into the same driver via
+`run_transport()` (see `transports/`): pure-stdlib async clients, no vendor SDKs,
+each verified against an in-process loopback server. A driver only owns the signals
+while `live`; unreachable hardware falls straight back to `simulate()`
+(offline-first). **Victron already runs for real** over `modbus_tcp` (GX register
+block) and `mqtt` (Venus `N/<portal>/…`) — pending validation on a physical GX.
 
 ## Taxonomy (machine-readable)
 

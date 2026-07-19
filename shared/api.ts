@@ -321,6 +321,19 @@ export async function setIntegration(
   return ((await res.json()).integrations ?? []) as IntegrationInfo[];
 }
 
+export async function setIntegrationConfig(
+  id: string,
+  values: Record<string, string>,
+): Promise<IntegrationInfo[]> {
+  const res = await fetch("/api/integrations/config", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, values }),
+  });
+  if (!res.ok) return [];
+  return ((await res.json()).integrations ?? []) as IntegrationInfo[];
+}
+
 export async function getSecurity(): Promise<{ armed: boolean }> {
   return (await fetch("/api/security")).json();
 }
