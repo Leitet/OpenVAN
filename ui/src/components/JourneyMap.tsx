@@ -3,19 +3,34 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { campSearch, getSeries, getStays } from "@shared/api";
 
+// A recent strong-coverage spot the locator points back to (from the connectivity
+// notice's better_spot). Shown as a marker so you can navigate toward it.
+export interface CoverageSpot {
+  lat: number;
+  lon: number;
+  signal_pct: number;
+  distance_m: number;
+  direction: string;
+}
+
+function distancePhrase(m: number): string {
+  return m < 950 ? `${m.toFixed(0)} m` : `${(m / 1000).toFixed(1)} km`;
+}
+
 /**
  * Live OpenStreetMap of the journey: the GPS track (which now follows real roads,
  * because Core snaps the simulated drive onto the OSM road graph), the current
  * position, past stays and nearby camp spots. Auto-follows the van while driving;
  * drag to explore, then tap ◎ to re-follow.
  */
-export function JourneyMap() {
+export function JourneyMap({ coverage }: { coverage: CoverageSpot | null }) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const trackRef = useRef<L.Polyline | null>(null);
   const vanRef = useRef<L.Marker | null>(null);
   const staysRef = useRef<L.LayerGroup | null>(null);
   const campsRef = useRef<L.LayerGroup | null>(null);
+  const coverageRef = useRef<L.LayerGroup | null>(null);
   const followRef = useRef(true);
   const fittedRef = useRef(false);
   const programmaticRef = useRef(false); // true while *we* move the map, not the user
@@ -45,6 +60,7 @@ export function JourneyMap() {
 
     staysRef.current = L.layerGroup().addTo(map);
     campsRef.current = L.layerGroup().addTo(map);
+    coverageRef.current = L.layerGroup().addTo(map);
 
     // "re-follow the van" control
     const Recenter = L.Control.extend({
@@ -172,10 +188,40 @@ export function JourneyMap() {
     };
   }, []);
 
+  // Better-coverage marker: appears while a weak-signal notice knows a stronger
+  // spot nearby, and clears when the signal recovers.
+  useEffect(() => {
+    const layer = coverageRef.current;
+    if (!layer) return;
+    layer.clearLayers();
+    if (!coverage) return;
+    const icon = L.divIcon({
+      className: "",
+      // Lucide "signal" glyph, inline so it themes via currentColor.
+      html:
+        '<div class="coverage-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/>' +
+        '<path d="M22 4v16"/></svg></div>',
+      iconSize: [24, 24],
+      iconAnchor: [12, 22],
+    });
+    const m = L.marker([coverage.lat, coverage.lon], { icon, zIndexOffset: 900 });
+    m.bindTooltip(
+      `Better coverage: ${coverage.signal_pct.toFixed(0)}% · ${distancePhrase(coverage.distance_m)} ${coverage.direction}`,
+    );
+    layer.addLayer(m);
+    // If we've no route to frame yet (e.g. parked with telemetry just started),
+    // bring the spot into view — being parked in a dead zone is the main use case.
+    if (mapRef.current && !fittedRef.current) {
+      jump(() => mapRef.current!.setView([coverage.lat, coverage.lon], 15));
+    }
+  }, [coverage?.lat, coverage?.lon, coverage?.signal_pct]);
+
   return (
     <div className="journey-map-wrap">
       <div ref={elRef} className="journey-leaflet" />
-      {empty && (
+      {empty && !coverage && (
         <div className="journey-map-empty">Start driving or bookmark a spot to see your route.</div>
       )}
     </div>

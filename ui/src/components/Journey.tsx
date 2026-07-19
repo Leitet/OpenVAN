@@ -1,9 +1,27 @@
 import type { Twin } from "@shared/types";
 import { useT } from "../i18n";
-import { JourneyMap } from "./JourneyMap";
+import { useVan } from "../state";
+import { JourneyMap, type CoverageSpot } from "./JourneyMap";
 
 function num(v: unknown): number | undefined {
   return typeof v === "number" ? v : undefined;
+}
+
+// Pull the "better coverage back there" spot out of the live connectivity notice,
+// if one is active — it's what the coverage locator recorded (see coverage.py).
+function coverageSpot(
+  notices: { key: string; data: Record<string, unknown> }[],
+): CoverageSpot | null {
+  const n = notices.find((x) => x.key === "connectivity");
+  const spot = n?.data?.better_spot as Record<string, unknown> | undefined;
+  if (!spot || typeof spot.lat !== "number" || typeof spot.lon !== "number") return null;
+  return {
+    lat: spot.lat,
+    lon: spot.lon,
+    signal_pct: Number(spot.signal_pct) || 0,
+    distance_m: Number(spot.distance_m) || 0,
+    direction: String(spot.direction ?? ""),
+  };
 }
 
 /** A compass whose needle points in the van's direction of travel; ring is fixed
@@ -43,10 +61,12 @@ function Compass({ heading }: { heading: number | undefined }) {
 
 export function Journey({ twin }: { twin: Twin }) {
   const t = useT();
+  const { notices } = useVan();
   const speed = num(twin["vehicle.speed_kmh"]);
   const heading = num(twin["vehicle.heading"]);
   const lat = num(twin["gps.lat"]);
   const lon = num(twin["gps.lon"]);
+  const coverage = coverageSpot(notices);
 
   return (
     <section className="panel span2 journey-panel">
@@ -60,12 +80,13 @@ export function Journey({ twin }: { twin: Twin }) {
           contributors
         </span>
       </div>
-      <JourneyMap />
+      <JourneyMap coverage={coverage} />
       <div className="journey-legend">
         <span><i className="dot here" /> {t("journey.position")}</span>
         <span><i className="dot stay" /> {t("journey.pastStay")}</span>
         <span><i className="dot open" /> {t("journey.hereNow")}</span>
         <span><i className="dot camp" /> {t("journey.camp")}</span>
+        {coverage && <span><i className="dot coverage" /> {t("journey.coverage")}</span>}
       </div>
       <div className="journey-readouts">
         <div className="stat">

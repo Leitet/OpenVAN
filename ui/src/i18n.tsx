@@ -241,6 +241,7 @@ const T: Record<string, Entry> = {
   "journey.odometer": { en: "Odometer", sv: "Vägmätare", de: "Kilometerzähler" },
   "journey.positionLabel": { en: "Position", sv: "Position", de: "Position" },
   "journey.camp": { en: "camp spot", sv: "campingplats", de: "Stellplatz" },
+  "journey.coverage": { en: "better signal", sv: "bättre signal", de: "besseres Signal" },
 
   // --- weather ---
   "weather.title": { en: "Weather", sv: "Väder", de: "Wetter" },

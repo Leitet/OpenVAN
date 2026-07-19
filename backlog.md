@@ -18,12 +18,12 @@ climate-extreme, scenes, leveling, propane and maintenance. Still open:
   now core twin state (seeded, bench-driven, read by a router integration on real
   hardware), surfaced by `plugins/connectivity` as entities + a status-bar chip, with
   a `WeakSignal` advisor (offline / weak-signal, offline-first framing). Remaining:
-  - **"Better spot back there" locator — landed.** `coverage.py` records a bounded
-    (GPS, signal) trail as the van moves; `WeakSignal` points back to the nearest
-    recent strong-coverage spot with distance + compass direction, and carries the
-    spot in the notice `data` (`better_spot`). Follow-ups:
-    - **Map marker** — show the `better_spot` on the Journey map (the notice already
-      carries lat/lon), and/or a "guide me back" nudge.
+  - **"Better spot back there" locator — landed, incl. map marker.** `coverage.py`
+    records a bounded (GPS, signal) trail as the van moves; `WeakSignal` points back to
+    the nearest recent strong-coverage spot with distance + compass direction, carries
+    the spot in the notice `data` (`better_spot`), and the Journey map shows it as an
+    amber signal marker (panning to it when parked with no route). Follow-ups:
+    - **"Guide me back"** — a route/line from the van to the better_spot, not just a pin.
     - **Recency/expiry** — the trail is count-bounded, not time-bounded; add an age
       cap so a spot from hours/days ago isn't offered as "just back there".
   - **Real transports**: Teltonika RutOS Web API, Starlink gRPC, GL.iNet — stream
