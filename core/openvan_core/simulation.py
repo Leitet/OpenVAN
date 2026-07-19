@@ -36,6 +36,13 @@ class WaterParams:
     flow_pct_per_s: float = 0.8  # pump transfer rate, fresh -> grey (% per second)
 
 
+@dataclass
+class EnergyParams:
+    alternator_w: float = 720.0  # DC-DC charge while the engine runs
+    inverter_warm_k: float = 18.0  # °C rise at full rated AC load
+    inverter_rated_w: float = 2000.0  # load at which that rise is reached
+
+
 def _as_float(value: object) -> float | None:
     try:
         return float(value)  # type: ignore[arg-type]
@@ -58,6 +65,7 @@ class VanSimulation:
         interval: float = 1.0,
         thermal: ThermalParams | None = None,
         water: WaterParams | None = None,
+        energy: EnergyParams | None = None,
         roads: Any = None,
         integrations: Any = None,
     ) -> None:
@@ -66,6 +74,9 @@ class VanSimulation:
         self.interval = interval
         self.thermal = thermal or ThermalParams()
         self.water = water or WaterParams()
+        self.energy = energy or EnergyParams()
+        # Local day number the solar-yield accumulator belongs to (resets at midnight).
+        self._solar_day: int | None = None
         # Optional RoadNetwork: when present, driving snaps to real roads instead
         # of free dead-reckoning. None (or not yet loaded) → dead reckon (offline).
         self._roads = roads
@@ -80,6 +91,7 @@ class VanSimulation:
         await self._step_thermal(dt)
         await self._step_water(dt)
         await self._step_vehicle(dt)
+        await self._step_energy(dt)
         # Integrations run last so they normalise from the freshly-evolved state.
         if self._integrations is not None:
             await self._integrations.simulate_all(dt)
@@ -139,6 +151,36 @@ class VanSimulation:
             return
         await self._twin.set_signal("fresh_water.level_pct", round(max(0.0, fresh - delta), 2))
         await self._twin.set_signal("grey_water.level_pct", round(min(100.0, grey + delta), 2))
+
+    async def _step_energy(self, dt: float) -> None:
+        """Evolve the van's DC energy state — the world's, not any integration's:
+        solar yield accumulates from PV power (resetting at local midnight), the
+        alternator charges while the engine runs, and the inverter warms with load.
+        A real van reads these from the BMS / GX; here the environment produces them."""
+        # Solar yield today (Wh), reset when the local day rolls over.
+        epoch = _as_float(self._twin.get("clock.epoch"))
+        lon = _as_float(self._twin.get("gps.lon")) or 0.0
+        day = int((epoch + lon / 15.0 * 3600.0) // 86400) if epoch is not None else None
+        if day is not None and day != self._solar_day:
+            if self._solar_day is not None:  # a real day boundary — start fresh
+                await self._twin.set_signal("solar.yield_today_wh", 0.0)
+            self._solar_day = day
+        power = _as_float(self._twin.get("solar.power")) or 0.0
+        yield_wh = (_as_float(self._twin.get("solar.yield_today_wh")) or 0.0) + power * dt / 3600.0
+        await self._twin.set_signal("solar.yield_today_wh", round(yield_wh, 1))
+
+        # Alternator: charges hard while the engine runs and the van is moving.
+        driving = bool(self._twin.get("vehicle.ignition")) and (_as_float(self._twin.get("vehicle.speed_kmh")) or 0.0) > 0
+        await self._twin.set_signal("alternator.power", self.energy.alternator_w if driving else 0.0)
+
+        # Inverter outlet temperature: rises with AC load, relaxes to cabin when off.
+        cabin = _as_float(self._twin.get("cabin.temperature")) or 20.0
+        if self._twin.get("inverter.on"):
+            load = _as_float(self._twin.get("inverter.ac_load")) or 0.0
+            temp = cabin + self.energy.inverter_warm_k * min(1.0, load / self.energy.inverter_rated_w)
+        else:
+            temp = cabin
+        await self._twin.set_signal("inverter.temperature", round(temp, 1))
 
     async def _step_vehicle(self, dt: float) -> None:
         if not self._twin.get("vehicle.ignition"):

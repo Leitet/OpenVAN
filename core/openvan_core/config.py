@@ -214,12 +214,16 @@ class Config:
             "fridge.temp_c": 4.0,
             "fridge.door_open": False,
             "fridge.power": 45.0,
-            # Energy inputs integrations read (shore plug, inverter). Outputs an
-            # integration *provides* (solar yield, alternator, inverter temp) are
-            # deliberately not seeded — they appear only once a driver is enabled.
+            # The van's DC energy system. These are physical facts of the van
+            # (it has an alternator, a shore inlet, an inverter) that the environment
+            # simulation evolves and an energy integration (Victron, …) reads on real
+            # hardware — not invented by any one integration.
             "shore.connected": False,
             "inverter.on": False,
             "inverter.ac_load": 0.0,
+            "inverter.temperature": 19.5,
+            "alternator.power": 0.0,
+            "solar.yield_today_wh": 0.0,
             # Home-Assistant presence input (van parked on the home network).
             "home_assistant.van_home": False,
             # Security — quiet by default.

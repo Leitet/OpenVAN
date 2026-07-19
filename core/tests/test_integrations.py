@@ -97,17 +97,17 @@ async def test_unknown_integration_toggle_returns_false(core):
 
 
 async def test_enabled_driver_normalises_signals_into_twin(core):
-    await core.set_integration_enabled("victron_venus", True)
-    await core.twin.set_signal("solar.power", 300.0)
-    # One hour of sim: yields ~300 Wh of solar into the normalised signal.
-    await core.integrations.simulate_all(3600.0)
-    assert core.twin.get("solar.yield_today_wh") == pytest.approx(300.0, abs=1.0)
+    # A device-owned reading (ESPHome cabin node) appears once the driver is on.
+    await core.set_integration_enabled("esphome", True)
+    await core.twin.set_signal("cabin.temperature", 21.0)
+    await core.integrations.simulate_all(1.0)
+    assert core.twin.get("esphome.cabin_node.temperature") == pytest.approx(20.6)
 
 
 async def test_disabled_driver_does_not_write(core):
-    # Victron is off by default → its signal stays absent.
+    # RuuviTag is off by default → its device signal stays absent.
     await core.integrations.simulate_all(1.0)
-    assert core.twin.get("solar.yield_today_wh") is None
+    assert core.twin.get("ruuvitag.outdoor.temperature") is None
 
 
 async def test_ruuvitag_tracks_outside_temperature(core):
@@ -226,32 +226,33 @@ async def test_victron_modbus_real_path_drives_signals(core):
 
 
 async def test_live_driver_skips_simulation(core):
-    server, port = await _modbus_server({840: 1310, 843: 77})
-    try:
-        await core.set_integration_enabled("victron_venus", True)
-        await core.set_integration_config(
-            "victron_venus", {"mode": "modbus_tcp", "host": "127.0.0.1", "port": str(port)}
-        )
-        assert await _wait_for(lambda: core.integrations.get("victron_venus").live)
-        # simulate_all must skip the live driver — its sim-only yield stays absent.
-        await core.integrations.simulate_all(3600.0)
-        assert core.twin.get("solar.yield_today_wh") is None
-    finally:
-        server.close()
+    # A driver connected to real hardware owns its signals; simulate_all must not
+    # also drive its sim path. Force RuuviTag "live" and confirm its device signal
+    # is not written by the sim tick.
+    await core.set_integration_enabled("ruuvitag", True)
+    inst = core.integrations.get("ruuvitag")
+    inst.live = True
+    await core.twin.set_signal("outside.temperature", 6.0)
+    await core.integrations.simulate_all(1.0)
+    assert core.twin.get("ruuvitag.outdoor.temperature") is None
+    # And once it's no longer live, the sim fallback drives it again.
+    inst.live = False
+    await core.integrations.simulate_all(1.0)
+    assert core.twin.get("ruuvitag.outdoor.temperature") == pytest.approx(6.0)
 
 
-async def test_unreachable_host_falls_back_to_sim(core):
+async def test_unreachable_host_stays_offline(core):
     await core.set_integration_enabled("victron_venus", True)
-    # Nothing is listening here → transport can't connect, stays not-live.
+    # Nothing is listening here → transport can't connect, so it never goes live and
+    # the van keeps running on the simulated energy state (offline-first).
     await core.set_integration_config(
         "victron_venus", {"mode": "modbus_tcp", "host": "127.0.0.1", "port": "1"}
     )
     await asyncio.sleep(0.2)
     inst = core.integrations.get("victron_venus")
     assert inst.live is False
-    # Sim fallback still provides signals.
-    await core.integrations.simulate_all(3600.0)
-    assert core.twin.get("solar.yield_today_wh") is not None
+    row = next(r for r in core.integrations_list() if r["id"] == "victron_venus")
+    assert row["mode"] == "modbus_tcp" and row["live"] is False
 
 
 def test_integration_config_http(tmp_path):

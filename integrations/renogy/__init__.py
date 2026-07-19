@@ -36,7 +36,7 @@ class Renogy(Integration):
         safety_class=3,
         status=Status.COMMUNITY,
         priority="P1",
-        provides=["solar.yield_today_wh", "solar.controller_temperature"],
+        provides=["solar.power", "house_battery.soc", "solar.controller_temperature"],
         description=(
             "Renogy shunt, Rover/Wanderer MPPT and DCC DC-DC over Modbus-RTU (RS-485) "
             "or BLE. The budget alternative to Victron for DIY builds."
@@ -44,10 +44,9 @@ class Renogy(Integration):
     )
 
     async def simulate(self, dt: float) -> None:
+        # Solar yield is world/environment state (the simulation owns it) — Renogy only
+        # adds its *own* device reading: the MPPT controller's temperature.
         twin = self.twin
-        yield_wh = _f(twin, "solar.yield_today_wh") + _f(twin, "solar.power") * dt / 3600.0
-        await twin.set_signal("solar.yield_today_wh", round(yield_wh, 1), source="renogy")
-        # Controller runs a little above cabin temp when it's converting power.
         base = _f(twin, "cabin.temperature", 20.0)
         bump = 12.0 * min(1.0, _f(twin, "solar.power") / 400.0)
         await twin.set_signal("solar.controller_temperature", round(base + bump, 1), source="renogy")

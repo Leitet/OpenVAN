@@ -219,7 +219,26 @@ function IntegrationsPanel({ twin }: { twin: Record<string, unknown> }) {
         Installed integrations only — add more from the product UI (Settings →
         Integrations → Browse library).
       </p>
-      <h3>Device inputs (what drivers read)</h3>
+      <button
+        className={"toggle" + (twin["home_assistant.van_home"] ? " on" : "")}
+        onClick={() => injectSignal("home_assistant.van_home", !twin["home_assistant.van_home"])}
+      >
+        Van at home {twin["home_assistant.van_home"] ? "yes" : "no"}
+      </button>
+      <p className="note">
+        Enable an integration, then watch its normalised signals appear below. On a
+        real van these come from the actual device over its protocol.
+      </p>
+    </>
+  );
+}
+
+// The van's DC energy system. Inputs (shore plugged in, inverter running) are set
+// here; outputs (solar yield, alternator, inverter temp) are evolved by the
+// simulation and read by an energy integration on real hardware.
+function EnergyPanel({ twin }: { twin: Record<string, unknown> }) {
+  return (
+    <>
       <button
         className={"toggle" + (twin["shore.connected"] ? " on" : "")}
         onClick={() => injectSignal("shore.connected", !twin["shore.connected"])}
@@ -241,15 +260,23 @@ function IntegrationsPanel({ twin }: { twin: Record<string, unknown> }) {
         step={50}
         unit=" W"
       />
-      <button
-        className={"toggle" + (twin["home_assistant.van_home"] ? " on" : "")}
-        onClick={() => injectSignal("home_assistant.van_home", !twin["home_assistant.van_home"])}
-      >
-        Van at home {twin["home_assistant.van_home"] ? "yes" : "no"}
-      </button>
+      <div className="bench-readouts">
+        <div>
+          <span className="note">Solar today</span>
+          <strong>{fmt(num(twin["solar.yield_today_wh"]) ?? 0)} Wh</strong>
+        </div>
+        <div>
+          <span className="note">Alternator</span>
+          <strong>{fmt(num(twin["alternator.power"]) ?? 0)} W</strong>
+        </div>
+        <div>
+          <span className="note">Inverter temp</span>
+          <strong>{fmt(num(twin["inverter.temperature"]) ?? 0)} °C</strong>
+        </div>
+      </div>
       <p className="note">
-        Enable an integration, then watch its normalised signals appear below. On a
-        real van these come from the actual device over its protocol.
+        Start the engine + drive (Turbo Dash) to see the alternator charge; toggle
+        the inverter to watch its temperature rise under load.
       </p>
     </>
   );
@@ -470,6 +497,11 @@ export function BenchApp() {
             The van as Core sees it right now — driven entirely by the signals
             above. On a real van this comes from actual hardware.
           </p>
+        </section>
+
+        <section className="card">
+          <h2>Energy system</h2>
+          <EnergyPanel twin={twin} />
         </section>
 
         <section className="card">

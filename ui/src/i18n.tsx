@@ -111,6 +111,20 @@ const T: Record<string, Entry> = {
 
   // --- power / predictions / trends ---
   "power.energy": { en: "Energy", sv: "Energi", de: "Energie" },
+  "power.system": { en: "Energy system", sv: "Energisystem", de: "Energiesystem" },
+  "label.solarYield": { en: "Solar today", sv: "Solel idag", de: "Solar heute" },
+  "label.alternator": { en: "Alternator", sv: "Generator", de: "Lichtmaschine" },
+  "label.shore": { en: "Shore power", sv: "Landström", de: "Landstrom" },
+  "label.inverter": { en: "Inverter", sv: "Växelriktare", de: "Wechselrichter" },
+  "label.inverterTemp": {
+    en: "Inverter temp",
+    sv: "Växelriktartemp",
+    de: "Wechselrichter-Temp",
+  },
+  "state.connected": { en: "Connected", sv: "Ansluten", de: "Verbunden" },
+  "state.disconnected": { en: "Off", sv: "Av", de: "Aus" },
+  "state.on": { en: "On", sv: "På", de: "An" },
+  "state.off": { en: "Off", sv: "Av", de: "Aus" },
   "predictions.title": { en: "Predictions", sv: "Prognoser", de: "Prognosen" },
   "predictions.batteryEmpty": {
     en: "Battery empty in",

@@ -215,12 +215,18 @@ companion.
 
 The twin holds state; `VanSimulation` makes it *evolve* — the heater warms the
 cabin toward its setpoint, the cabin loses heat to the outside, the pump moves
-water fresh → grey. This is **environment physics, not a feature**, so it lives in
+water fresh → grey, and the **DC energy system** develops (solar yield accumulates
+and resets at local midnight, the alternator charges while driving, the inverter
+warms with load). This is **environment physics, not a feature**, so it lives in
 the simulation layer (alongside `SimBackend`), not in a plugin. It runs only in
-sim mode (`Config.simulate`); a real van gets these values from sensors. Values
+sim mode (`Config.simulate`); a real van gets these values from sensors — or from
+an **energy integration** (Victron GX, …) that reads them over its transport. Values
 a plugin *owns as an actuator* (e.g. `diesel_heater.on`) are written by the
-plugin; values the *world* determines (e.g. `cabin.temperature`) are the
-simulation's. Its constants are illustrative — measure a real van before shipping.
+plugin; values the *world* determines (e.g. `cabin.temperature`, `alternator.power`)
+are the simulation's — an integration only *reads* them, it never invents them. The
+`energy_system` plugin surfaces the DC-system signals as entities (solar yield,
+alternator, shore, inverter) on the Power tab. Its constants are illustrative —
+measure a real van before shipping.
 
 Driving normally dead-reckons `gps.lat/lon` from `speed` + `heading`. When a
 `RoadNetwork` (`roads.py`) is present it instead **snaps the drive onto the real
@@ -263,6 +269,8 @@ A plugin is a subclass of `openvan_core.Plugin` that self-registers. See
 reference plugins:
 
 - `plugins/battery_monitor/` — read-only **sensor** pattern.
+- `plugins/energy_system/` — the wider DC **energy** picture as entities (solar
+  yield, alternator, shore, inverter); reads world signals the simulation evolves.
 - `plugins/cabin_light/` — controllable **actuator** pattern (with safety).
 - `plugins/diesel_heater/` — **climate** actuator with a setpoint; exercises both
   the battery load-shedding and fuel-required safety rules.

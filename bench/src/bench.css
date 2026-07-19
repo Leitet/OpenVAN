@@ -404,6 +404,24 @@ input[type="range"]::-moz-range-thumb {
   color: var(--good, #37d67a);
   border-color: color-mix(in srgb, var(--good, #37d67a) 45%, transparent);
 }
+.bench-readouts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 10px 0 2px;
+}
+.bench-readouts div {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+.bench-readouts strong {
+  font-size: 14px;
+  margin-top: 2px;
+}
 .scenario-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

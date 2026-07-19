@@ -131,9 +131,11 @@ maxheight/maxweight on the road ahead) also landed. Remaining:
     charge limits, heater setpoint) must route through `Hub.execute_intent` → safety,
     never a bare transport write.
   - **Discovery** auto-fills host/port (mDNS for GX/ESPHome) so the user rarely types an IP.
-  - **Normalised entities**: add plugins that turn the new integration signals
-    (`solar.yield_today_wh`, `alternator.power`, `inverter.*`, `connectivity.*`,
-    `ruuvitag.*`) into semantic entities on the product UI (energy/connectivity tabs).
+  - **Normalised entities — energy landed.** The DC energy system (solar yield,
+    alternator, shore, inverter) is now environment physics in `simulation.py` and
+    surfaced by the `energy_system` plugin on the Power tab (+ a bench Energy card).
+    Still to surface as entities: `connectivity.*` (Teltonika), `ruuvitag.*`,
+    `esphome.*` on the relevant tabs.
   - **Fas 2–4** (see the landscape doc): JK/JBD BMS, EPEver, EcoFlow, Mopeka, Shelly,
     Signal K, OBD-II; then OEM buses (CI-BUS, RV-C, NMEA 2000, Truma/Dometic); then
     vendor partnerships.
