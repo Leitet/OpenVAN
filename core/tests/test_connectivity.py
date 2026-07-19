@@ -70,3 +70,18 @@ async def test_weak_signal_fires_through_engine(core):
     await core.twin.set_signal("connectivity.signal_pct", 80.0)
     keys = {n["key"] for n in core.advisors.active_notices()}
     assert "connectivity" not in keys
+
+
+async def test_weak_signal_points_back_to_coverage(core):
+    # Drive through a strong-coverage spot, then into a weak patch nearby.
+    await core.twin.set_signal("gps.lat", 46.5400)
+    await core.twin.set_signal("gps.lon", 11.6550)
+    await core.twin.set_signal("connectivity.signal_pct", 88.0)
+    await core.twin.set_signal("gps.lat", 46.5430)  # ~330 m north
+    await core.twin.set_signal("connectivity.signal_pct", 7.0)
+
+    notice = next(n for n in core.advisors.active_notices() if n["key"] == "connectivity")
+    assert "88%" in notice["message"]
+    assert "south of here" in notice["message"]
+    best = notice["data"]["better_spot"]
+    assert best["signal_pct"] == 88.0 and 250 < best["distance_m"] < 400

@@ -150,36 +150,66 @@ class FridgeDoorOpen(Advisor):
         )
 
 
+def _distance_phrase(distance_m: float) -> str:
+    return f"{distance_m:.0f} m" if distance_m < 950 else f"{distance_m / 1000.0:.1f} km"
+
+
 class WeakSignal(Advisor):
     """Connectivity is a van-life pain point: you plan around coverage. This nudges
     when the van is offline or the mobile signal is weak — offline-first framing, so
     it never implies the van itself has stopped working (cloud is only an enhancement,
-    Rule 3)."""
+    Rule 3). When a coverage trail is available, it points back to the nearest recent
+    strong-signal spot ("you had 85% about 300 m north of here")."""
 
     key = "connectivity"
 
-    def __init__(self, weak_pct: float = 25.0) -> None:
+    def __init__(self, weak_pct: float = 25.0, coverage: Any = None) -> None:
         self.weak_pct = weak_pct
+        self.coverage = coverage
+
+    def _better_spot_phrase(self, hub: "Hub", current_pct: float) -> tuple[str, dict[str, Any]]:
+        """A '…you had X% about Y back' clause, if the trail knows a better spot."""
+        if self.coverage is None:
+            return "", {}
+        lat = _twin_float(hub, "gps.lat")
+        lon = _twin_float(hub, "gps.lon")
+        if lat is None or lon is None:
+            return "", {}
+        hit = self.coverage.best_nearby(lat, lon, better_than=current_pct)
+        if hit is None:
+            return "", {}
+        clause = (
+            f" You had {hit.spot.signal_pct:.0f}% about {_distance_phrase(hit.distance_m)} "
+            f"{hit.direction} of here."
+        )
+        return clause, {
+            "better_spot": {
+                "lat": hit.spot.lat, "lon": hit.spot.lon, "signal_pct": hit.spot.signal_pct,
+                "distance_m": round(hit.distance_m), "direction": hit.direction,
+            }
+        }
 
     def evaluate(self, hub: "Hub") -> Notice | None:
         online = hub.twin.get("connectivity.online")
         if online is None:
             return None
         if not online:
+            clause, extra = self._better_spot_phrase(hub, 0.0)
             return Notice(
                 self.key, "suggestion", "journey", "Offline here",
                 "No mobile signal at this spot — cloud features are paused, but the "
-                "van keeps running as normal.",
-                {"online": False},
+                "van keeps running as normal." + clause,
+                {"online": False, **extra},
             )
         signal = _twin_float(hub, "connectivity.signal_pct")
         if signal is None or signal >= self.weak_pct:
             return None
         network = hub.twin.get("connectivity.network") or "mobile"
+        clause, extra = self._better_spot_phrase(hub, signal)
         return Notice(
             self.key, "info", "journey", "Weak signal",
-            f"Only {signal:.0f}% {network} signal here — calls and uploads may struggle.",
-            {"signal_pct": signal, "network": network},
+            f"Only {signal:.0f}% {network} signal here — calls and uploads may struggle." + clause,
+            {"signal_pct": signal, "network": network, **extra},
         )
 
 
@@ -658,7 +688,8 @@ def default_advisors(config: Any = None) -> list[Advisor]:
         FridgeDoorOpen(),
         BatteryRuntime(low_hours=g("battery_low_hours", 24.0)),
         LongDrive(g("long_drive_hours", 2.0) * 3600.0),
-        WeakSignal(g("signal_weak_pct", 25.0)),
+        # WeakSignal is composed in runtime._build_advisors so it can read the
+        # coverage trail (it needs a stateful service, not just config).
         # Air & safety (life-critical → most-common)
         CarbonMonoxide(g("co_warn_ppm", 35.0), g("co_danger_ppm", 70.0)),
         GasLeak(g("gas_leak_lel", 10.0)),

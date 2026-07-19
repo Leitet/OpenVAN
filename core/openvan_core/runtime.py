@@ -33,7 +33,8 @@ from .llm import (
 from .integrations import IntegrationManager
 from .memory import TravelMemory
 from .maintenance import MaintenanceLog
-from .notices import AdvisorEngine, Intrusion, RainSoon, ServiceDue, default_advisors
+from .coverage import CoverageMemory
+from .notices import AdvisorEngine, Intrusion, RainSoon, ServiceDue, WeakSignal, default_advisors
 from .personalities import PersonalityStore
 from .plugins import PluginManager, registered_plugins
 from .safety import (
@@ -91,13 +92,14 @@ def _match_scene(text: str) -> str | None:
     return None
 
 
-def _build_advisors(config, weather, maintenance, security):
+def _build_advisors(config, weather, maintenance, security, coverage):
     """The complete advisor list, all thresholds from config tuning. Reused at
     build time and whenever tuning changes, so live edits take effect."""
     return default_advisors(config) + [
         RainSoon(weather, threshold_h=config.tune("rain_soon_hours")),
         ServiceDue(maintenance),
         Intrusion(security),
+        WeakSignal(config.tune("signal_weak_pct"), coverage),
     ]
 
 
@@ -125,6 +127,7 @@ class Core:
     scenes: SceneEngine
     maintenance: MaintenanceLog
     security: SecuritySystem
+    coverage: CoverageMemory
     roads: RoadNetwork | None = None
 
     async def start(self) -> None:
@@ -157,7 +160,9 @@ class Core:
             self.roads.load_cache()  # last-known road graph, for instant offline follow
         if self.config.simulate:
             self.simulation.start()
-        # Subscribe advisors, then evaluate once against the seeded state.
+        # Record the coverage trail, then subscribe advisors and evaluate once
+        # against the seeded state.
+        self.coverage.start()
         self.advisors.start()
         await self.advisors.evaluate()
         if self.config.weather_enabled:
@@ -172,6 +177,7 @@ class Core:
             await self.memory.stop()
         if self.config.weather_enabled:
             await self.weather.stop()
+        self.coverage.stop()
         await self.advisors.stop()
         await self.simulation.stop()
         if self.config.telemetry_enabled:
@@ -339,7 +345,7 @@ class Core:
         """Rebuild the config-driven advisors/scenes/maintenance after a tuning
         change, so overrides take effect without a restart."""
         self.advisors.advisors = _build_advisors(
-            self.config, self.weather, self.maintenance, self.security
+            self.config, self.weather, self.maintenance, self.security, self.coverage
         )
         self.scenes = SceneEngine(
             self.hub,
@@ -614,8 +620,9 @@ def build_core(config: Config | None = None) -> Core:
         intervals=config.maintenance_intervals,
     )
     security = SecuritySystem()
+    coverage = CoverageMemory(bus, twin)
     # Build the full advisor set from config-driven thresholds (nothing hardcoded).
-    advisors.advisors = _build_advisors(config, weather, maintenance, security)
+    advisors.advisors = _build_advisors(config, weather, maintenance, security, coverage)
     return Core(
         config=config,
         bus=bus,
@@ -638,6 +645,7 @@ def build_core(config: Config | None = None) -> Core:
         scenes=scenes,
         maintenance=maintenance,
         security=security,
+        coverage=coverage,
         router=router,
         roads=roads,
     )

@@ -273,7 +273,9 @@ reference plugins:
   yield, alternator, shore, inverter); reads world signals the simulation evolves.
 - `plugins/connectivity/` — **connectivity** status entities (internet, signal,
   network, GPS fix); offline-first (status, never a dependency). The `WeakSignal`
-  advisor nudges when offline or signal is weak.
+  advisor nudges when offline or signal is weak, and — via `coverage.py`'s trail of
+  where signal was strong — points back to the nearest recent good spot
+  ("you had 88% about 330 m south of here").
 - `plugins/cabin_light/` — controllable **actuator** pattern (with safety).
 - `plugins/diesel_heater/` — **climate** actuator with a setpoint; exercises both
   the battery load-shedding and fuel-required safety rules.
