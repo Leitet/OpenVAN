@@ -128,6 +128,8 @@ class VictronVenus(Integration):
             {"key": "port", "label": "Port", "type": "text"},
             {"key": "unit_id", "label": "Modbus unit ID", "type": "text", "default": "100"},
             {"key": "portal_id", "label": "MQTT portal ID (VRM)", "type": "text"},
+            {"key": "username", "label": "MQTT username", "type": "text"},
+            {"key": "password", "label": "MQTT password", "type": "text", "secret": True},
         ],
         warning="Confirm Modbus register addresses against your GX firmware before relying on values.",
     )

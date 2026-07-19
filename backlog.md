@@ -148,6 +148,12 @@ maxheight/maxweight on the road ahead) also landed. Remaining:
   - **Writes/control** — the transports are read-only so far; actuation (set inverter,
     charge limits, heater setpoint) must route through `Hub.execute_intent` → safety,
     never a bare transport write.
+  - **Signal freshness / staleness** — when a real transport drops, a reader driver
+    (e.g. Victron, which has no `simulate()`) leaves its last reading frozen with no
+    "stale" marker. Add a per-signal freshness/updated-at (or a driver `live=false`
+    banner in the UI) so a stale reading isn't shown as current.
+  - **MQTT SUBACK** — the client subscribes fire-and-forget; award/log a rejected
+    subscription (SUBACK failure 0x80) instead of silently never yielding.
   - **Discovery** auto-fills host/port (mDNS for GX/ESPHome) so the user rarely types an IP.
   - **Normalised entities — energy landed.** The DC energy system (solar yield,
     alternator, shore, inverter) is now environment physics in `simulation.py` and

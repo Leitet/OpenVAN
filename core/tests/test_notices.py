@@ -62,6 +62,29 @@ async def test_battery_runtime_warns_at_high_draw(core):
     assert "battery_runtime_low" in _keys(core)
 
 
+async def test_one_failing_advisor_does_not_stop_the_others():
+    """A raising advisor must not prevent the rest (some are life-critical) from
+    evaluating — the engine isolates each."""
+    from openvan_core.events import EventBus
+    from openvan_core.notices import Advisor, AdvisorEngine, Notice
+
+    class _Boom(Advisor):
+        key = "boom"
+
+        def evaluate(self, hub):
+            raise RuntimeError("kaboom")
+
+    class _Ok(Advisor):
+        key = "ok"
+
+        def evaluate(self, hub):
+            return Notice("ok", "info", "energy", "Ok", "still here", {})
+
+    engine = AdvisorEngine(EventBus(), hub=None, advisors=[_Boom(), _Ok()])
+    await engine.evaluate()
+    assert "ok" in {n["key"] for n in engine.active_notices()}
+
+
 def _collect(sink, label):
     async def handler(event):
         sink.append((label, event.data["notice"]["key"]))

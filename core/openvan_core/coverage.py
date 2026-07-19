@@ -103,8 +103,17 @@ class CoverageMemory:
         lon = _as_float(self.twin.get("gps.lon"))
         if lat is None or lon is None:
             return
+        # Explicitly offline → a real 0% dead-zone worth remembering. Otherwise only
+        # record a *known* signal — never invent 0% from a missing reading, which
+        # would pollute the trail with false dead-zones.
         online = self.twin.get("connectivity.online")
-        signal = 0.0 if online is False else (_as_float(self.twin.get("connectivity.signal_pct")) or 0.0)
+        sig = _as_float(self.twin.get("connectivity.signal_pct"))
+        if online is False:
+            signal = 0.0
+        elif sig is not None:
+            signal = sig
+        else:
+            return
         if self._samples:
             last = self._samples[-1]
             if _haversine_km(last.lat, last.lon, lat, lon) * 1000.0 < self.min_move_m:

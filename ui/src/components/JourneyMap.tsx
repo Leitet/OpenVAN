@@ -216,7 +216,9 @@ export function JourneyMap({ coverage }: { coverage: CoverageSpot | null }) {
     if (mapRef.current && !fittedRef.current) {
       jump(() => mapRef.current!.setView([coverage.lat, coverage.lon], 15));
     }
-  }, [coverage?.lat, coverage?.lon, coverage?.signal_pct]);
+    // distance_m/direction are in the tooltip and change as the van moves, so they
+    // must be in the deps too — else the marker shows a stale distance.
+  }, [coverage?.lat, coverage?.lon, coverage?.signal_pct, coverage?.distance_m, coverage?.direction]);
 
   return (
     <div className="journey-map-wrap">

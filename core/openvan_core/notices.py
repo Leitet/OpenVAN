@@ -13,12 +13,15 @@ briefing) is a separate, optional LLM layer — see ``companion.py``.
 
 from __future__ import annotations
 
+import logging
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable
 
 from .events import EventBus
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:  # pragma: no cover
     from .hub import Hub
@@ -781,7 +784,13 @@ class AdvisorEngine:
     async def evaluate(self) -> None:
         firing: set[str] = set()
         for advisor in self.advisors:
-            notice = advisor.evaluate(self.hub)
+            # Isolate advisors: a bug in one must never stop the others from running
+            # (some are life-critical, e.g. CO). Deterministic + offline-first.
+            try:
+                notice = advisor.evaluate(self.hub)
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("advisor %s failed", getattr(advisor, "key", advisor))
+                continue
             if notice is None:
                 continue
             firing.add(notice.key)

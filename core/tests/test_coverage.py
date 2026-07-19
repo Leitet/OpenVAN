@@ -60,6 +60,22 @@ async def test_best_nearby_none_when_no_better_spot():
     assert cov.best_nearby(46.5430, 11.6550, better_than=8.0) is None
 
 
+async def test_record_skips_unknown_signal_keeps_explicit_offline():
+    twin, cov = await _twin()
+    # Online, but no signal reading yet → don't invent a 0% dead-zone.
+    await twin.set_signal("connectivity.online", True)
+    await twin.set_signal("gps.lat", 46.5400)
+    await twin.set_signal("gps.lon", 11.6550)
+    assert len(cov._samples) == 0
+    # A real reading is recorded.
+    await twin.set_signal("connectivity.signal_pct", 70.0)
+    assert len(cov._samples) == 1 and cov._samples[-1].signal_pct == 70.0
+    # Explicitly offline, then move → a genuine 0% dead-zone at the new spot.
+    await twin.set_signal("connectivity.online", False)
+    await twin.set_signal("gps.lat", 46.5460)  # ~660 m north
+    assert cov._samples[-1].signal_pct == 0.0
+
+
 async def test_far_spot_is_ignored():
     twin, cov = await _twin()
     await _drive_to(twin, 46.5400, 11.6550, 90.0)

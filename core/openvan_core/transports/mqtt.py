@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import struct
+import time
 from typing import AsyncIterator
 
 # Control packet types (high nibble of the fixed header).
@@ -129,13 +130,19 @@ class AsyncMqttClient:
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self._packet_id = 0
+        self._last_send = 0.0  # monotonic time of our last outbound packet
+
+    async def _send(self, data: bytes) -> None:
+        assert self._writer is not None
+        self._writer.write(data)
+        await self._writer.drain()
+        self._last_send = time.monotonic()
 
     async def connect(self) -> None:
         self._reader, self._writer = await asyncio.wait_for(
             asyncio.open_connection(self.host, self.port), self.timeout
         )
-        self._writer.write(build_connect(self.client_id, self.keepalive, self.username, self.password))
-        await self._writer.drain()
+        await self._send(build_connect(self.client_id, self.keepalive, self.username, self.password))
         fixed = await asyncio.wait_for(self._reader.readexactly(1), self.timeout)
         if fixed[0] != CONNACK:
             raise MqttError(f"expected CONNACK, got 0x{fixed[0]:02x}")
@@ -148,33 +155,34 @@ class AsyncMqttClient:
         if self._writer is None:
             raise MqttError("not connected")
         self._packet_id = (self._packet_id % 0xFFFF) + 1
-        self._writer.write(build_subscribe(self._packet_id, topic, qos))
-        await self._writer.drain()
+        await self._send(build_subscribe(self._packet_id, topic, qos))
 
     async def publish(self, topic: str, payload: bytes) -> None:
         if self._writer is None:
             raise MqttError("not connected")
-        self._writer.write(build_publish(topic, payload))
-        await self._writer.drain()
+        await self._send(build_publish(topic, payload))
 
     async def _ping(self) -> None:
         if self._writer is not None:
-            self._writer.write(bytes([PINGREQ, 0x00]))
-            await self._writer.drain()
+            await self._send(bytes([PINGREQ, 0x00]))
 
     async def messages(self) -> AsyncIterator[tuple[str, bytes]]:
         """Yield ``(topic, payload)`` for each PUBLISH until the connection drops.
 
-        Keeps the link alive with PINGREQ on the keepalive interval and silently
-        consumes SUBACK / PINGRESP control packets.
+        Keeps the link alive with PINGREQ within the keepalive interval — gated on
+        time since our last *send*, not since the last read, so a busy broker (which
+        keeps us receiving) doesn't starve the ping and get dropped. Silently consumes
+        SUBACK / PINGRESP control packets.
         """
         if self._reader is None:
             raise MqttError("not connected")
-        # A read that outlives the keepalive interval means it's time to ping.
-        read_timeout = max(1.0, self.keepalive * 0.8) if self.keepalive else None
+        interval = self.keepalive * 0.8 if self.keepalive else None
         while True:
+            timeout = None
+            if interval is not None:
+                timeout = max(0.05, interval - (time.monotonic() - self._last_send))
             try:
-                fixed = await asyncio.wait_for(self._reader.readexactly(1), read_timeout)
+                fixed = await asyncio.wait_for(self._reader.readexactly(1), timeout)
             except asyncio.TimeoutError:
                 await self._ping()
                 continue
@@ -187,6 +195,9 @@ class AsyncMqttClient:
                 qos = (fixed[0] & 0x06) >> 1
                 yield parse_publish(body, qos)
             # SUBACK / PINGRESP / others: nothing to surface, keep reading.
+            # Even while receiving steadily, ping if we've been silent too long.
+            if interval is not None and (time.monotonic() - self._last_send) >= interval:
+                await self._ping()
 
     async def close(self) -> None:
         if self._writer is not None:

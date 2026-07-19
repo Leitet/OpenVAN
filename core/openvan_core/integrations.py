@@ -185,9 +185,13 @@ class Integration(ABC):
         if task is not None:
             task.cancel()
             try:
-                await task
-            except asyncio.CancelledError:
+                # Bound the wait: a driver's cleanup (e.g. closing a half-open socket)
+                # must never block teardown/reconfigure indefinitely.
+                await asyncio.wait_for(asyncio.shield(task), timeout=5.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
                 pass
+            except Exception:  # pragma: no cover - defensive, driver cleanup error
+                logger.exception("integration %s transport shutdown error", self.info.id)
 
     async def _transport_supervisor(self) -> None:
         """Keep the real transport connected, reconnecting with backoff. On a clean

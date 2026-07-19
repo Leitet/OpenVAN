@@ -84,6 +84,29 @@ async def test_modbus_client_reads_from_loopback():
     assert to_int16(block[10]) == 240  # PV W
 
 
+async def test_modbus_rejects_malformed_length():
+    """A garbled MBAP length must raise ModbusError, not readexactly(-1) ValueError."""
+    async def handle(reader, writer):
+        try:
+            await reader.readexactly(12)  # consume the request (MBAP 7 + PDU 5)
+            writer.write(struct.pack(">HHHB", 1, 0, 1, 1))  # length=1 → invalid
+            await writer.drain()
+            await asyncio.sleep(0.2)
+        except (asyncio.IncompleteReadError, ConnectionError):
+            pass
+
+    server = await asyncio.start_server(handle, "127.0.0.1", 0)
+    port = server.sockets[0].getsockname()[1]
+    try:
+        client = AsyncModbusTcpClient("127.0.0.1", port, unit_id=1)
+        await client.connect()
+        with pytest.raises(ModbusError):
+            await client.read_holding_registers(840, 4)
+        await client.close()
+    finally:
+        server.close()
+
+
 # --- MQTT codec --------------------------------------------------------------
 
 @pytest.mark.parametrize("n,expected", [(0, b"\x00"), (127, b"\x7f"), (128, b"\x80\x01"), (16383, b"\xff\x7f")])
@@ -140,3 +163,53 @@ async def test_mqtt_client_subscribes_and_receives():
     assert got is not None
     assert got[0].endswith("Battery/Soc")
     assert b"91.0" in got[1]
+
+
+async def test_mqtt_pings_even_under_steady_traffic():
+    """Keepalive must be driven by time-since-send, not since-read — a busy broker
+    (constant inbound) must still get a PINGREQ or it will drop us."""
+    got_ping: list[bool] = []
+
+    async def handle(reader, writer):
+        try:
+            await reader.readexactly(1)  # CONNECT
+            await reader.readexactly(await read_remaining_length(reader))
+            writer.write(bytes([0x20, 0x02, 0x00, 0x00]))
+            await writer.drain()
+            await reader.readexactly(1)  # SUBSCRIBE
+            sub = await reader.readexactly(await read_remaining_length(reader))
+            writer.write(bytes([0x90, 0x03]) + sub[:2] + bytes([0x00]))
+            await writer.drain()
+            writer.write(build_publish("N/x/system/0/Dc/Battery/Soc", b'{"value": 50}'))
+            await writer.drain()
+            # Now stay silent and watch for the client's keepalive PINGREQ (0xC0).
+            pkt = await asyncio.wait_for(reader.readexactly(1), 2.0)
+            if pkt[0] == 0xC0:
+                got_ping.append(True)
+                await read_remaining_length(reader)
+            await asyncio.sleep(0.1)
+        except (asyncio.IncompleteReadError, asyncio.TimeoutError, ConnectionError):
+            pass
+
+    server = await asyncio.start_server(handle, "127.0.0.1", 0)
+    port = server.sockets[0].getsockname()[1]
+    try:
+        client = AsyncMqttClient("127.0.0.1", port, keepalive=1)  # → ping ~0.8 s idle
+        await client.connect()
+        await client.subscribe("N/#")
+
+        async def drain():
+            async for _ in client.messages():
+                pass
+
+        task = asyncio.create_task(drain())
+        await asyncio.sleep(1.3)  # long enough for one keepalive interval to elapse
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        await client.close()
+    finally:
+        server.close()
+    assert got_ping == [True]

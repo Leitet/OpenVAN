@@ -121,6 +121,8 @@ class AsyncModbusTcpClient:
                 raise ModbusError(f"bad protocol id {proto}")
             if resp_tid != tid:
                 raise ModbusError("transaction id mismatch")
+            if length < 2:  # must cover unit id + at least a function-code byte
+                raise ModbusError(f"invalid MBAP length {length}")
             body = await asyncio.wait_for(self._reader.readexactly(length - 1), self.timeout)
         return parse_read_response(body, function, count)
 
