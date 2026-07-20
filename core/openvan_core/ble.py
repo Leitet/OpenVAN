@@ -53,6 +53,28 @@ class Advertisement:
     service_data: dict[str, bytes] = field(default_factory=dict)  # short uuid → payload
 
 
+class BleDevice(ABC):
+    """A GATT session with one device (connect via :meth:`BleScanner.connect`)."""
+
+    address: str = ""
+
+    @abstractmethod
+    async def read(self, char_uuid: str) -> bytes:
+        ...
+
+    @abstractmethod
+    async def write(self, char_uuid: str, data: bytes, response: bool = True) -> None:
+        ...
+
+    @abstractmethod
+    async def start_notify(self, char_uuid: str, handler: Callable[[bytes], Awaitable[None] | None]) -> None:
+        ...
+
+    @abstractmethod
+    async def disconnect(self) -> None:
+        ...
+
+
 class BleRadio(ABC):
     kind: str = "radio"
 
@@ -64,15 +86,61 @@ class BleRadio(ABC):
     async def stop(self) -> None:
         ...
 
+    async def connect(self, address: str, timeout: float = 10.0) -> BleDevice:
+        raise NotImplementedError("this radio has no GATT support")
+
+
+class SimBleDevice(BleDevice):
+    """A programmable fake GATT device for the sim radio / tests.
+
+    ``characteristics`` seeds read values; ``on_write(char, data)`` lets a test
+    script a device's behaviour (e.g. a fake BMS answering a request by calling
+    :meth:`notify`)."""
+
+    def __init__(self, address: str, characteristics: dict[str, bytes] | None = None,
+                 on_write: Callable[["SimBleDevice", str, bytes], Awaitable[None] | None] | None = None) -> None:
+        self.address = address
+        self.characteristics = dict(characteristics or {})
+        self._on_write = on_write
+        self._notify: dict[str, Callable[[bytes], Awaitable[None] | None]] = {}
+        self.connected = False
+        self.writes: list[tuple[str, bytes]] = []
+
+    async def read(self, char_uuid: str) -> bytes:
+        return self.characteristics.get(short_uuid(char_uuid), b"")
+
+    async def write(self, char_uuid: str, data: bytes, response: bool = True) -> None:
+        char = short_uuid(char_uuid)
+        self.writes.append((char, data))
+        if self._on_write is not None:
+            result = self._on_write(self, char, data)
+            if asyncio.iscoroutine(result):
+                await result
+
+    async def start_notify(self, char_uuid: str, handler: Callable[[bytes], Awaitable[None] | None]) -> None:
+        self._notify[short_uuid(char_uuid)] = handler
+
+    async def notify(self, char_uuid: str, data: bytes) -> None:
+        handler = self._notify.get(short_uuid(char_uuid))
+        if handler is not None:
+            result = handler(data)
+            if asyncio.iscoroutine(result):
+                await result
+
+    async def disconnect(self) -> None:
+        self.connected = False
+
 
 class SimBleRadio(BleRadio):
     """The dev stand-in: advertisements are *injected* (bench / tests), not
-    received over the air — the BLE analogue of SimBackend."""
+    received over the air — the BLE analogue of SimBackend. GATT devices are
+    registered with :meth:`add_device`."""
 
     kind = "sim"
 
     def __init__(self) -> None:
         self._handler: AdvHandler | None = None
+        self.devices: dict[str, SimBleDevice] = {}
 
     async def start(self, on_advertisement: AdvHandler) -> None:
         self._handler = on_advertisement
@@ -85,6 +153,16 @@ class SimBleRadio(BleRadio):
             result = self._handler(adv)
             if asyncio.iscoroutine(result):
                 await result
+
+    def add_device(self, device: SimBleDevice) -> None:
+        self.devices[device.address.lower()] = device
+
+    async def connect(self, address: str, timeout: float = 10.0) -> BleDevice:
+        device = self.devices.get(address.lower())
+        if device is None:
+            raise ConnectionError(f"no sim BLE device at {address}")
+        device.connected = True
+        return device
 
 
 class BleakRadio(BleRadio):
@@ -125,6 +203,36 @@ class BleakRadio(BleRadio):
             await self._scanner.stop()
             self._scanner = None
         self._handler = None
+
+    async def connect(self, address: str, timeout: float = 10.0) -> BleDevice:  # pragma: no cover - hw path
+        from bleak import BleakClient
+
+        client = BleakClient(address, timeout=timeout)
+        await client.connect()
+        return _BleakDevice(address, client)
+
+
+class _BleakDevice(BleDevice):  # pragma: no cover - hw path
+    def __init__(self, address: str, client: Any) -> None:
+        self.address = address
+        self._client = client
+
+    async def read(self, char_uuid: str) -> bytes:
+        return bytes(await self._client.read_gatt_char(char_uuid))
+
+    async def write(self, char_uuid: str, data: bytes, response: bool = True) -> None:
+        await self._client.write_gatt_char(char_uuid, data, response=response)
+
+    async def start_notify(self, char_uuid: str, handler: Callable[[bytes], Awaitable[None] | None]) -> None:
+        def _cb(_char: Any, data: bytearray) -> None:
+            result = handler(bytes(data))
+            if asyncio.iscoroutine(result):
+                asyncio.ensure_future(result)
+
+        await self._client.start_notify(char_uuid, _cb)
+
+    async def disconnect(self) -> None:
+        await self._client.disconnect()
 
 
 async def _maybe_await(handler: AdvHandler, adv: Advertisement) -> None:
@@ -219,6 +327,17 @@ class BleScanner:
         """Feed a canned advertisement through the pipeline (bench / tests). Works
         with any radio — it enters at the dispatch stage, like sim signal injection."""
         await self._dispatch(adv)
+
+    async def connect(self, address: str, timeout: float = 10.0) -> BleDevice:
+        """Open a GATT session on the shared radio (sim: a registered SimBleDevice)."""
+        if self.radio is None:
+            raise ConnectionError("BLE radio not running")
+        return await self.radio.connect(address, timeout)
+
+    def sim_device(self, device: "SimBleDevice") -> None:
+        """Register a programmable GATT device on the sim radio (bench / tests)."""
+        if isinstance(self.radio, SimBleRadio):
+            self.radio.add_device(device)
 
     async def _dispatch(self, adv: Advertisement) -> None:
         for sub in list(self._subs):
