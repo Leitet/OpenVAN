@@ -5,7 +5,7 @@ import { LearnedMemory } from "../components/LearnedMemory";
 export function AssistantTab() {
   const { notices, assistant } = useVan();
   return (
-    <div className="tab-grid stack">
+    <div className="assistant-tab">
       <Chat notices={notices} assistant={assistant} />
       <LearnedMemory />
     </div>

@@ -9,6 +9,26 @@ an issue/branch and delete it here.
 
 ---
 
+## Hardware validation — awaiting real devices (owner: Johan)
+
+Everything below is written to documented protocols but is **unvalidated against real
+hardware** (no devices in the dev env). Test on real kit when available, then feed
+findings back:
+
+- **Victron** — confirm the CCGX Modbus-TCP register addresses / scale factors and the
+  Venus MQTT `N/<portal>/…` topic map on a real Cerbo GX (`integrations/victron_venus`).
+- **ESPHome** — validate the `native_api` transport against a real node (entity listing,
+  state streaming, auth/encryption); confirm the `aioesphomeapi` version pin.
+- **Modbus / MQTT clients** — exercise `transports/` against real brokers/PLCs (framing,
+  reconnect, keepalive under real traffic).
+- **Real router transports** — Teltonika RutOS Web API, Starlink gRPC, GL.iNet.
+- **Simulator realism** — once real telemetry exists, tune the illustrative constants
+  (thermal, water, energy, solar cloud-loss) against measured values.
+- After each: replace the integration's honest "unvalidated" `warning` with a real
+  status, and add a packet capture / fixture to the tests.
+
+---
+
 ## Van-life pain points — deferred (2026-07 research session)
 
 From `docs/RESEARCH.md`. The session shipped air/CO safety, condensation,
