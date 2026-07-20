@@ -106,12 +106,22 @@ Constraints live in `core/openvan_core/safety.py` as `SafetyRule`s (return a
 
 When your plugin introduces **new signal keys**, make them drivable/observable:
 
-1. **Seed** a sensible default in `Config.seed_twin` (`core/openvan_core/config.py`)
-   so both front-ends have something to show on first load.
-2. **Inject** — add a `SignalSlider` (for sensors) to `bench/src/BenchApp.tsx`
-   (the Hardware Bench) so you can play the physical value.
+1. **Seed** a sensible default. Actuator rest-states (your plugin's own
+   switches/setpoints) go in `Config.seed_twin`
+   (`core/openvan_core/config.py`). *World* data the environment would measure
+   (a tank level, a temperature) belongs to a **world-sim provider card**
+   instead — extend an existing `integrations/sim_*` provider's `SEEDS`, or add
+   a new `WorldSimProvider` for a new domain (see
+   [DRIVERS.md](DRIVERS.md#world-sim-providers--simulated-data-sources-as-drivers)),
+   so removing the card honestly makes your entities read unknown.
+2. **Inject** — automatic: every twin signal appears in the bench's **Signal
+   browser** (grouped by source) the moment it exists. Add a hand-crafted
+   `SignalSlider`/scenario to `bench/src/BenchApp.tsx` only when the signal
+   deserves a curated experience (a drive dash, a one-click scenario).
 3. **Observe** — in the **product UI** (`ui/`) add a `Gauge` (sensors) or a
    control/indicator (actuators) so the effect is visible where users look.
+   If the domain can be unprovided on a real van, show `NoSource` when its
+   signals are all `null` (see `ui/src/components/NoSource.tsx`).
 4. **Test** — add a test in `core/tests/` that drives the twin and asserts the
    entity/behaviour, mirroring `test_core.py`.
 

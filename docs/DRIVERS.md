@@ -76,6 +76,57 @@ Key rules (enforced by the architecture — see `CLAUDE.md`):
 - Failures are contained: if your import or setup raises, your driver shows an
   *error* state in the catalog and the van keeps running — but don't rely on it.
 
+### Self-contained by design — what a driver gets for free
+
+A driver is **one directory**; it never touches UI code. When it is enabled
+(from either front-end), the platform surfaces it everywhere:
+
+| Surface | How it happens |
+| --- | --- |
+| Catalog card in the **product UI** (Settings → Integrations) and the **bench** (Integrations card, incl. *Add integration*) | from your `IntegrationInfo` descriptor — name, badges, warning, config form |
+| Injectable signal group in the bench's **Signal browser** | automatic: every `twin.set_signal(..., source=self.info.id)` is grouped under your driver id, with an auto-generated control per value type |
+| `sensor.*` entities in the product UI | `device_sensors` auto-surfaces readings under known signal prefixes, guessing unit + friendly name from the key |
+| History, trends, predictions | the telemetry recorder captures every numeric signal automatically |
+| Honest emptiness | if nothing provides a domain, the UI shows "—" and a *no data source* hint — never stale fake values |
+
+For this to work, follow two conventions:
+
+1. **Signal naming**: `"<prefix>.<device>.<measure>"`, where `<prefix>` is a
+   short, stable namespace unique to your ecosystem (`ruuvitag.`, `cdh.`,
+   `epever.`) and `<measure>` uses the common vocabulary (`temperature`,
+   `humidity`, `voltage`, `power`, `battery`, …) so units are guessed right.
+   List your keys in the descriptor's `provides`.
+2. **Always pass `source=self.info.id`** when writing twin signals — that is
+   what groups your signals in the bench and attributes them in tooling.
+
+Auto-entity coverage: bundled ecosystems are listed in
+`plugins/device_sensors/DEFAULT_PREFIXES`. If your driver is external, either PR
+your prefix into that list or tell users to add it to the `device_sensors`
+plugin config (`prefixes`). Signals that mirror *core* van state
+(`house_battery.soc`, `propane.level_pct`, …) need no prefix work at all — the
+dedicated plugins, advisors and safety rules pick them up as-is.
+
+### World-sim providers — simulated data sources as drivers
+
+Everything the UI shows traces to an installed integration — including the
+simulated reference van. Its data comes from removable **provider cards**
+(`sim_energy`, `sim_water`, …) built on `WorldSimProvider`:
+
+```python
+from openvan_core import IntegrationInfo, WorldSimProvider
+
+class SimCompost(WorldSimProvider):
+    SEEDS = {"compost.level_pct": 10.0, "compost.temp_c": 35.0}
+    info = IntegrationInfo(id="sim_compost", name="Compost Simulator", ...)
+```
+
+The base class does the contract for you: installing seeds the keys (without
+stomping a value another source already provides — that's what makes per-domain
+**mixed mode** work), removing releases them to `None` so the UI honestly reads
+unknown. If you introduce a *new simulated domain*, ship a provider card for it
+rather than adding keys to `Config.seed_twin` — the seed dict is reserved for
+what the platform itself owns (actuator rest-states, the sim clock).
+
 ### BLE drivers
 
 Never own a radio — subscribe to the shared scanner with a filter and parse:
@@ -156,6 +207,11 @@ The tiers exist so users decide with real information.
 
 - [ ] `driver.toml` with a stable `id` (== `info.id`) and correct `api`
 - [ ] `simulate()` works against the twin; a test in your repo proves it
+- [ ] Signals named `<prefix>.<device>.<measure>`, written with
+      `source=self.info.id`, listed in `provides`
+- [ ] Verified end-to-end with **zero UI code**: enable the driver, see its
+      signal group in the bench's Signal browser, inject a value, watch the
+      product UI react
 - [ ] Honest `status`, `safety_class` and `warning` in the descriptor
 - [ ] Controls (if any) go through `register_control` / `send_command`
 - [ ] `openvan-driver sign` with your published key

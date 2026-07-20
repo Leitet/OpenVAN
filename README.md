@@ -32,8 +32,11 @@ Early skeleton. What works today, end-to-end and tested:
   safety-checked intents via a local LLM (Ollama), with an offline rule-based
   fallback so it works with no model at all.
 
-See [the vision & rules in CLAUDE.md](CLAUDE.md) and the
-[plugin guide](docs/PLUGINS.md).
+See [the vision & rules in CLAUDE.md](CLAUDE.md), the
+[plugin guide](docs/PLUGINS.md) and the
+[driver guide](docs/DRIVERS.md) — drivers are **self-contained**: one
+directory, zero UI code, and an enabled integration shows up in the product
+UI, the bench's signal browser and the telemetry automatically.
 
 ---
 
