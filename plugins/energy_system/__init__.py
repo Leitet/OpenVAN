@@ -54,6 +54,10 @@ class EnergySystem(Plugin):
         for sensor in SENSORS:
             value = await self.backend.read(sensor.signal)
             domain = sensor.entity_id.split(".", 1)[0]
+            # The inverter is a real actuator, not just a reading: turn_on/turn_off
+            # route through the safety layer (non-essential → load-shed at critical
+            # SoC) and write the signal through the backend like any actuator.
+            controllable = sensor.entity_id == "switch.inverter"
             await self.hub.register_entity(
                 Entity(
                     entity_id=sensor.entity_id,
@@ -62,9 +66,17 @@ class EnergySystem(Plugin):
                     category="energy",
                     state=value,
                     unit=sensor.unit,
-                )
+                    controllable=controllable,
+                    commands=["turn_on", "turn_off"] if controllable else [],
+                    attributes={"essential": False} if controllable else {},
+                ),
+                handler=self._handle_inverter if controllable else None,
             )
             self._unwatchers.append(self._watch(sensor))
+
+    async def _handle_inverter(self, command: str, params: dict) -> None:
+        if command in ("turn_on", "turn_off"):
+            await self.backend.write("inverter.on", command == "turn_on")
 
     def _watch(self, sensor: _SensorMap):
         async def _on_change(_key: str, value) -> None:

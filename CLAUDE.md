@@ -141,6 +141,13 @@ strategy map — priorities, phases, top-10, taxonomy — is
 New integrations: add an `Integration` subclass under `integrations/<id>/` with an
 `info` descriptor and a `simulate()` that feeds the twin.
 
+**Device controls**: an integration's controllable devices (relays, switches) are
+surfaced with `Integration.register_control()` — a switch entity whose commands
+arrive only via `Hub.execute_intent` → safety layer → `send_command()` (twin write
+in sim; the driver's transport when live — ESPHome pushes over the native API and
+the node's state echo drives the entity). Never actuate from a driver outside this
+path (Rule 2); a safety-refused command must never reach the wire.
+
 **Real transports** (`transports/`): a driver moves from sim to hardware by
 overriding `run_transport()` and picking a `mode` in its config. The
 **HA bridge** (`habridge.py`, run by the `mqtt_homeassistant` integration in

@@ -3,6 +3,21 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Safety-checked device controls
+
+- **Integrations can now actuate — only through the safety layer.** The
+  `Integration` base gained `register_control()` + `send_command()`: a driver's
+  controllable device (an ESPHome relay, …) becomes a switch entity whose commands
+  run intent → safety → the driver's transport (or the twin in sim); the device's
+  state echo drives the UI. Load-shedding covers every control automatically
+  (non-essential by default). ESPHome discovers a real node's switches and pushes
+  commands over the native API — with a sim relay so the whole path runs against
+  the twin; a refused command never reaches the wire.
+- **The inverter switch is genuinely controllable** (was read-only), incl. from
+  Home Assistant via the bridge.
+- Device controls render as toggles on the Comfort tab; `device_sensors` no longer
+  shadows control-owned signals with read-only sensors.
+
 ## 2026-07 — Voice + the Home Assistant bridge
 
 - **Voice** — offline-first STT/TTS behind one seam: sim engines for the bench and

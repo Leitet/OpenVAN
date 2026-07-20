@@ -86,10 +86,11 @@ findings back:
 - **HA bridge follow-ups** (export shipped): *import* other HA devices into the
   van (HA entities → twin signals, surfaced like device_sensors); Matter later;
   validate against a real Home Assistant instance (only mosquitto validated so far).
-- **Writes/control through the safety layer** — transports are read-only; actuation
-  (ESPHome switch/light, inverter on/off, charge limits, heater setpoint) must route
-  through `Hub.execute_intent` → safety, never a bare transport write. Includes a
-  first *controllable* device entity (device_sensors is read-only).
+- **Device-control follow-ups** (safety-layer writes shipped for switches):
+  ESPHome *lights* (brightness/colour, needs a light entity model beyond on/off) and
+  other control types (numbers, covers); Victron control writes (inverter on/off,
+  charge limits) over Modbus/MQTT — register maps are device-critical, validate on
+  real hardware first; validate ESPHome switch control against a real node.
 - **VE.Direct (USB serial)** for Victron products without a GX.
 - **RuuviTag BLE scan** and **Autoterm UART** real transports.
 - **Signal freshness / staleness** — when a live transport drops, a reader driver

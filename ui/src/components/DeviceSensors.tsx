@@ -1,4 +1,5 @@
-import { Thermometer, Droplet, Zap, Gauge as GaugeIcon, Radio } from "lucide-react";
+import { Thermometer, Droplet, Zap, Gauge as GaugeIcon, Radio, Power } from "lucide-react";
+import { sendIntent } from "@shared/api";
 import { useVan } from "../state";
 import { useT } from "../i18n";
 import type { Entity } from "@shared/types";
@@ -26,12 +27,35 @@ export function DeviceSensors() {
   const sensors = Object.values(entities)
     .filter((e: Entity) => e.attributes?.device_sensor)
     .sort((a, b) => a.name.localeCompare(b.name));
+  // Controllable devices an integration registered (relays, switches) — their
+  // commands go through the same safety-checked intent path as everything else.
+  const controls = Object.values(entities)
+    .filter((e: Entity) => e.attributes?.device_control)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
-  if (sensors.length === 0) return null;
+  if (sensors.length === 0 && controls.length === 0) return null;
 
   return (
     <section className="panel span2">
       <h2>{t("comfort.sensors")}</h2>
+      {controls.length > 0 && (
+        <div className="device-controls">
+          {controls.map((e) => {
+            const on = e.state === "on";
+            return (
+              <button
+                key={e.entity_id}
+                className={"quick device-control" + (on ? " on" : "")}
+                onClick={() => sendIntent(e.entity_id, on ? "turn_off" : "turn_on")}
+              >
+                <Power size={20} />
+                <span className="quick-label">{e.name}</span>
+                <span className="quick-state">{on ? t("common.on") : t("common.off")}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div className="energy-stats">
         {sensors.map((e) => (
           <div className="energy-stat" key={e.entity_id}>

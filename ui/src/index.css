@@ -1134,6 +1134,15 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 12px;
 }
+.device-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.device-controls .quick {
+  min-height: 96px;
+}
 .trip-head {
   display: flex;
   align-items: center;

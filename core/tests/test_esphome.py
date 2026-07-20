@@ -55,6 +55,9 @@ class _FakeCli:
     async def entity_keys(self):
         return {1: "temperature", 2: "humidity"}
 
+    async def switches(self):
+        return []  # a sensor-only node
+
     def subscribe_states(self, on_state):
         for key, value in self._states:
             on_state(key, value)

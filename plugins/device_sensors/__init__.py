@@ -78,6 +78,12 @@ class DeviceSensors(Plugin):
             self._unwatchers.append(self.backend.watch_prefix(prefix, self._apply))
 
     async def _apply(self, key: str, value) -> None:
+        # A signal owned by a *control* entity (a switch an integration registered
+        # through the safety layer) must not be duplicated as a read-only sensor.
+        for other in self.hub.entities.values():
+            attrs = other.attributes or {}
+            if attrs.get("device_control") and attrs.get("signal") == key:
+                return
         eid = entity_id_for(key)
         if eid not in self._known:
             self._known.add(eid)

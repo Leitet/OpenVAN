@@ -75,6 +75,18 @@ class _EspClient:
         entities, _services = await self._cli.list_entities_services()
         return {e.key: e.object_id for e in entities if getattr(e, "object_id", None)}
 
+    async def switches(self) -> list[dict]:
+        """The node's controllable switch entities: [{key, object_id, name}]."""
+        entities, _services = await self._cli.list_entities_services()
+        return [
+            {"key": e.key, "object_id": e.object_id, "name": getattr(e, "name", e.object_id)}
+            for e in entities
+            if type(e).__name__ == "SwitchInfo" and getattr(e, "object_id", None)
+        ]
+
+    async def switch_command(self, key: int, state: bool) -> None:
+        self._cli.switch_command(key, state)
+
     def subscribe_states(self, on_state) -> None:
         def _cb(state):
             value = getattr(state, "state", None)
@@ -89,6 +101,14 @@ class _EspClient:
 
 
 class ESPHome(Integration):
+    _client: _EspClient | None = None
+    _switch_keys: dict  # signal -> native-API key (populated per connection)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._client = None
+        self._switch_keys = {}
+
     info = IntegrationInfo(
         id="esphome",
         name="ESPHome",
@@ -131,6 +151,23 @@ class ESPHome(Integration):
         await cli.connect(on_stop=on_stop, login=True)
         return _EspClient(cli)
 
+    async def setup_sim_controls(self) -> None:
+        # The sim cabin node carries a relay (say, an awning light) so the whole
+        # command path — intent → safety → send_command → twin echo → entity —
+        # is exercisable with no hardware (Rule 1).
+        await self.register_control(
+            "esphome.cabin_node.relay", "switch.esphome_cabin_node_relay", "Cabin Node Relay"
+        )
+
+    async def send_command(self, signal: str, value) -> None:
+        # Live node: push over the native API; the device's state echo comes back
+        # via subscribe_states → twin → entity. Otherwise: the sim twin write.
+        key = self._switch_keys.get(signal)
+        if self.live and self._client is not None and key is not None:
+            await self._client.switch_command(key, bool(value))
+            return
+        await super().send_command(signal, value)
+
     async def run_transport(self) -> None:
         if self.transport_mode() != "native_api":
             raise NotImplementedError
@@ -141,8 +178,16 @@ class ESPHome(Integration):
         queue: asyncio.Queue = asyncio.Queue()
         client = await self._open_client(host, int(self.config.get("port") or 6053), lambda *a: queue.put_nowait(_STOP))
         try:
+            self._client = client
             device = await client.device_name()
             keymap = await client.entity_keys()
+            # Announce the node's switches as safety-checked controls.
+            for sw in await client.switches():
+                signal = esphome_signal(device, sw["object_id"])
+                self._switch_keys[signal] = sw["key"]
+                await self.register_control(
+                    signal, "switch." + signal.replace(".", "_"), sw["name"]
+                )
 
             def on_state(key, value):
                 obj = keymap.get(key)
@@ -159,6 +204,8 @@ class ESPHome(Integration):
                 obj, value = item
                 await self.twin.set_signal(esphome_signal(device, obj), coerce(value), source=self.info.id)
         finally:
+            self._client = None
+            self._switch_keys = {}
             await client.disconnect()
 
     async def simulate(self, dt: float) -> None:

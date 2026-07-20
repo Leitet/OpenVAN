@@ -160,6 +160,8 @@ class Integration(ABC):
         # them through hub.execute_intent — never actuate directly (Rule 2).
         self.hub: Any = None
         self.enabled = False
+        self._control_entities: list[str] = []
+        self._control_unsubs: list[Any] = []
         # True while a real transport is connected and owns the signals; the sim
         # driver stands down (offline-first: sim only fills in when no hardware).
         self.live = False
@@ -179,11 +181,17 @@ class Integration(ABC):
         await self.stop_transport()
 
     async def start_transport(self) -> None:
-        if self.transport_mode() == "sim" or self._transport_task is not None:
+        if self.transport_mode() == "sim":
+            # Sim mode has no wire — but it may still expose *controls* so the
+            # actuation path is exercisable against the twin (Rule 1).
+            await self.setup_sim_controls()
+            return
+        if self._transport_task is not None:
             return
         self._transport_task = asyncio.create_task(self._transport_supervisor())
 
     async def stop_transport(self) -> None:
+        await self.remove_controls()
         self.live = False
         task, self._transport_task = self._transport_task, None
         if task is not None:
@@ -222,6 +230,78 @@ class Integration(ABC):
         connected and stream normalised signals into the twin until it drops.
         The default raises so sim-only integrations fall back cleanly."""
         raise NotImplementedError
+
+    # --- controls: safety-checked actuation on integration devices ----------
+
+    async def setup_sim_controls(self) -> None:
+        """Override to register the sim stand-ins for this ecosystem's
+        controllable devices (called when the transport mode is ``sim``)."""
+
+    async def send_command(self, signal: str, value: Any) -> None:
+        """Push a desired value to the device that owns ``signal``.
+
+        Default (sim / no wire): write the twin signal — the actuator effect in
+        simulation. Real drivers override to send over their transport; the
+        device's state echo then flows back through the normal read path.
+
+        Only ever called from an entity command handler, i.e. AFTER the intent
+        passed the safety layer — never call this from anywhere else (Rule 2).
+        """
+        await self.twin.set_signal(signal, value, source=self.info.id)
+
+    async def register_control(
+        self,
+        signal: str,
+        entity_id: str,
+        name: str,
+        *,
+        category: str = "sensors",
+        essential: bool = False,
+    ) -> None:
+        """Surface a controllable device (relay/switch/light) as a switch entity.
+
+        Commands arrive only via ``Hub.execute_intent`` → safety layer → the
+        handler here → :meth:`send_command`; state follows the normalised twin
+        signal, so a real device's echo (or the sim write) drives the UI."""
+        if self.hub is None:
+            return
+        from .entities import Entity
+        from .twin import SIGNAL_CHANGED
+
+        async def _handle(command: str, params: dict) -> None:
+            if command in ("turn_on", "turn_off"):
+                await self.send_command(signal, command == "turn_on")
+
+        await self.hub.register_entity(
+            Entity(
+                entity_id=entity_id,
+                name=name,
+                domain="switch",
+                category=category,
+                state="on" if self.twin.get(signal) else "off",
+                controllable=True,
+                commands=["turn_on", "turn_off"],
+                attributes={"device_control": True, "essential": essential,
+                            "signal": signal, "integration": self.info.id},
+            ),
+            handler=_handle,
+        )
+
+        async def _on_signal(event) -> None:
+            if event.data.get("key") == signal:
+                await self.hub.set_state(entity_id, "on" if event.data.get("value") else "off")
+
+        self._control_entities.append(entity_id)
+        self._control_unsubs.append(self.bus.subscribe(SIGNAL_CHANGED, _on_signal))
+
+    async def remove_controls(self) -> None:
+        for unsub in self._control_unsubs:
+            unsub()
+        self._control_unsubs = []
+        entities, self._control_entities = self._control_entities, []
+        if self.hub is not None:
+            for entity_id in entities:
+                await self.hub.remove_entity(entity_id)
 
     async def simulate(self, dt: float) -> None:
         """Inject the characteristic raw signals this ecosystem would produce.
