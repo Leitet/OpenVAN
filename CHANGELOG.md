@@ -3,6 +3,24 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Autonomous build session (roadmap waves + small items)
+
+- **GATT sessions** in the BLE substrate (programmable SimBleDevice; bleak
+  adapter) — connection-oriented BLE drivers now fully testable with no radio.
+- **BLE BMS driver** (JBD/Overkill/Xiaoxiang): polls packs over GATT with frame
+  reassembly + checksums; feeds `house_battery.*` so every advisor, prediction
+  and safety rule runs on a non-Victron pack. (Wave 1)
+- **Victron Instant Readout driver**: SmartShunt/SmartSolar broadcasts with no GX
+  — pure-stdlib AES-128-CTR (FIPS-pinned, generated S-box), per-device keys from
+  VictronConnect, battery-monitor + solar records with sentinel handling. (Wave 1)
+- **BLE TPMS driver** (TypeA valve-cap): pressure/temperature/battery/alarm per
+  wheel, format fetched from the community reference parser. (Wave 2)
+- **Small items**: cassette-toilet tank + advisor (#17) · pet mode (tightened
+  cabin band + Comfort toggle) · coverage-trail age cap · CO₂/humidity trend
+  sparklines · MQTT SUBACK rejection surfaced · OSM **maxwidth** → NarrowRoad
+  advisor (width incl. mirrors) + a Journey "restrictions ahead" strip · scene
+  names localised.
+
 ## 2026-07 — BLE substrate + first BLE drivers
 
 - **One radio, shared by every BLE driver** (`ble.py`): Core owns a single

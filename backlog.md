@@ -28,8 +28,10 @@ findings back:
   hardware, profile CPU/latency and pick model sizes (`voice_whisper_model`), and
   pick a per-personality piper voice.
 - **BLE** — validate the bleak radio on a real adapter (Linux/BlueZ + macOS), and
-  the BTHome / Ruuvi RAWv2 / Mopeka parsers against real devices (formats are per
-  public docs/community RE, pinned only by synthetic vectors).
+  the BTHome / Ruuvi RAWv2 / Mopeka / TPMS TypeA parsers against real devices, the
+  **JBD BMS** frames against a real pack, and **Victron Instant Readout**
+  decrypt+records against a real SmartShunt/SmartSolar (formats per public docs /
+  community RE / the victron-ble reference, pinned only by synthetic vectors).
 - **Simulator realism** — once real telemetry exists, tune the illustrative constants
   (thermal, water, energy, solar cloud-loss) against measured values.
 - After each: replace the integration's honest "unvalidated" `warning` with a real
@@ -40,9 +42,8 @@ findings back:
 ## Van-life pain points
 
 - **Connectivity follow-ups** (#11): a "guide me back" route/line to the
-  better-coverage spot (not just a pin); an age cap on the coverage trail (a spot
-  from hours ago isn't "just back there"); data-usage / per-SIM stats and a
-  "you're roaming" cost hint.
+  better-coverage spot (not just a pin); data-usage / per-SIM stats and a
+  "you're roaming" cost hint. (Trail age cap shipped.)
 - **Services layer on the map/route** (#12) — water refill, dump/black, LPG,
   fuel points from OSM/Park4Night along the route, and "grey tank full → dump 4 km
   ahead". Framework exists (camp sources + roads); needs a services data source
@@ -59,16 +60,14 @@ findings back:
   an interior-cam privacy shutter when disarmed. See `docs/CAMERAS.md`.
 - **Park nose-south for morning charge** (#15) — an orientation hint (needs panel
   azimuth + the sun's azimuth, not just elevation).
-- **Black / cassette toilet** (#17) — mirror the grey-tank advisor; cassette-full
-  reminder + dump finder.
-- **Pet mode** — an explicit "pet aboard" toggle that tightens the cabin-temp
-  alarm band and (online) can push an alert; ties into `CabinClimateExtreme`.
-- **Scene polish** — user-editable scenes and setpoints; bind Goodnight's sleep
-  temperature to the learned preference; localise scene names.
+- **Cassette dump finder** — the CassetteFull advisor shipped (#17); the "find an
+  emptying point" map layer waits on the services layer (#12).
+- **Pet mode push alert** — the aboard-toggle + tightened band shipped; a remote
+  push needs a notification channel (see #14).
+- **Scene polish** — names are localised now; still open: user-editable scenes and
+  setpoints; bind Goodnight's sleep temperature to the learned preference.
 - **Maintenance polish** — user-editable intervals; per-item history; odometer
   baseline from a real "install" reading rather than the interval window.
-- **Air-quality trends** — log CO2/humidity to telemetry and show the overnight
-  curve (helps people see when to crack a vent).
 
 ## Assistant / AI
 
@@ -99,12 +98,10 @@ findings back:
 - **Signal freshness / staleness** — when a live transport drops, a reader driver
   leaves its last value frozen with no marker; add per-signal freshness or a
   `live=false` banner so stale readings aren't shown as current.
-- **MQTT SUBACK** — surface/log a rejected subscription (0x80) instead of silently
-  never yielding.
 - **Discovery** — mDNS/DHCP/BLE auto-fills host/port so the user rarely types an IP.
-- **Vehicle-aware routing** — `maxwidth` checks (width incl. mirrors); a
-  "restrictions ahead" strip on the Journey tab; eventually a height/weight/width-aware
-  route planner (OSRM/Valhalla profile from the vehicle dimensions).
+- **Vehicle-aware routing** — maxwidth checks + the Journey "restrictions ahead"
+  strip shipped; remaining: a height/weight/width-aware route planner
+  (OSRM/Valhalla profile from the vehicle dimensions).
 - Navigation / routing + destination ETA; OBD-II / CAN detail for the vehicle plugin.
 ### Integration roadmap — market-scouted 2026-07
 
@@ -119,38 +116,40 @@ open/RE'd protocol base* to build on.
 subscriptions, sim radio + bench injection, bleak as the optional `ble` extra.
 First drivers landed on it: **BTHome**, **Mopeka** (mirrors into core tank
 signals → existing advisors work on real hardware), **RuuviTag real mode**.
-Remaining substrate work:
-- **GATT session support** (connect/read/notify) — needed for BLE BMS, fridges,
-  power stations; the scanner only covers broadcast advertisements today.
-- Remaining passive parsers: **BLE TPMS** (fragmented formats) and **BM2/Junctek
-  shunts** — small additions on the existing pattern.
+Remaining substrate work (GATT sessions + TPMS TypeA shipped 2026-07):
+- Remaining passive parsers: other TPMS families (SYTPMS/Michelin/WODHMIEY) and
+  **BM2/Junctek shunts** — small additions on the existing pattern.
 - Per-device aliasing/bind UI (name a MAC "fridge probe", assign a Mopeka puck to
   a tank from the library card).
 
-**Wave 1 — unanimous picks (demand × proven protocol):**
-1. **Truma iNet-box emulation** (LIN) — the single biggest demand signal in the
-   space (1000+-post HA thread; three mature RE stacks to port); *the* EU
-   heater/boiler; our LIN/CI-BUS beachhead. Home-market fit.
-2. **Multi-brand BLE BMS** (JK/JBD/Daly/Seplos/ANT/SOK) — one driver, not
-   per-brand (BMS_BLE-HA model); the heart of every DIY LiFePO4 van; unlocks
-   SoC safety rules on non-Victron builds.
-3. **Chinese diesel heaters** (Hcalory/Vevor blue-wire UART; BLE/Afterburner
-   variants later) — highest unit volume anywhere; sibling of our Autoterm driver.
-4. **Victron BLE Instant Readout** — official spec; covers the huge
-   SmartShunt/SmartSolar-but-no-GX fleet our Venus driver misses.
-5. **Tank senders: Garnet SeeLevel II** (NA standard, pulse RE'd) — tank data
-   feeds our existing water advisors directly. (Mopeka side already shipped.)
-6. **Votronic** (UART/BLE, RE'd) — "the German Victron", OEM in EU vans,
-   uncovered by anyone.
+**Wave 1 — status after the 2026-07 autonomous build session:**
+1. **Truma iNet-box emulation** (LIN) — REMAINS (the biggest one). Needs the LIN
+   protocol port from inetbox.py/esphome-truma_inetbox (license check first) and
+   a serial transport; recommend fetching the reference repos when starting.
+2. **BLE BMS — JBD/Overkill SHIPPED** (`ble_bms`, GATT, feeds house_battery so
+   all advisors/safety run on non-Victron packs). Remains: JK, Daly, Seplos
+   protocol modules in the same driver.
+3. **Chinese diesel heaters** — REMAINS. Blue-wire UART needs a serial transport
+   (pyserial optional extra) or an ESPHome-bridge recipe; BLE variants fragmented.
+4. **Victron BLE Instant Readout — SHIPPED** (`victron_ble`: pure-stdlib AES-CTR
+   FIPS-pinned, battery-monitor + solar records, per-device keys, optional
+   house-battery mirror). Remains: more record types (DC-DC, inverter, aux modes).
+5. **Garnet SeeLevel II** — REMAINS (12V pulse bus needs GPIO/ESP hardware — an
+   ESPHome-bridge recipe is the realistic path; document rather than driver?).
+6. **Votronic** (UART/BLE, RE'd) — REMAINS; needs serial transport or the BLE
+   Connector GATT protocol.
 
 **Wave 2 — strong demand, mostly easy:**
-MaxxFan IR (protocol decoded; the roof fan) · Dometic **CFX3** + Alpicool/Brass
-Monkey BLE fridges · EcoFlow (**local BLE**, not cloud — Rule 3) / Bluetti BLE /
-Anker SOLIX (official local Modbus-TCP → near-free on our driver) · EPEver as a
-**register-map preset** on the Modbus driver · Starlink local gRPC (note: GPS
-dropped from local API 2026-05) · OBD-II via **WiCAN** (already speaks MQTT) ·
-Shelly 12V + Tasmota (VanPi-ecosystem compat) · Simarine Pico (passive UDP) ·
-Webasto/Eberspächer W-Bus · Micro-Air EasyTouch (NA thermostat).
+**BLE TPMS TypeA SHIPPED** (`tpms`; SYTPMS/Michelin/WODHMIEY families remain) ·
+MaxxFan IR (protocol decoded; needs an IR bridge recipe) · Dometic **CFX3** +
+Alpicool/Brass Monkey BLE fridges (GATT — substrate ready) · EcoFlow (**local
+BLE**, not cloud — Rule 3) / Bluetti BLE / Anker SOLIX (official local Modbus-TCP
+→ near-free on our driver) · EPEver as a **register-map preset** (needs Modbus
+RTU/serial) · Starlink local gRPC (grpc dep decision; GPS dropped from local API
+2026-05) · OBD-II via **WiCAN** (rides our MQTT client — good next candidate) ·
+Shelly 12V (HTTP RPC, loopback-testable) + Tasmota (rides our MQTT client;
+VanPi-ecosystem compat) · Simarine Pico (passive UDP — easy) · Webasto/
+Eberspächer W-Bus (serial) · Micro-Air EasyTouch (GATT).
 
 **Wave 3 — strategic/regional bets:**
 RV-C via CoachProxyOS's decoded tables (the US motorhome gateway) · Lippert
