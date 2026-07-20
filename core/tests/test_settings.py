@@ -108,11 +108,15 @@ async def test_configure_online_endpoint(core):
 
 
 async def test_toggle_simulation(core):
+    # The tick loop always runs (per-driver sims must tick on a real van —
+    # mixed mode); the toggle pauses only the world physics.
     assert core.simulation._task is not None
+    assert core.simulation.physics is True
     await core.apply_settings(simulate=False)
-    assert core.simulation._task is None
-    await core.apply_settings(simulate=True)
     assert core.simulation._task is not None
+    assert core.simulation.physics is False
+    await core.apply_settings(simulate=True)
+    assert core.simulation.physics is True
 
 
 async def test_settings_changed_event_published(core):

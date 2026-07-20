@@ -331,6 +331,10 @@ class IntegrationManager:
         self.ble: Any = None
         self.registry: Any = None
         self.integrations: dict[str, Integration] = {}
+        # Mirror of Config.simulate (set by Core): whether the *environment
+        # physics* is running. Per-driver sims tick regardless — this only feeds
+        # the descriptor so the UI can show the simulator card paused/running.
+        self.sim_engine_on = True
 
     def get(self, integration_id: str) -> Integration | None:
         return self.integrations.get(integration_id)
@@ -472,6 +476,9 @@ class IntegrationManager:
         d["enabled"] = instance.enabled
         d["installed"] = instance.enabled
         d["builtin"] = instance.info.id in BUILTIN
+        # Whether the environment-physics engine runs (the simulator card is its
+        # switch; same value on every row so any consumer can read it).
+        d["sim_engine"] = self.sim_engine_on
         # Live transport state: "sim" (driver-simulated), or connected to hardware.
         d["mode"] = instance.transport_mode()
         d["live"] = instance.live

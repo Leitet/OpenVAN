@@ -457,6 +457,26 @@ const T: Record<string, Entry> = {
   },
   "integrations.configure": { en: "Configure", sv: "Konfigurera", de: "Konfigurieren" },
   "integrations.connection": { en: "Connection", sv: "Anslutning", de: "Verbindung" },
+  "integrations.pauseSim": {
+    en: "Pause simulation",
+    sv: "Pausa simuleringen",
+    de: "Simulation pausieren",
+  },
+  "integrations.resumeSim": {
+    en: "Resume simulation",
+    sv: "Återuppta simuleringen",
+    de: "Simulation fortsetzen",
+  },
+  "integrations.simRunning": {
+    en: "Simulation running",
+    sv: "Simulering igång",
+    de: "Simulation läuft",
+  },
+  "integrations.simPaused": {
+    en: "Simulation paused",
+    sv: "Simulering pausad",
+    de: "Simulation pausiert",
+  },
   "settings.camping": { en: "Camping", sv: "Camping", de: "Camping" },
   "settings.campingNote": {
     en: "Sources for places to stay. The van proposes camp spots from the enabled ones — add more by dropping a source package under campsources/.",

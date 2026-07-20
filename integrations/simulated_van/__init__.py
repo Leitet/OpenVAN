@@ -1,10 +1,13 @@
-"""Built-in simulator — the reference integration.
+"""Built-in simulator — the catalog face of the environment physics.
 
-Represents OpenVan's own digital twin as an "integration" so it appears in the
-catalog alongside real ecosystems. It's always on, purely read-only, and injects
-nothing itself — the twin + environment simulation already drive the core signals
-(battery, water, climate, GPS). It exists so a fresh install shows a fully working,
-honestly-labelled data source out of the box (safety class 0, native).
+Represents OpenVan's environment simulation as an "integration" so it appears in
+the catalog alongside real ecosystems, and so it has an honest switch: toggling
+this card on/off maps to ``Config.simulate`` — pausing/resuming the world physics
+(battery, thermal, water, driving). It is never uninstalled (built-in), and it
+injects nothing itself — the twin + :class:`VanSimulation` drive the core signals.
+
+Pausing it does **not** stop per-driver sim modes: those keep ticking so a real
+van can trial a driver in sim mode next to live hardware (mixed mode).
 """
 
 from __future__ import annotations
@@ -31,7 +34,9 @@ class SimulatedVan(Integration):
             "grey_water.level_pct", "cabin.temperature", "gps.lat", "gps.lon",
         ],
         description=(
-            "The built-in digital twin. Drives the reference van's raw signals so "
-            "every feature works with no hardware attached."
+            "The built-in environment simulation: evolves the reference van's world "
+            "(battery, thermal, water, driving) so every feature works with no "
+            "hardware. Pause it on a real van — drivers set to sim mode keep "
+            "working, so you can still trial hardware you don't own yet."
         ),
     )

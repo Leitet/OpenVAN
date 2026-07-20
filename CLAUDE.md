@@ -132,9 +132,14 @@ MQTT/Home Assistant, Modbus, RuuviTag, Teltonika, Autoterm, …) into twin signa
 the plugins consume. `IntegrationManager` discovers `integrations/` like plugins,
 persists enable/disable to the store (`integrations` namespace), and — per Rule 1
 — ticks each enabled driver's `simulate(dt)` from the sim loop so it injects the
-raw signals real hardware would emit. The catalog is a **searchable library**
-(Settings → Integrations → Browse) — a minimal standard set is installed by default
-(just the simulator, a non-removable built-in), everything else is opt-in. API:
+raw signals real hardware would emit. **Sim / real / mixed**: the tick loop always
+runs; only the *world physics* is gated by `Config.simulate`, so per-driver `sim`
+modes keep working on a real van (trial a driver you don't own yet next to live
+hardware). The simulator card is that switch's honest UI: toggling it pauses/
+resumes the physics — it is never uninstalled. The catalog is a **searchable
+library** (Settings → Integrations → Browse) — a minimal standard set is installed
+by default (just the simulator, a non-removable built-in), everything else is
+opt-in. API:
 `/api/integrations` (GET list, POST enable/disable, POST `/config`). The full
 strategy map — priorities, phases, top-10, taxonomy — is
 [docs/OPENVAN-INTEGRATION-LANDSCAPE.md](docs/OPENVAN-INTEGRATION-LANDSCAPE.md).

@@ -15,6 +15,8 @@ import {
   Settings2,
   Radio,
   FlaskConical,
+  Pause,
+  Play,
   BadgeCheck,
   Users,
   ShieldQuestion,
@@ -265,7 +267,18 @@ export function IntegrationsSettings() {
   };
 
   const statusBadge = (it: IntegrationInfo) =>
-    it.live ? (
+    it.builtin ? (
+      // The simulator card: shows whether the environment physics runs.
+      it.sim_engine ? (
+        <span className="badge badge-good" title={t("integrations.simRunning")}>
+          <FlaskConical size={12} /> {t("integrations.simRunning")}
+        </span>
+      ) : (
+        <span className="badge badge-warn" title={t("integrations.simPaused")}>
+          <Pause size={12} /> {t("integrations.simPaused")}
+        </span>
+      )
+    ) : it.live ? (
       <span className="badge badge-good" title={t("integrations.connected")}>
         <Radio size={12} /> {it.mode}
       </span>
@@ -338,9 +351,22 @@ export function IntegrationsSettings() {
                   status={statusBadge(it)}
                   action={
                     it.builtin ? (
-                      <span className="badge badge-line" title={t("integrations.builtin")}>
-                        <Lock size={12} /> {t("integrations.builtin")}
-                      </span>
+                      // Built-in = never removed; the button pauses/resumes the
+                      // environment physics instead (real van: pause; per-driver
+                      // sim modes keep working for trials).
+                      <div className="integration-actions">
+                        <button
+                          className={"mini" + (it.sim_engine ? "" : " primary")}
+                          disabled={busy === it.id}
+                          onClick={() => set(it.id, !it.sim_engine)}
+                        >
+                          {it.sim_engine ? <Pause size={13} /> : <Play size={13} />}
+                          {t(it.sim_engine ? "integrations.pauseSim" : "integrations.resumeSim")}
+                        </button>
+                        <span className="badge badge-line" title={t("integrations.builtin")}>
+                          <Lock size={12} /> {t("integrations.builtin")}
+                        </span>
+                      </div>
                     ) : (
                       <div className="integration-actions">
                         {it.config.length > 0 && (

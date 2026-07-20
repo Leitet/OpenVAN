@@ -197,8 +197,12 @@ class Core:
         await self.router.refresh()  # probe the effective model for the active profile
         if self.roads is not None:
             self.roads.load_cache()  # last-known road graph, for instant offline follow
-        if self.config.simulate:
-            self.simulation.start()
+        # The tick loop always runs: per-driver sims must tick even on a real van
+        # (mixed mode — trial a driver in sim next to live hardware). Only the
+        # world *physics* inside the loop is gated by config.simulate.
+        self.simulation.physics = self.config.simulate
+        self.integrations.sim_engine_on = self.config.simulate
+        self.simulation.start()
         # Record the coverage trail, then subscribe advisors and evaluate once
         # against the seeded state.
         self.coverage.start()
@@ -343,6 +347,13 @@ class Core:
 
     async def set_integration_enabled(self, integration_id: str, enabled: bool) -> bool:
         """Enable/disable an integration and persist the choice."""
+        if integration_id == "simulated_van":
+            # The simulator card is the honest switch for the *environment
+            # physics* (Config.simulate) — turning it off pauses the world, it
+            # never uninstalls the built-in. Per-driver sim modes keep ticking
+            # either way, so a real van can still trial a driver in sim mode.
+            await self.apply_settings(simulate=enabled)
+            return True
         return await self.integrations.set_enabled(integration_id, enabled)
 
     async def set_integration_config(self, integration_id: str, values: dict[str, Any]) -> bool:
@@ -555,10 +566,13 @@ class Core:
 
         if simulate is not None and simulate != self.config.simulate:
             self.config.simulate = simulate
-            if simulate:
-                self.simulation.start()
-            else:
-                await self.simulation.stop()
+            # The loop keeps running either way (per-driver sims are how a real
+            # van trials a driver — mixed mode); only the world physics pauses.
+            self.simulation.physics = simulate
+            self.integrations.sim_engine_on = simulate
+            changed = self.integrations.describe("simulated_van")
+            if changed:
+                await self.bus.publish("integration.changed", changed)
 
         self._save_settings()
         result = self.settings()

@@ -84,14 +84,19 @@ class VanSimulation:
         # characteristic raw signals each tick (Rule 1 — every integration runs
         # against the twin). None → no integration signals.
         self._integrations = integrations
+        # World physics on/off (mirrors ``Config.simulate``). Off on a real van —
+        # sensors own those signals. Per-driver sim ticks continue regardless, so
+        # a real van can trial a driver in sim mode next to live hardware.
+        self.physics = True
         self._task: asyncio.Task | None = None
 
     async def step(self, dt: float) -> None:
-        await self._step_clock(dt)
-        await self._step_thermal(dt)
-        await self._step_water(dt)
-        await self._step_vehicle(dt)
-        await self._step_energy(dt)
+        if self.physics:
+            await self._step_clock(dt)
+            await self._step_thermal(dt)
+            await self._step_water(dt)
+            await self._step_vehicle(dt)
+            await self._step_energy(dt)
         # Integrations run last so they normalise from the freshly-evolved state.
         if self._integrations is not None:
             await self._integrations.simulate_all(dt)

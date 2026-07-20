@@ -3,6 +3,20 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Sim / real / mixed: the simulator card becomes the physics switch
+
+- **Decoupled the two simulations.** The tick loop now always runs; only the
+  *world physics* (clock/thermal/water/vehicle/energy) is gated by the sim
+  toggle. Per-driver `sim` modes keep ticking regardless — so a real van can
+  trial a driver in sim mode next to live hardware ("what happens if I add X"),
+  and OpenVan runs fully simulated, fully real, or mixed.
+- **The "OpenVan Simulator" card is now an honest switch**: toggling it on the
+  Integrations page maps to `Config.simulate` (same switch as Settings →
+  System). Paused ≠ uninstalled — the built-in stays, badged "Simulation
+  paused", with a Pause/Resume control instead of Remove.
+- Catalog rows expose `sim_engine`; the card description no longer claims to
+  drive signals it doesn't.
+
 ## 2026-07 — Chinese diesel heater driver (Wave 1 #3)
 
 - **`chinese_heater` driver**: the generic "blue wire" heaters (Vevor, Hcalory,
