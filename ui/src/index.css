@@ -221,6 +221,41 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 24px;
+  /* Let a tab choose to fill the screen (a fixed van display) rather than float
+     its content at the top. Non-fill tabs still size to content and scroll. */
+  display: flex;
+  flex-direction: column;
+}
+
+/* A dashboard that fills the viewport — every cell equal, no ragged holes, cards
+   grow so vitals/controls stay big and glanceable on a van screen. */
+.tab-grid.fill {
+  flex: 1;
+  min-height: 0;
+  grid-auto-rows: 1fr;
+  align-content: stretch;
+}
+.tab-grid.fill > .panel {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.tab-grid.fill .gauge-grid,
+.tab-grid.fill .quick-grid,
+.tab-grid.fill .scene-grid,
+.tab-grid.fill .companion {
+  flex: 1;
+  min-height: 0;
+}
+.tab-grid.fill .gauge-grid,
+.tab-grid.fill .quick-grid,
+.tab-grid.fill .scene-grid {
+  grid-auto-rows: 1fr; /* items stretch to fill — bigger, touch-friendlier */
+}
+.tab-grid.fill .companion {
+  display: flex;
+  flex-direction: column;
 }
 
 .admin {
@@ -2616,6 +2651,24 @@ body {
 }
 .gauge-grid.vitals .gauge-value {
   font-size: 32px;
+}
+
+/* In a filled dashboard the tiles are taller — center/distribute their content so
+   they read as deliberate cockpit tiles, not top-aligned cards with empty bottoms. */
+.tab-grid.fill .gauge-grid.vitals .gauge {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+.tab-grid.fill .gauge-grid.vitals .gauge-value {
+  font-size: 40px;
+}
+.tab-grid.fill .quick {
+  justify-content: space-between;
+}
+.tab-grid.fill .scene-btn {
+  justify-content: center;
 }
 
 /* ---- responsive: narrow / portrait falls back to a bottom-ish rail ---- */

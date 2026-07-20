@@ -18,7 +18,7 @@ export function HomeTab() {
   const pumpOn = pump?.state === "on";
 
   return (
-    <div className="tab-grid home">
+    <div className="tab-grid fill home">
       <section className="panel">
         <h2>{t("home.vitals")}</h2>
         <div className="gauge-grid vitals">
@@ -63,7 +63,7 @@ export function HomeTab() {
 
       <Scenes />
 
-      <section className="panel span2">
+      <section className="panel">
         <Companion notices={notices} />
       </section>
     </div>
