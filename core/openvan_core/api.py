@@ -25,7 +25,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -120,6 +120,11 @@ class VehicleBody(BaseModel):
 class IntegrationBody(BaseModel):
     id: str
     enabled: bool
+
+
+class SpeakBody(BaseModel):
+    text: str
+    voice: str | None = None
 
 
 class IntegrationConfigBody(BaseModel):
@@ -269,6 +274,35 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
         if not core.complete_maintenance(body.id):
             raise HTTPException(404, f"unknown maintenance item '{body.id}'")
         return {"items": core.maintenance_status()}
+
+    @app.get("/api/voice")
+    async def voice_capabilities() -> dict[str, Any]:
+        return core.voice.capabilities()
+
+    @app.post("/api/voice/transcribe")
+    async def voice_transcribe(request: Request) -> dict[str, Any]:
+        from .voice import VoiceError
+
+        audio = await request.body()
+        if not audio:
+            raise HTTPException(400, "empty audio payload")
+        try:
+            text = await core.voice.transcribe(audio, request.headers.get("content-type", ""))
+        except VoiceError as exc:
+            status = 503 if core.voice.stt is None else 400
+            raise HTTPException(status, str(exc))
+        return {"text": text}
+
+    @app.post("/api/voice/speak")
+    async def voice_speak(body: SpeakBody) -> Response:
+        from .voice import VoiceError
+
+        try:
+            audio, mime = await core.voice.speak(body.text, body.voice)
+        except VoiceError as exc:
+            status = 503 if core.voice.tts is None else 400
+            raise HTTPException(status, str(exc))
+        return Response(content=audio, media_type=mime)
 
     @app.get("/api/trip")
     async def trip() -> dict[str, Any]:

@@ -23,6 +23,10 @@ findings back:
 - **Modbus / MQTT clients** — exercise `transports/` against real brokers/PLCs (framing,
   reconnect, keepalive under real traffic).
 - **Real router transports** — Teltonika RutOS Web API, Starlink gRPC, GL.iNet.
+- **Voice on the edge box** — whisper+piper are validated end-to-end on the dev
+  machine (piper speaks → whisper transcribes back verbatim); on the real Zap/edge
+  hardware, profile CPU/latency and pick model sizes (`voice_whisper_model`), and
+  pick a per-personality piper voice.
 - **Simulator realism** — once real telemetry exists, tune the illustrative constants
   (thermal, water, energy, solar cloud-loss) against measured values.
 - After each: replace the integration's honest "unvalidated" `warning` with a real

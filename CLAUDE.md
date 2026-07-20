@@ -203,6 +203,24 @@ suggestions — it never controls hardware on its own (Rule 2). API:
 `/api/assistant/memory` (GET learned memory, DELETE to forget); surfaced in the
 Assistant tab's "What I've learned".
 
+### Voice (`voice.py`)
+
+Offline-first STT/TTS behind one seam — voice is an *enhancement*: dictation fills
+the same text box (safety-checked intent path, Rule 2) and everything works with no
+mic or model (Rule 3). Engines implement `SttEngine`/`TtsEngine`; the real ones —
+**faster-whisper** and **piper** — are an optional extra (`pip install -e ".[voice]"`,
+`voice_whisper_model` size / `voice_piper_model` path in config). The **sim engines**
+are the Rule-1 stand-in: `SimStt` decodes a `SIMVOICE:<text>` payload (the bench
+injects a canned utterance, like a SignalSlider injects a sensor value) and `SimTts`
+renders a deterministic WAV chime — so the whole pipeline is testable with no ML
+deps. `VoiceService` resolves `voice_stt`/`voice_tts` (`auto` → real engine if
+installed, else sim in simulate mode, else unavailable). API: `GET /api/voice`
+(capabilities), `POST /api/voice/transcribe` (audio → text),
+`POST /api/voice/speak` (text → WAV). The front-end (`ui/src/voice.ts`) prefers a
+*real* Core engine (audio stays on the van) and falls back to the browser Web
+Speech API; the sim engines are deliberately not used for the product mic/replies.
+Bench: a Voice card feeds canned utterances through the same endpoints.
+
 ### Weather (`weather.py`)
 
 Location-aware, offline-first. `WeatherService` fetches the forecast for the

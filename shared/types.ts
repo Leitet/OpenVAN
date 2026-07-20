@@ -195,6 +195,11 @@ export interface IntegrationInfo {
   config: IntegrationConfigField[]; // connection settings the user can fill in
 }
 
+export interface VoiceCaps {
+  stt: { available: boolean; engine: string | null };
+  tts: { available: boolean; engine: string | null };
+}
+
 export interface TripStats {
   started_at: number | null;
   days: number;

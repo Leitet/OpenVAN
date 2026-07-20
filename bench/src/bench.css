@@ -381,13 +381,19 @@ input[type="range"]::-moz-range-thumb {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 .bench-int-row .toggle {
+  /* Override the full-width base .toggle: in a row it's a compact inline button. */
+  width: auto;
   min-width: 42px;
+  margin-bottom: 0;
   flex: none;
 }
 .bench-int-meta {
   display: flex;
   flex-direction: column;
   line-height: 1.25;
+  /* Long names/status lines wrap inside the card instead of overflowing it. */
+  min-width: 0;
+  flex: 1;
 }
 .bench-int-meta strong {
   font-size: 12px;

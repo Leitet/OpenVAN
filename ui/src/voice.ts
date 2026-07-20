@@ -1,28 +1,61 @@
-// Voice-chat plumbing over the browser Web Speech API, feature-detected.
+// Voice-chat plumbing: Core-first, browser fallback — feature-detected.
 //
 // Voice is an *enhancement*, never required — dictation just fills the same text
 // box, so every command still goes through the safety-checked text-intent path,
-// and typing works with no mic at all (Rule 2 + Rule 3). Browser STT quality
-// varies and can use a cloud service; a fully offline path (whisper.cpp / vosk
-// for STT, piper for TTS, or a cloud realtime model) is a Core-side follow-up —
-// see backlog.md. This module is the front-end seam that work will plug into.
+// and typing works with no mic at all (Rule 2 + Rule 3).
+//
+// When Core exposes a REAL local engine (whisper/piper via the `voice` extra —
+// GET /api/voice), we prefer it: audio stays on the van, quality is consistent,
+// and it works with no internet. The browser Web Speech API remains the fallback
+// (it can round-trip audio through a cloud service). Core's *sim* engines are the
+// bench/test stand-ins, not speech — they're deliberately not used here.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { getVoice, speakText, transcribeAudio } from "@shared/api";
+import type { VoiceCaps } from "@shared/types";
+
+// Capabilities are fetched once, in the background; until resolved (or on any
+// failure) we behave exactly as before — pure browser voice.
+let caps: VoiceCaps | null = null;
+getVoice().then((c) => (caps = c)).catch(() => {});
+
+const coreStt = () => caps?.stt.available && caps.stt.engine !== "sim";
+const coreTts = () => caps?.tts.available && caps.tts.engine !== "sim";
+
 export function sttSupported(): boolean {
   return (
-    typeof window !== "undefined" &&
-    !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+    coreStt() === true ||
+    (typeof window !== "undefined" &&
+      !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition))
   );
 }
 
 export function ttsSupported(): boolean {
-  return typeof window !== "undefined" && "speechSynthesis" in window;
+  return coreTts() === true || (typeof window !== "undefined" && "speechSynthesis" in window);
 }
 
-/** Speak a line aloud (on-device TTS). No-op if unsupported. */
+let playing: HTMLAudioElement | null = null;
+
+/** Speak a line aloud — Core TTS when a real engine is available, else the
+ * browser. No-op if neither is supported. */
 export function speak(text: string): void {
-  if (!ttsSupported() || !text) return;
+  if (!text) return;
+  if (coreTts()) {
+    stopSpeaking();
+    speakText(text)
+      .then((blob) => {
+        playing = new Audio(URL.createObjectURL(blob));
+        playing.play().catch(() => {});
+      })
+      .catch(() => speakBrowser(text)); // engine hiccup → browser fallback
+    return;
+  }
+  speakBrowser(text);
+}
+
+function speakBrowser(text: string): void {
+  if (!("speechSynthesis" in window)) return;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = navigator.language || "en-US";
   window.speechSynthesis.cancel();
@@ -30,7 +63,13 @@ export function speak(text: string): void {
 }
 
 export function stopSpeaking(): void {
-  if (ttsSupported()) window.speechSynthesis.cancel();
+  if (playing) {
+    playing.pause();
+    playing = null;
+  }
+  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
 }
 
 export interface Dictation {
@@ -38,8 +77,69 @@ export interface Dictation {
   stop(): void;
 }
 
-/** A one-shot dictation session. Returns null if STT isn't available. */
+/** A one-shot dictation session. Returns null if no STT path is available. */
 export function createDictation(opts: {
+  onInterim?: (text: string) => void;
+  onFinal: (text: string) => void;
+  onEnd?: () => void;
+  onError?: (reason: string) => void;
+}): Dictation | null {
+  // Core path: record the mic locally, transcribe on the van.
+  if (coreStt() && typeof navigator !== "undefined" && !!navigator.mediaDevices) {
+    return createCoreDictation(opts);
+  }
+  return createBrowserDictation(opts);
+}
+
+function createCoreDictation(opts: {
+  onInterim?: (text: string) => void;
+  onFinal: (text: string) => void;
+  onEnd?: () => void;
+  onError?: (reason: string) => void;
+}): Dictation {
+  let recorder: MediaRecorder | null = null;
+  let stream: MediaStream | null = null;
+  const chunks: Blob[] = [];
+
+  const cleanup = () => {
+    stream?.getTracks().forEach((t) => t.stop());
+    recorder = null;
+    stream = null;
+    opts.onEnd?.();
+  };
+
+  return {
+    start() {
+      navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then((s) => {
+          stream = s;
+          recorder = new MediaRecorder(s);
+          recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+          recorder.onstop = async () => {
+            try {
+              const text = await transcribeAudio(new Blob(chunks, { type: recorder?.mimeType }));
+              if (text.trim()) opts.onFinal(text.trim());
+            } catch (e: any) {
+              opts.onError?.(String(e?.message ?? e));
+            } finally {
+              cleanup();
+            }
+          };
+          recorder.start();
+        })
+        .catch((e) => {
+          opts.onError?.(String(e?.message ?? "microphone unavailable"));
+          cleanup();
+        });
+    },
+    stop() {
+      recorder?.stop();
+    },
+  };
+}
+
+function createBrowserDictation(opts: {
   onInterim?: (text: string) => void;
   onFinal: (text: string) => void;
   onEnd?: () => void;

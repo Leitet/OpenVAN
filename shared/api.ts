@@ -272,6 +272,34 @@ export async function getMaintenance(): Promise<MaintenanceItem[]> {
 
 import type { TripStats } from "./types";
 
+import type { VoiceCaps } from "./types";
+
+export async function getVoice(): Promise<VoiceCaps> {
+  const res = await fetch("/api/voice");
+  if (!res.ok) return { stt: { available: false, engine: null }, tts: { available: false, engine: null } };
+  return res.json();
+}
+
+export async function transcribeAudio(data: Blob | ArrayBuffer | string): Promise<string> {
+  const res = await fetch("/api/voice/transcribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/octet-stream" },
+    body: data,
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail ?? "transcription failed");
+  return (await res.json()).text as string;
+}
+
+export async function speakText(text: string, voice?: string): Promise<Blob> {
+  const res = await fetch("/api/voice/speak", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, voice }),
+  });
+  if (!res.ok) throw new Error("speech synthesis failed");
+  return res.blob();
+}
+
 export async function getTrip(): Promise<TripStats> {
   return (await (await fetch("/api/trip")).json()).trip as TripStats;
 }

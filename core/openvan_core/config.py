@@ -172,6 +172,14 @@ class Config:
     # Language the assistant (model) replies in: "en" | "sv" | "de". Normally the
     # UI sets this to match its own language; the user can override it.
     language: str = "en"
+    # Voice pipeline (offline-first STT/TTS; see voice.py). "auto" picks a real
+    # engine when its optional library is installed (pip install -e ".[voice]"),
+    # else the sim engine in simulate mode, else unavailable — the front-end then
+    # keeps using the browser speech APIs. Explicit: "off" | "sim" | "whisper"/"piper".
+    voice_stt: str = "auto"
+    voice_tts: str = "auto"
+    voice_whisper_model: str = "base"  # faster-whisper model size
+    voice_piper_model: str = ""  # path to a piper .onnx voice (required for piper)
     # Offline models: a local Ollama server.
     llm_base_url: str = "http://127.0.0.1:11434"
     llm_model: str = "llama3.2"
@@ -326,6 +334,10 @@ class Config:
             cfg.plugins_dir = Path(os.environ["OPENVAN_PLUGINS_DIR"])
         if os.environ.get("OPENVAN_INTEGRATIONS_DIR"):
             cfg.integrations_dir = Path(os.environ["OPENVAN_INTEGRATIONS_DIR"])
+        cfg.voice_stt = os.environ.get("OPENVAN_VOICE_STT", cfg.voice_stt)
+        cfg.voice_tts = os.environ.get("OPENVAN_VOICE_TTS", cfg.voice_tts)
+        cfg.voice_whisper_model = os.environ.get("OPENVAN_WHISPER_MODEL", cfg.voice_whisper_model)
+        cfg.voice_piper_model = os.environ.get("OPENVAN_PIPER_MODEL", cfg.voice_piper_model)
         if os.environ.get("OPENVAN_DATA_DIR"):
             cfg.data_dir = Path(os.environ["OPENVAN_DATA_DIR"])
         if os.environ.get("OPENVAN_AI") is not None:

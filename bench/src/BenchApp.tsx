@@ -10,8 +10,11 @@ import {
   removeCamera,
   getIntegrations,
   setIntegration,
+  getVoice,
+  transcribeAudio,
+  speakText,
 } from "@shared/api";
-import type { Weather, IntegrationInfo } from "@shared/types";
+import type { Weather, IntegrationInfo, VoiceCaps } from "@shared/types";
 import { useVanState } from "@shared/useVanState";
 import { SignalSlider } from "./components/SignalSlider";
 import { VanView } from "./components/VanView";
@@ -332,6 +335,73 @@ function ConnectivityPanel({ twin }: { twin: Record<string, unknown> }) {
   );
 }
 
+// Voice pipeline without a mic (Rule 1): feed a canned utterance as SIMVOICE
+// "audio" through /api/voice/transcribe, and play the TTS output. With the real
+// engines installed (the `voice` extra) the same endpoints run whisper/piper.
+function VoicePanel() {
+  const [caps, setCaps] = useState<VoiceCaps | null>(null);
+  const [utterance, setUtterance] = useState("turn on the cabin light");
+  const [transcript, setTranscript] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getVoice().then(setCaps).catch(() => {});
+  }, []);
+
+  const transcribe = async () => {
+    setError(null);
+    try {
+      setTranscript(await transcribeAudio("SIMVOICE:" + utterance));
+    } catch (e) {
+      setTranscript(null);
+      setError(String((e as Error).message ?? e));
+    }
+  };
+
+  const chime = async () => {
+    setError(null);
+    try {
+      const blob = await speakText(transcript ?? utterance);
+      new Audio(URL.createObjectURL(blob)).play().catch(() => {});
+    } catch (e) {
+      setError(String((e as Error).message ?? e));
+    }
+  };
+
+  return (
+    <>
+      <p className="note">
+        STT: {caps?.stt.available ? caps.stt.engine : "off"} · TTS:{" "}
+        {caps?.tts.available ? caps.tts.engine : "off"}
+      </p>
+      <div className="cam-add">
+        <input
+          style={{ flex: 1, width: "auto" }}
+          value={utterance}
+          onChange={(e) => setUtterance(e.target.value)}
+          placeholder="canned utterance"
+        />
+        <button className="chip on" onClick={transcribe}>
+          transcribe
+        </button>
+        <button className="chip" onClick={chime}>
+          speak
+        </button>
+      </div>
+      {transcript !== null && (
+        <p className="note">
+          heard: <strong>{transcript}</strong>
+        </p>
+      )}
+      {error && <p className="note">error: {error}</p>}
+      <p className="note">
+        The text is sent as canned "audio" (SIMVOICE) — the same endpoint a real mic
+        recording hits when whisper is installed. "Speak" plays the TTS output.
+      </p>
+    </>
+  );
+}
+
 export function BenchApp() {
   const { twin, connected, entities } = useVanState();
   const [wx, setWx] = useState<Weather>({});
@@ -557,6 +627,11 @@ export function BenchApp() {
         <section className="card">
           <h2>Connectivity</h2>
           <ConnectivityPanel twin={twin} />
+        </section>
+
+        <section className="card">
+          <h2>Voice</h2>
+          <VoicePanel />
         </section>
 
         <section className="card">

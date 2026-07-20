@@ -59,6 +59,7 @@ from .store import ConfigStore
 from .telemetry import TelemetryRecorder, TelemetryStore
 from .trip import TripLedger
 from .twin import VanTwin
+from .voice import VoiceService
 from .weather import WeatherService
 
 # Phrase hints that a message is asking where to spend the night. Deterministic so a
@@ -144,6 +145,7 @@ class Core:
     security: SecuritySystem
     coverage: CoverageMemory
     trip: TripLedger
+    voice: VoiceService
     roads: RoadNetwork | None = None
 
     async def start(self) -> None:
@@ -649,6 +651,7 @@ def build_core(config: Config | None = None) -> Core:
     )
     security = SecuritySystem()
     coverage = CoverageMemory(bus, twin)
+    voice = VoiceService(config)
     # Build the full advisor set from config-driven thresholds (nothing hardcoded).
     advisors.advisors = _build_advisors(config, weather, maintenance, security, coverage)
     return Core(
@@ -675,6 +678,7 @@ def build_core(config: Config | None = None) -> Core:
         security=security,
         coverage=coverage,
         trip=trip,
+        voice=voice,
         router=router,
         roads=roads,
     )

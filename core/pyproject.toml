@@ -24,6 +24,13 @@ mcp = [
 esphome = [
     "aioesphomeapi>=24",
 ]
+# Real voice engines (offline STT/TTS). Optional: without them the voice API runs
+# the sim engines (simulate mode) or reports unavailable, and the front-end keeps
+# using the browser speech APIs.
+voice = [
+    "faster-whisper>=1.0",
+    "piper-tts>=1.2",
+]
 
 [project.scripts]
 openvan-core = "openvan_core.__main__:main"
