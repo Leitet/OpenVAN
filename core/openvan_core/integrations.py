@@ -326,12 +326,22 @@ class IntegrationManager:
         self.bus = bus
         self.store = store
         self.hub = hub
+        self.registry: Any = None
         self.integrations: dict[str, Integration] = {}
 
     def get(self, integration_id: str) -> Integration | None:
         return self.integrations.get(integration_id)
 
-    def discover(self, integrations_dir: Path | str) -> None:
+    def discover(self, integrations_dir: Path | str, registry: Any = None) -> None:
+        """Discover drivers through the registry (manifest-first, trust-checked,
+        crash-contained). Without a registry (unit tests), fall back to a plain
+        contained import walk of the bundled dir."""
+        self.registry = registry
+        if registry is not None:
+            registry.scan()
+            for record in registry.loadable("integration"):
+                registry.load(record)  # contained: failures become error records
+            return
         integrations_dir = Path(integrations_dir)
         if not integrations_dir.is_dir():
             logger.warning("integrations directory %s does not exist", integrations_dir)
@@ -340,8 +350,10 @@ class IntegrationManager:
             sys.path.insert(0, str(integrations_dir))
         for child in sorted(integrations_dir.iterdir()):
             if child.is_dir() and (child / "__init__.py").exists():
-                logger.info("loading integration package: %s", child.name)
-                importlib.import_module(child.name)
+                try:
+                    importlib.import_module(child.name)
+                except Exception:
+                    logger.exception("integration package %s failed to import", child.name)
 
     def _persisted_enabled(self) -> dict[str, bool]:
         if self.store is None:
@@ -350,16 +362,34 @@ class IntegrationManager:
 
     async def setup_all(self) -> None:
         """Instantiate every registered integration; enable those the user has
-        turned on (defaulting to the descriptor-implied default for un-set ones)."""
+        turned on (defaulting to the descriptor-implied default for un-set ones).
+
+        With a registry: only classes belonging to a successfully LOADED driver
+        record run, and a driver whose setup raises becomes an error record — one
+        bad driver never stops the rest (or the van)."""
+        from .drivers import STATE_LOADED
+
         persisted = self._persisted_enabled()
         for cls in registered_integrations():
             info = cls.info
-            instance = cls(self.twin, self.bus, self._config_for(info.id))
-            instance.hub = self.hub
-            self.integrations[info.id] = instance
-            want = persisted.get(info.id, _default_enabled(info))
-            if want:
-                await self._enable(instance)
+            if self.registry is not None:
+                record = self.registry.records.get(info.id)
+                if record is None or record.state != STATE_LOADED:
+                    continue  # stale class from an earlier test / unloaded driver
+            if info.id in self.integrations:
+                continue
+            try:
+                instance = cls(self.twin, self.bus, self._config_for(info.id))
+                instance.hub = self.hub
+                self.integrations[info.id] = instance
+                want = persisted.get(info.id, _default_enabled(info))
+                if want:
+                    await self._enable(instance)
+            except Exception as exc:
+                logger.exception("integration %s failed to set up", info.id)
+                self.integrations.pop(info.id, None)
+                if self.registry is not None:
+                    self.registry.mark_error(info.id, f"setup failed: {exc}")
 
     def _config_for(self, integration_id: str) -> dict[str, Any]:
         if self.store is None:
@@ -442,6 +472,10 @@ class IntegrationManager:
         d["mode"] = instance.transport_mode()
         d["live"] = instance.live
         d["config"] = _config_view(instance.info.config_fields, instance.config)
+        # Provenance from the driver registry (trust tier, package version).
+        record = self.registry.records.get(integration_id) if self.registry else None
+        d["trust"] = record.trust if record else "bundled"
+        d["driver_version"] = record.version if record else ""
         return d
 
     def list(self) -> list[dict[str, Any]]:

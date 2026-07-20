@@ -110,4 +110,8 @@ def discover_camp_sources(sources_dir: Path | str) -> None:
     for child in sorted(sources_dir.iterdir()):
         if child.is_dir() and (child / "__init__.py").exists():
             logger.info("loading camp source package: %s", child.name)
-            importlib.import_module(child.name)
+            try:
+                importlib.import_module(child.name)
+            except Exception:
+                # A broken camp-source package must never stop the van booting.
+                logger.exception("camp source package %s failed to import", child.name)

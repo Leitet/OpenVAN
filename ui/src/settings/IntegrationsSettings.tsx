@@ -15,6 +15,9 @@ import {
   Settings2,
   Radio,
   FlaskConical,
+  BadgeCheck,
+  Users,
+  ShieldQuestion,
 } from "lucide-react";
 import { getIntegrations, setIntegration, setIntegrationConfig } from "@shared/api";
 import type { IntegrationInfo } from "@shared/types";
@@ -70,6 +73,27 @@ const TRANSPORT_LABEL: Record<string, string> = {
 
 const SAFETY_LABEL = ["Read-only", "Low", "Moderate", "High", "Critical"];
 
+// Driver provenance (the signing/trust chain). "bundled" ships with core and
+// needs no badge; everything installed from outside shows where it came from.
+const TRUST_BADGE: Record<string, { label: string; tone: "good" | "warn"; icon: "check" | "users" | "question" }> = {
+  official: { label: "Official", tone: "good", icon: "check" },
+  community: { label: "Community-signed", tone: "good", icon: "users" },
+  unknown_signer: { label: "Unknown signer", tone: "warn", icon: "question" },
+  unsigned: { label: "Unsigned", tone: "warn", icon: "question" },
+};
+
+function TrustBadge({ trust }: { trust: string }) {
+  const meta = TRUST_BADGE[trust];
+  if (!meta) return null; // bundled → the default, no badge noise
+  const Icon = meta.icon === "check" ? BadgeCheck : meta.icon === "users" ? Users : ShieldQuestion;
+  return (
+    <span className={`badge badge-${meta.tone}`} title="Driver provenance">
+      <Icon size={13} />
+      {meta.label}
+    </span>
+  );
+}
+
 function titleCase(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -112,6 +136,7 @@ function IntegrationCard({
 
       <div className="integration-badges">
         {status}
+        <TrustBadge trust={it.trust} />
         <span className={`badge badge-${tone}`} title="Support status">
           {STATUS_LABEL[it.status] ?? it.status}
         </span>

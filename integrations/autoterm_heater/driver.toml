@@ -1,0 +1,8 @@
+# OpenVan driver manifest — identity readable without importing code.
+[driver]
+id = "autoterm_heater"
+name = "Autoterm / Planar heater"
+version = "0.1.0"
+kind = "integration"
+api = 1
+entry = "autoterm_heater"

@@ -83,13 +83,22 @@ class PluginManager:
         for child in sorted(plugins_dir.iterdir()):
             if child.is_dir() and (child / "__init__.py").exists():
                 logger.info("loading plugin package: %s", child.name)
-                importlib.import_module(child.name)
+                try:
+                    importlib.import_module(child.name)
+                except Exception:
+                    # One broken plugin package must never stop the van booting.
+                    logger.exception("plugin package %s failed to import", child.name)
 
     async def setup_all(self, configs: dict[str, dict[str, Any]] | None = None) -> None:
         configs = configs or {}
         for plugin_cls in registered_plugins():
-            instance = plugin_cls(self.hub, self.backend, configs.get(plugin_cls.domain))
-            await instance.async_setup()
+            try:
+                instance = plugin_cls(self.hub, self.backend, configs.get(plugin_cls.domain))
+                await instance.async_setup()
+            except Exception:
+                # Contained: a failing plugin is logged and skipped, not fatal.
+                logger.exception("plugin %s failed to set up", plugin_cls.domain)
+                continue
             self.plugins.append(instance)
             logger.info("plugin ready: %s (%s)", plugin_cls.name or plugin_cls.domain, plugin_cls.domain)
 

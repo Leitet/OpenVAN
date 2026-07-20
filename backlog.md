@@ -108,10 +108,16 @@ findings back:
   vendor partnerships.
 - **Safety-class-4 gating** — locks / gas valves need strong auth + audit +
   isolation before any such integration ships (never free LLM access).
-- **Library at scale (thousands of integrations)** — a metadata registry/manifest
-  decoupled from driver code; server-side search + pagination + facet counts;
-  signed, versioned packages with an update channel; per-integration logos and
-  richer detail pages; fuzzy search + synonyms and popularity sort.
+- **Library at scale (thousands of integrations)** — the local foundations shipped
+  (manifest registry decoupled from code, signed + versioned packages, trust tiers,
+  `/api/drivers`). Remaining: a hosted store index with server-side search +
+  pagination + facet counts; on-demand download/install + an update channel
+  (community vs. certified); per-integration logos and richer detail pages; fuzzy
+  search + synonyms and popularity sort.
+- **Driver ecosystem follow-ups** — key rotation/revocation for store keys; a
+  `driver.toml` schema for plugins/campsources parity (they load contained today
+  but only integrations surface trust); process/sandbox isolation research for
+  untrusted drivers (in-proc Python can't be sandboxed — document threat model).
 
 ## Telemetry & data
 

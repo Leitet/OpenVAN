@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 from dataclasses import dataclass
 
 from typing import Any
@@ -147,6 +148,7 @@ class Core:
     trip: TripLedger
     voice: VoiceService
     roads: RoadNetwork | None = None
+    registry: Any = None  # DriverRegistry, built in start()
 
     async def start(self) -> None:
         # The config store holds plugin / camp-source settings (incl. credentials)
@@ -173,7 +175,18 @@ class Core:
         await self.plugins.setup_all(plugin_configs)
         # Integration drivers normalise hardware ecosystems into twin signals. In
         # sim mode their enabled drivers inject characteristic signals each tick.
-        self.integrations.discover(self.config.integrations_dir)
+        # Discovery goes through the driver registry: manifest-first, signature
+        # trust tiers, API-version gate, and per-driver crash containment.
+        from .drivers import DriverRegistry
+
+        self.registry = DriverRegistry(
+            bundled_dirs=[self.config.integrations_dir],
+            external_dirs=[self.config.drivers_dir or (self.config.data_dir / "drivers")],
+            official_key_dirs=[Path(__file__).parent / "trust"],
+            user_key_dirs=[self.config.data_dir / "trust"],
+            require_signed=self.config.require_signed,
+        )
+        self.integrations.discover(self.config.integrations_dir, self.registry)
         await self.integrations.setup_all()
         await self.router.refresh()  # probe the effective model for the active profile
         if self.roads is not None:

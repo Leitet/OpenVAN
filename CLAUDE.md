@@ -148,6 +148,21 @@ in sim; the driver's transport when live — ESPHome pushes over the native API 
 the node's state echo drives the entity). Never actuate from a driver outside this
 path (Rule 2); a safety-refused command must never reach the wire.
 
+**The driver ecosystem** (`drivers.py`, `signing.py`, [docs/DRIVERS.md](docs/DRIVERS.md)):
+the core stays small; everything at the edges is a **driver** anyone can write.
+Discovery is manifest-first (`driver.toml`: id/name/version/kind/`api` level —
+readable via stdlib `tomllib` *without importing code*), gated by `DRIVER_API`
+compatibility, and **crash-contained**: a driver that fails to import or set up
+becomes an `error` record in the catalog and the van keeps running. External
+drivers install under `data/drivers/`; ones without a manifest are refused.
+**Signing & trust** (pure-stdlib Ed25519, RFC 8032, pinned by the RFC test
+vectors): the store signs official drivers (`openvan_core/trust/*.pub`), users
+trust publisher keys in `data/trust/`, unsigned drivers are allowed but badged
+(`require_signed` locks down), and a signed-then-modified package (**tampered**)
+never loads. CLI: `openvan-driver keygen|sign|verify`. `GET /api/drivers` lists
+records; the library UI shows provenance badges. Trust proves *publisher +
+integrity*, not safety — loaded drivers run in-process with full access.
+
 **Real transports** (`transports/`): a driver moves from sim to hardware by
 overriding `run_transport()` and picking a `mode` in its config. The
 **HA bridge** (`habridge.py`, run by the `mqtt_homeassistant` integration in

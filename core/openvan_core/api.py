@@ -320,6 +320,14 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
     async def set_vehicle(body: VehicleBody) -> dict[str, Any]:
         return await core.set_vehicle(body.profile)
 
+    @app.get("/api/drivers")
+    async def drivers() -> dict[str, Any]:
+        return {
+            "api": __import__("openvan_core.drivers", fromlist=["DRIVER_API"]).DRIVER_API,
+            "require_signed": core.config.require_signed,
+            "drivers": core.registry.describe() if core.registry else [],
+        }
+
     @app.get("/api/integrations")
     async def integrations() -> dict[str, Any]:
         return {"integrations": core.integrations_list()}

@@ -3,6 +3,26 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — The driver ecosystem: manifests, signing, containment
+
+- **Manifest-first driver registry** — every driver declares `driver.toml`
+  (id/version/kind/`api` level) readable without importing code; API-version
+  gating lists future drivers as *incompatible* instead of crashing; external
+  drivers without a manifest are refused; user drivers install in `data/drivers/`.
+- **Signing & trust chain** — pure-stdlib Ed25519 (RFC 8032, pinned by the RFC's
+  own vectors) over a canonical package digest; trust tiers bundled / official
+  (store keys) / community (user-trusted keys) / unsigned (allowed, badged);
+  `require_signed` lockdown; a signed-then-modified package is **blocked** and
+  never loads. `openvan-driver keygen|sign|verify` CLI; provenance badges in the
+  library; `GET /api/drivers`. Validated live end-to-end: keygen → sign → trust →
+  loads as *community*; tampering the file → CLI says TAMPERED and the van
+  refuses it while booting normally.
+- **Containment everywhere** — a driver/plugin/camp-source that fails to import
+  or set up is logged and shown as an error record; one bad package never bricks
+  the van. All bundled integrations now carry manifests.
+- `docs/DRIVERS.md` — the community guide: writing, simulating, signing,
+  publishing a driver.
+
 ## 2026-07 — Safety-checked device controls
 
 - **Integrations can now actuate — only through the safety layer.** The

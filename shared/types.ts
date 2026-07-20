@@ -193,6 +193,8 @@ export interface IntegrationInfo {
   mode: string; // "sim" | "modbus_tcp" | "mqtt" | … — the active transport
   live: boolean; // connected to real hardware (vs. simulated)
   config: IntegrationConfigField[]; // connection settings the user can fill in
+  trust: string; // bundled | official | community | unknown_signer | unsigned
+  driver_version: string; // the driver package version from its manifest
 }
 
 export interface VoiceCaps {

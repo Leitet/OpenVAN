@@ -116,6 +116,12 @@ class Config:
     # Integration drivers (Victron, ESPHome, MQTT/HA, Modbus, …) — the layer that
     # normalises hardware ecosystems into twin signals. Discovered like plugins.
     integrations_dir: Path = field(default_factory=lambda: _REPO_ROOT / "integrations")
+    # User-installed drivers (community/store packages) live under the data dir,
+    # separate from the bundled repo dirs. None → data_dir / "drivers".
+    drivers_dir: Path | None = None
+    # Lockdown mode: refuse unsigned / unknown-signer drivers entirely. Off by
+    # default — your van, your call — but tampered packages NEVER load regardless.
+    require_signed: bool = False
     # Local storage for things that must survive restarts (custom personalities,
     # the active choice). Offline-first: a plain local directory, no server.
     data_dir: Path = field(default_factory=lambda: _REPO_ROOT / "data")
@@ -334,6 +340,10 @@ class Config:
             cfg.plugins_dir = Path(os.environ["OPENVAN_PLUGINS_DIR"])
         if os.environ.get("OPENVAN_INTEGRATIONS_DIR"):
             cfg.integrations_dir = Path(os.environ["OPENVAN_INTEGRATIONS_DIR"])
+        if os.environ.get("OPENVAN_DRIVERS_DIR"):
+            cfg.drivers_dir = Path(os.environ["OPENVAN_DRIVERS_DIR"])
+        if os.environ.get("OPENVAN_REQUIRE_SIGNED"):
+            cfg.require_signed = os.environ["OPENVAN_REQUIRE_SIGNED"] not in ("0", "false", "")
         cfg.voice_stt = os.environ.get("OPENVAN_VOICE_STT", cfg.voice_stt)
         cfg.voice_tts = os.environ.get("OPENVAN_VOICE_TTS", cfg.voice_tts)
         cfg.voice_whisper_model = os.environ.get("OPENVAN_WHISPER_MODEL", cfg.voice_whisper_model)

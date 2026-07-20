@@ -35,6 +35,7 @@ voice = [
 [project.scripts]
 openvan-core = "openvan_core.__main__:main"
 openvan-mcp = "openvan_core.mcp_server:main"
+openvan-driver = "openvan_core.signing:main"
 
 [build-system]
 requires = ["setuptools>=68"]
