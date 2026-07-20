@@ -90,13 +90,26 @@ class VanSimulation:
         self.physics = True
         self._task: asyncio.Task | None = None
 
+    def _provided(self, provider_id: str) -> bool:
+        """Whether a world-sim provider card is installed — physics only evolves
+        a domain someone *provides*. Without a manager (unit tests driving the
+        physics directly), everything is considered provided."""
+        if self._integrations is None:
+            return True
+        instance = self._integrations.get(provider_id)
+        return instance is not None and instance.enabled
+
     async def step(self, dt: float) -> None:
         if self.physics:
             await self._step_clock(dt)
-            await self._step_thermal(dt)
-            await self._step_water(dt)
-            await self._step_vehicle(dt)
-            await self._step_energy(dt)
+            if self._provided("sim_climate"):
+                await self._step_thermal(dt)
+            if self._provided("sim_water"):
+                await self._step_water(dt)
+            if self._provided("sim_vehicle"):
+                await self._step_vehicle(dt)
+            if self._provided("sim_energy"):
+                await self._step_energy(dt)
         # Integrations run last so they normalise from the freshly-evolved state.
         if self._integrations is not None:
             await self._integrations.simulate_all(dt)

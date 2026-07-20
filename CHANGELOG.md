@@ -3,6 +3,22 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Everything is an integration: world-sim provider cards
+
+- The reference van's data (battery/solar, water/tanks, climate/air,
+  vehicle/GPS) is no longer baked into the twin's seeds — it is **provided** by
+  four removable `WorldSimProvider` integrations (`sim_energy`, `sim_water`,
+  `sim_climate`, `sim_vehicle`), installed by default. Remove one and its
+  domain honestly reads "—" (signals released to `None`) instead of frozen
+  fake values; the physics engine only evolves domains whose provider is
+  installed.
+- **Per-domain mixed mode**: a provider never overwrites a value another
+  source already supplies, so a real BMS can own the battery while the water
+  tanks stay simulated — swap each domain to real hardware card by card.
+- `Config.seed_twin` shrinks to what the platform itself owns (actuator
+  rest-states, the simulated clock, domains without provider cards yet:
+  fridge, connectivity, security, cameras).
+
 ## 2026-07 — Sim / real / mixed: the simulator card becomes the physics switch
 
 - **Decoupled the two simulations.** The tick loop now always runs; only the

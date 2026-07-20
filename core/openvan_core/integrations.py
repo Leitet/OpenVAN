@@ -117,10 +117,18 @@ class IntegrationInfo:
 
 
 # Built-in integrations are installed out of the box and can't be removed — they're
-# part of the platform, not optional add-ons. The simulator (the twin itself) is the
+# part of the platform, not optional add-ons. The simulator master switch is the
 # one standard integration every install needs. Everything else is opt-in from the
 # library. Keep this set tiny: only what is genuinely universal and always-present.
 BUILTIN: frozenset[str] = frozenset({"simulated_van"})
+
+# Installed by default but *removable*: the per-domain world-simulator providers.
+# Everything the UI shows must come from an installed integration — these cards
+# are what provides the reference van's data out of the box. Remove one and its
+# domain honestly reads "unknown" until a real integration takes it over.
+DEFAULT_INSTALLED: frozenset[str] = BUILTIN | frozenset(
+    {"sim_energy", "sim_water", "sim_climate", "sim_vehicle"}
+)
 
 
 _REGISTRY: list[type["Integration"]] = []
@@ -312,6 +320,34 @@ class Integration(ABC):
         owns the signals. Keep it offline and deterministic (no wall-clock / RNG)
         so tests stay stable.
         """
+
+
+class WorldSimProvider(Integration):
+    """A slice of the simulated world as an installable integration.
+
+    "Everything is an integration": the reference van's data (battery, water,
+    climate, vehicle) is *provided* by these cards, not baked in. Each provider
+    owns its domain's seed signals — installing it seeds them (without stomping
+    values a real integration already provides), removing it releases them to
+    ``None`` so the UI honestly shows "unknown" instead of frozen fake numbers.
+    The physics engine (:class:`~openvan_core.simulation.VanSimulation`) only
+    evolves a domain while its provider is installed.
+    """
+
+    info = None  # abstract — subclasses define their descriptor
+    SEEDS: dict[str, Any] = {}
+
+    async def async_setup(self) -> None:
+        for key, value in self.SEEDS.items():
+            # Don't overwrite a value some other source (real hardware, the
+            # bench) already provides — only fill in the unknowns.
+            if self.twin.get(key) is None:
+                await self.twin.set_signal(key, value, source=self.info.id)
+
+    async def async_teardown(self) -> None:
+        # Release the domain: unknown, not a stale pretend-value.
+        for key in self.SEEDS:
+            await self.twin.set_signal(key, None, source=self.info.id)
 
 
 class IntegrationManager:
@@ -521,5 +557,6 @@ def _config_view(fields: list[dict[str, Any]], values: dict[str, Any]) -> list[d
 
 def _default_enabled(info: IntegrationInfo) -> bool:
     """A never-configured integration is not installed by default — the user adds it
-    from the library. Only the built-in standard set (the simulator) ships installed."""
-    return info.id in BUILTIN
+    from the library. Only the standard set (the simulator master switch and the
+    per-domain world-sim providers) ships installed; the providers are removable."""
+    return info.id in DEFAULT_INSTALLED

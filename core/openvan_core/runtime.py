@@ -163,11 +163,11 @@ class Core:
         if self.config.telemetry_enabled:
             self.telemetry.open()
             self.telemetry_recorder.start()  # records + rolls up + prunes
-        # Seed the twin first so plugins read sensible values on setup.
+        # Seed the twin first so plugins read sensible values on setup. (World
+        # data — battery, water, climate, vehicle — is seeded by the world-sim
+        # provider integrations during setup_all, not here.)
         for key, value in self.config.seed_twin.items():
             await self.twin.set_signal(key, value, source="seed")
-        # Pin the trip start on first run (odometer is seeded now).
-        self.trip.load()
         self.plugins.discover(self.config.plugins_dir)
         # Plugin config comes from the store (namespace "plugin:<domain>"), not env.
         plugin_configs = {
@@ -194,6 +194,9 @@ class Core:
         self.integrations.ble = self.ble
         self.integrations.discover(self.config.integrations_dir, self.registry)
         await self.integrations.setup_all()
+        # Pin the trip start on first run — after setup_all, so the odometer the
+        # vehicle provider (or real hardware) supplies is what gets pinned.
+        self.trip.load()
         await self.router.refresh()  # probe the effective model for the active profile
         if self.roads is not None:
             self.roads.load_cache()  # last-known road graph, for instant offline follow

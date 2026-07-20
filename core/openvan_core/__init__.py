@@ -31,6 +31,7 @@ from .integrations import (
     Permissions,
     Status,
     Transport,
+    WorldSimProvider,
 )
 from .plugins import Plugin, PluginManager
 from .predictions import compute_predictions
@@ -74,6 +75,7 @@ __all__ = [
     "Permissions",
     "Status",
     "Transport",
+    "WorldSimProvider",
     "CampSource",
     "CampSpot",
     "CampService",

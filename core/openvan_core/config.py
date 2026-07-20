@@ -208,49 +208,23 @@ class Config:
     online_base_url: str = "https://api.openai.com/v1"
     online_model: str = ""
     online_api_key: str | None = None
-    # Seed the twin with a pleasant default van state so the simulator has
-    # something to show on first load.
+    # Seed the twin with the state the *platform itself* owns: actuator
+    # rest-states, the simulated clock, and domains without a provider card yet.
+    # The world's data (battery/solar, water/tanks, climate/air, vehicle/GPS) is
+    # NOT seeded here — it is *provided* by the per-domain world-sim provider
+    # integrations (integrations/sim_*), installed by default and removable, so
+    # what the UI shows always traces to an installed integration.
     seed_twin: dict[str, float | bool] = field(
         default_factory=lambda: {
-            "house_battery.soc": 82.0,
-            "house_battery.voltage": 12.9,
-            "house_battery.current": -4.2,
-            "solar.power": 240.0,
-            "fresh_water.level_pct": 55.0,
-            "grey_water.level_pct": 8.0,
-            "cassette.level_pct": 20.0,
             "water_pump.on": False,
-            "cabin.temperature": 19.5,
-            "outside.temperature": 11.0,
-            # Air quality & safety — healthy defaults (CO2 ~600 indoors, RH ~55%).
-            "air.co_ppm": 0.0,
-            "air.lpg_pct_lel": 0.0,
-            "air.co2_ppm": 600.0,
-            "air.smoke": False,
-            "cabin.humidity_pct": 55.0,
-            # Inclinometer — parked dead level by default.
-            "imu.pitch_deg": 0.0,
-            "imu.roll_deg": 0.0,
             "cabin_light.on": False,
             "diesel_heater.on": False,
             "diesel_heater.setpoint": 20.0,
             "diesel_heater.power": 0.0,
-            "diesel_tank.level_pct": 70.0,
-            "propane.level_pct": 60.0,
             # Fridge — cold, closed, drawing a typical compressor load.
             "fridge.temp_c": 4.0,
             "fridge.door_open": False,
             "fridge.power": 45.0,
-            # The van's DC energy system. These are physical facts of the van
-            # (it has an alternator, a shore inlet, an inverter) that the environment
-            # simulation evolves and an energy integration (Victron, …) reads on real
-            # hardware — not invented by any one integration.
-            "shore.connected": False,
-            "inverter.on": False,
-            "inverter.ac_load": 0.0,
-            "inverter.temperature": 19.5,
-            "alternator.power": 0.0,
-            "solar.yield_today_wh": 0.0,
             # Home-Assistant presence input (van parked on the home network).
             "home_assistant.van_home": False,
             # Connectivity — a physical fact of the van (it has a link, or it
@@ -284,20 +258,6 @@ class Config:
             "sun.elevation_deg": 40.0,
             "environment.is_day": True,
             "environment.phase": "day",
-            # Vehicle / GPS — starting parked in the Dolomites.
-            "gps.lat": 46.5405,
-            "gps.lon": 11.6553,
-            "vehicle.speed_kmh": 0.0,
-            "vehicle.heading": 90.0,
-            "vehicle.odometer_km": 48210.0,
-            "vehicle.ignition": False,
-            "vehicle.trip_seconds": 0.0,
-            # Tightest routing limits on the road ahead (0 = none). Filled from OSM
-            # maxheight/maxweight when road data is available; else driven from the
-            # bench to simulate approaching a low bridge or a weight-limited road.
-            "road.max_height_m": 0.0,
-            "road.max_weight_t": 0.0,
-            "road.max_width_m": 0.0,
         }
     )
 

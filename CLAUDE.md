@@ -136,10 +136,16 @@ raw signals real hardware would emit. **Sim / real / mixed**: the tick loop alwa
 runs; only the *world physics* is gated by `Config.simulate`, so per-driver `sim`
 modes keep working on a real van (trial a driver you don't own yet next to live
 hardware). The simulator card is that switch's honest UI: toggling it pauses/
-resumes the physics — it is never uninstalled. The catalog is a **searchable
-library** (Settings → Integrations → Browse) — a minimal standard set is installed
-by default (just the simulator, a non-removable built-in), everything else is
-opt-in. API:
+resumes the physics — it is never uninstalled. **Everything is an integration**:
+the reference van's world data is *provided* by removable per-domain
+`WorldSimProvider` cards (`sim_energy`, `sim_water`, `sim_climate`,
+`sim_vehicle`) that own their domain's seeds and gate its physics step —
+removing one releases its signals to `None` (UI shows "—"), and a real
+integration takes the domain over (per-domain mixed mode; a provider never
+overwrites a value another source already supplies). The catalog is a
+**searchable library** (Settings → Integrations → Browse) — the standard set
+installed by default is the master switch (non-removable) plus those four
+provider cards; everything else is opt-in. API:
 `/api/integrations` (GET list, POST enable/disable, POST `/config`). The full
 strategy map — priorities, phases, top-10, taxonomy — is
 [docs/OPENVAN-INTEGRATION-LANDSCAPE.md](docs/OPENVAN-INTEGRATION-LANDSCAPE.md).

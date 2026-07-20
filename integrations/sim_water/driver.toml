@@ -1,0 +1,8 @@
+# OpenVan driver manifest — identity readable without importing code.
+[driver]
+id = "sim_water"
+name = "Water & Tanks Simulator"
+version = "0.1.0"
+kind = "integration"
+api = 1
+entry = "sim_water"

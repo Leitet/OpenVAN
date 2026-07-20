@@ -59,8 +59,10 @@ async def test_only_simulator_installed_by_default(core):
     assert rows["simulated_van"]["builtin"] is True
     assert rows["victron_venus"]["installed"] is False
     assert rows["victron_venus"]["builtin"] is False
-    installed = [r["id"] for r in core.integrations_list() if r["installed"]]
-    assert installed == ["simulated_van"]
+    installed = {r["id"] for r in core.integrations_list() if r["installed"]}
+    # The standard set: the simulator master switch + the removable world-sim
+    # provider cards ("everything is an integration").
+    assert installed == {"simulated_van", "sim_energy", "sim_water", "sim_climate", "sim_vehicle"}
 
 
 async def test_builtin_cannot_be_removed(core):
