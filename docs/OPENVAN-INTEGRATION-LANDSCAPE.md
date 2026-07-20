@@ -148,6 +148,15 @@ entities**; it never disappears into HA.
 
 ## Development order (Fas 1–4)
 
+> **2026-07 update:** Fas 2–4 have been re-planned from market research (three
+> scouted passes over products, forums and the HA/ESPHome scene). The current
+> wave plan lives in [backlog.md](../backlog.md) ("Integration roadmap —
+> market-scouted"); evidence in
+> [INTEGRATION-MARKET-RESEARCH.md](INTEGRATION-MARKET-RESEARCH.md). Headlines:
+> Truma iNet emulation, multi-brand BLE BMS and Chinese diesel heaters are the
+> unanimous top picks; a shared **BLE substrate** is the highest-leverage
+> engineering investment; CZone/CBE/Thetford demoted for lack of demand.
+
 **Fas 1 — reference van & core:** MQTT · HA discovery · ESPHome · Victron GX (MQTT)
 · Victron Modbus TCP · VE.Direct (USB) · generic ESP32 IO · leveling sensor ·
 temp/humidity/CO₂ · tank level + water pump · Teltonika router · USB-GPS · Autoterm

@@ -103,9 +103,66 @@ findings back:
   "restrictions ahead" strip on the Journey tab; eventually a height/weight/width-aware
   route planner (OSRM/Valhalla profile from the vehicle dimensions).
 - Navigation / routing + destination ETA; OBD-II / CAN detail for the vehicle plugin.
-- **Fas 2–4** (see the landscape doc): JK/JBD BMS, EPEver, EcoFlow, Mopeka, Shelly,
-  Signal K, OBD-II; then OEM buses (CI-BUS, RV-C, NMEA 2000, Truma/Dometic); then
-  vendor partnerships.
+### Integration roadmap — market-scouted 2026-07
+
+Replaces the old "Fas 2–4" list. Built from three parallel research passes over
+commercial products, user communities (incl. Husbilsklubben/Wohnmobilforum) and
+the HA/ESPHome smart-van scene — full evidence + sources in
+[docs/INTEGRATION-MARKET-RESEARCH.md](docs/INTEGRATION-MARKET-RESEARCH.md).
+Every pick below has both *demand evidence* and (unless marked) an *existing
+open/RE'd protocol base* to build on.
+
+**Substrate first (highest leverage):**
+- **BLE substrate** — scan, advertisement parsing, GATT sessions, one shared
+  radio across drivers. Nearly everything the market wants is BLE; this makes
+  8+ integrations below cheap.
+- **Passive-advertisement family driver** (the RuuviTag pattern generalised):
+  one listener ships Mopeka (LPG/tanks) + BLE TPMS + BM2/Junctek shunts +
+  BTHome/Govee/Xiaomi thermometers (fridge + pet heat-safety) in one go.
+
+**Wave 1 — unanimous picks (demand × proven protocol):**
+1. **Truma iNet-box emulation** (LIN) — the single biggest demand signal in the
+   space (1000+-post HA thread; three mature RE stacks to port); *the* EU
+   heater/boiler; our LIN/CI-BUS beachhead. Home-market fit.
+2. **Multi-brand BLE BMS** (JK/JBD/Daly/Seplos/ANT/SOK) — one driver, not
+   per-brand (BMS_BLE-HA model); the heart of every DIY LiFePO4 van; unlocks
+   SoC safety rules on non-Victron builds.
+3. **Chinese diesel heaters** (Hcalory/Vevor blue-wire UART; BLE/Afterburner
+   variants later) — highest unit volume anywhere; sibling of our Autoterm driver.
+4. **Victron BLE Instant Readout** — official spec; covers the huge
+   SmartShunt/SmartSolar-but-no-GX fleet our Venus driver misses.
+5. **Tank senders: Garnet SeeLevel II** (NA standard, pulse RE'd) — tank data
+   feeds our existing water advisors directly.
+6. **Votronic** (UART/BLE, RE'd) — "the German Victron", OEM in EU vans,
+   uncovered by anyone.
+
+**Wave 2 — strong demand, mostly easy:**
+MaxxFan IR (protocol decoded; the roof fan) · Dometic **CFX3** + Alpicool/Brass
+Monkey BLE fridges · EcoFlow (**local BLE**, not cloud — Rule 3) / Bluetti BLE /
+Anker SOLIX (official local Modbus-TCP → near-free on our driver) · EPEver as a
+**register-map preset** on the Modbus driver · Starlink local gRPC (note: GPS
+dropped from local API 2026-05) · OBD-II via **WiCAN** (already speaks MQTT) ·
+Shelly 12V + Tasmota (VanPi-ecosystem compat) · Simarine Pico (passive UDP) ·
+Webasto/Eberspächer W-Bus · Micro-Air EasyTouch (NA thermostat).
+
+**Wave 3 — strategic/regional bets:**
+RV-C via CoachProxyOS's decoded tables (the US motorhome gateway) · Lippert
+OneControl (dominant NA towables — only a fragile cloud-bridge path; watch) ·
+Gobius (Swedish tank radar — partner opportunity) · Frigate/RTSP (integrate,
+don't build) · Signal K bridge (also our route to NMEA 2000 — don't build native
+N2K) · Schaudt EBL + **Alde** (heavy Nordic/DE demand, closed buses, RE thin —
+watch; Alde partially reachable via the Truma iNet path) · VanPi/Pekaway interop
+(documented MQTT/HTTP API; courts the nearest existing community).
+
+**Demoted with evidence:** CZone (no DIY demand; someday a Signal K/N2K profile)
+· CI-BUS standalone (too early; Truma emulation is the practical value) · CBE,
+Thetford (no visible demand) · E&P/AL-KO, REDARC, BMPRO, Sargent, Lithionics
+(closed, no RE base — watchlist).
+
+**Pain points the roadmap serves** (aim advisors here too): remote heater
+control · tank levels that work · app fragmentation (the unified dashboard *is*
+the product) · monitoring-while-away (battery/fridge/**pet safety**) ·
+security/theft.
 - **Safety-class-4 gating** — locks / gas valves need strong auth + audit +
   isolation before any such integration ships (never free LLM access).
 - **Library at scale (thousands of integrations)** — the local foundations shipped

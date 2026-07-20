@@ -3,6 +3,16 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Integration market research
+
+- Three parallel scouted research passes (commercial products, user forums incl.
+  Husbilsklubben/Wohnmobilforum, HA/ESPHome smart-van scene) distilled into a
+  wave-planned integration roadmap in the backlog + an evidence file
+  (`docs/INTEGRATION-MARKET-RESEARCH.md`). Unanimous top picks: Truma iNet-box
+  emulation, multi-brand BLE BMS, Chinese diesel heaters. Key insight: almost
+  everything is BLE — build the shared BLE substrate first. CZone/CBE/Thetford
+  demoted for lack of demand.
+
 ## 2026-07 — The driver ecosystem: manifests, signing, containment
 
 - **Manifest-first driver registry** — every driver declares `driver.toml`
