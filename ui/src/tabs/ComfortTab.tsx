@@ -4,6 +4,7 @@ import { sendIntent, getSettings, saveSettings } from "@shared/api";
 import { useVan, num } from "../state";
 import { useT } from "../i18n";
 import { Gauge } from "../components/Gauge";
+import { NoSource } from "../components/NoSource";
 import { HeaterControl } from "../components/HeaterControl";
 import { QuickToggle } from "../components/QuickToggle";
 import { AirSafety } from "../components/AirSafety";
@@ -48,6 +49,9 @@ export function ComfortTab() {
     <div className="tab-grid comfort">
       <section className="panel">
         <h2>{t("comfort.climate")}</h2>
+        {[twin["cabin.temperature"], twin["outside.temperature"]].every((v) => v == null) && (
+          <NoSource />
+        )}
         <div className="gauge-grid">
           <Gauge label={t("label.cabin")} value={num(twin["cabin.temperature"])} unit="°C" min={-5} max={35} />
           <Gauge label={t("label.outside")} value={num(twin["outside.temperature"])} unit="°C" min={-20} max={40} />
@@ -61,6 +65,9 @@ export function ComfortTab() {
 
       <section className="panel">
         <h2>{t("comfort.water")}</h2>
+        {[twin["fresh_water.level_pct"], twin["grey_water.level_pct"]].every((v) => v == null) && (
+          <NoSource />
+        )}
         <div className="gauge-grid">
           <Gauge label={t("label.freshWater")} value={num(twin["fresh_water.level_pct"])} unit="%" warnBelow={15} />
           <Gauge label={t("label.greyWater")} value={num(twin["grey_water.level_pct"])} unit="%" />

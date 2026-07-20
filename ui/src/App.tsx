@@ -194,6 +194,16 @@ export default function App() {
   const t = useT();
   const [tab, setTab] = useState<TabId>("home");
 
+  // Deep links from panels (e.g. a "no data source" hint → Settings → Integrations).
+  useEffect(() => {
+    const onNavigate = (e: Event) => {
+      const target = (e as CustomEvent).detail?.tab;
+      if (target) setTab(target as TabId);
+    };
+    window.addEventListener("openvan:navigate", onNavigate);
+    return () => window.removeEventListener("openvan:navigate", onNavigate);
+  }, []);
+
   // The whole UI themes to the active persona (design-system [data-theme]).
   useEffect(() => {
     document.documentElement.setAttribute(

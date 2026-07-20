@@ -121,11 +121,12 @@ function IntegrationCard({
 }) {
   const tone = STATUS_TONE[it.status] ?? "warn";
   const safetyTone = it.safety_class >= 3 ? "bad" : it.safety_class >= 2 ? "warn" : "good";
+  const Glyph = it.world_sim || it.builtin ? FlaskConical : Plug;
   return (
     <div className={"integration-card" + (it.installed ? " on" : "") + (busy ? " busy" : "")}>
       <div className="integration-head">
         <div className="integration-title">
-          <Plug size={16} className="integration-glyph" />
+          <Glyph size={16} className="integration-glyph" />
           <div>
             <strong>{it.name}</strong>
             {it.vendor && <span className="integration-vendor">{it.vendor}</span>}
@@ -289,6 +290,16 @@ export function IntegrationsSettings() {
     ) : undefined;
 
   const installed = useMemo(() => items.filter((i) => i.installed), [items]);
+  // Real hardware first — that's what matters on a real van; the simulated
+  // data sources (master switch + world-sim providers) group below.
+  const hardware = useMemo(
+    () => installed.filter((i) => !i.builtin && !i.world_sim),
+    [installed],
+  );
+  const simulators = useMemo(
+    () => installed.filter((i) => i.builtin || i.world_sim),
+    [installed],
+  );
 
   // Filter option lists derived from the whole catalog.
   const categories = useMemo(
@@ -337,14 +348,33 @@ export function IntegrationsSettings() {
       {mode === "installed" ? (
         <>
           <h3 className="integration-cat">
-            {t("integrations.installed")} ({installed.length})
+            {t("integrations.hardware")} ({hardware.length})
           </h3>
-          {installed.length === 0 ? (
+          {hardware.length === 0 ? (
+            <p className="companion-quiet">{t("integrations.noHardware")}</p>
+          ) : (
+            <div className="integration-grid">{hardware.map(renderInstalled)}</div>
+          )}
+          <h3 className="integration-cat">
+            {t("integrations.simulators")} ({simulators.length})
+          </h3>
+          {simulators.length === 0 ? (
             <p className="companion-quiet">{t("integrations.none")}</p>
           ) : (
             <div className="integration-grid">
-              {installed.map((it) => (
-                <IntegrationCard
+              {simulators.map(renderInstalled)}
+            </div>
+          )}
+        </>
+      ) : (
+        <LibraryView />
+      )}
+    </section>
+  );
+
+  function renderInstalled(it: IntegrationInfo) {
+    return (
+      <IntegrationCard
                   key={it.id}
                   it={it}
                   busy={busy === it.id}
@@ -397,12 +427,12 @@ export function IntegrationsSettings() {
                       />
                     ) : undefined
                   }
-                />
-              ))}
-            </div>
-          )}
-        </>
-      ) : (
+      />
+    );
+  }
+
+  function LibraryView() {
+    return (
         <>
           <div className="integration-searchbar">
             <Search size={15} className="integration-search-glyph" />
@@ -487,7 +517,6 @@ export function IntegrationsSettings() {
             </div>
           )}
         </>
-      )}
-    </section>
-  );
+    );
+  }
 }

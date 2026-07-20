@@ -193,6 +193,7 @@ export interface IntegrationInfo {
   mode: string; // "sim" | "modbus_tcp" | "mqtt" | … — the active transport
   live: boolean; // connected to real hardware (vs. simulated)
   sim_engine: boolean; // environment physics running (the simulator card is its switch)
+  world_sim: boolean; // a simulated data-source card (grouped apart from hardware)
   config: IntegrationConfigField[]; // connection settings the user can fill in
   trust: string; // bundled | official | community | unknown_signer | unsigned
   driver_version: string; // the driver package version from its manifest

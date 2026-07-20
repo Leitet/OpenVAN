@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useT } from "../i18n";
+import { clearPendingSettings, peekPendingSettings } from "../navigation";
 import { SettingsProvider, useSettings } from "../settings/SettingsProvider";
 import { GeneralSettings } from "../settings/GeneralSettings";
 import { AssistantSettings } from "../settings/AssistantSettings";
@@ -44,7 +45,21 @@ export function SettingsTab() {
 function SettingsCategories() {
   const t = useT();
   const { saving, saved } = useSettings();
-  const [cat, setCat] = useState<Category>("general");
+  // Deep links (e.g. a "no data source" hint) land on a specific category —
+  // consumed on mount (the event that opened Settings fired before we existed),
+  // and listened for while already open.
+  const [cat, setCat] = useState<Category>(
+    () => (peekPendingSettings() as Category) ?? "general",
+  );
+  useEffect(() => {
+    clearPendingSettings();
+    const onNavigate = (e: Event) => {
+      const target = (e as CustomEvent).detail?.settings;
+      if (target) setCat(target as Category);
+    };
+    window.addEventListener("openvan:navigate", onNavigate);
+    return () => window.removeEventListener("openvan:navigate", onNavigate);
+  }, []);
 
   return (
     <div className="settings-view">

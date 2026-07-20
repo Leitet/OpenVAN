@@ -477,6 +477,31 @@ const T: Record<string, Entry> = {
     sv: "Simulering pausad",
     de: "Simulation pausiert",
   },
+  "integrations.hardware": {
+    en: "Your hardware",
+    sv: "Din hårdvara",
+    de: "Deine Hardware",
+  },
+  "integrations.simulators": {
+    en: "Simulated sources",
+    sv: "Simulerade källor",
+    de: "Simulierte Quellen",
+  },
+  "integrations.noHardware": {
+    en: "No hardware integrations yet — browse the library to add your van's gear.",
+    sv: "Inga hårdvaruintegrationer ännu — bläddra i biblioteket för att lägga till bilens utrustning.",
+    de: "Noch keine Hardware-Integrationen — durchsuche die Bibliothek, um die Ausstattung hinzuzufügen.",
+  },
+  "noSource.hint": {
+    en: "No data source for this — the values read unknown.",
+    sv: "Ingen datakälla för detta — värdena är okända.",
+    de: "Keine Datenquelle dafür — die Werte sind unbekannt.",
+  },
+  "noSource.action": {
+    en: "Add integration",
+    sv: "Lägg till integration",
+    de: "Integration hinzufügen",
+  },
   "settings.camping": { en: "Camping", sv: "Camping", de: "Camping" },
   "settings.campingNote": {
     en: "Sources for places to stay. The van proposes camp spots from the enabled ones — add more by dropping a source package under campsources/.",

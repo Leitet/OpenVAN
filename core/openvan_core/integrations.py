@@ -513,6 +513,9 @@ class IntegrationManager:
         d["enabled"] = instance.enabled
         d["installed"] = instance.enabled
         d["builtin"] = instance.info.id in BUILTIN
+        # World-sim provider cards (simulated data sources) — the UI groups them
+        # apart from real hardware integrations.
+        d["world_sim"] = isinstance(instance, WorldSimProvider)
         # Whether the environment-physics engine runs (the simulator card is its
         # switch; same value on every row so any consumer can read it).
         d["sim_engine"] = self.sim_engine_on

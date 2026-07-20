@@ -2,6 +2,7 @@ import { Zap, Fuel, PlugZap, Power } from "lucide-react";
 import { useVan, num } from "../state";
 import { useT } from "../i18n";
 import { Gauge } from "../components/Gauge";
+import { NoSource } from "../components/NoSource";
 import { Trends } from "../components/Trends";
 import { Predictions } from "../components/Predictions";
 import { Maintenance } from "../components/Maintenance";
@@ -40,6 +41,9 @@ export function PowerTab() {
     <div className="tab-grid power">
       <section className="panel">
         <h2>{t("power.energy")}</h2>
+        {[twin["house_battery.soc"], twin["house_battery.voltage"], twin["solar.power"]].every(
+          (v) => v == null,
+        ) && <NoSource />}
         <div className="gauge-grid">
           <Gauge label={t("label.battery")} value={num(twin["house_battery.soc"])} unit="%" warnBelow={20} />
           <Gauge label={t("label.voltage")} value={num(twin["house_battery.voltage"])} unit="V" min={10} max={15} />

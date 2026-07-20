@@ -578,6 +578,23 @@ body {
   margin: 0;
   line-height: 1.4;
 }
+/* "No data source" hint — a domain without a provider (everything is an
+   integration): values read unknown, this links to the library. */
+.no-source {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px dashed color-mix(in srgb, var(--muted) 40%, transparent);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 0 0 10px;
+}
+.no-source button {
+  margin-left: auto;
+  flex: none;
+}
 /* Toggle switch (reused from device rows) */
 .switch {
   position: relative;

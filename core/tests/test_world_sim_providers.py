@@ -65,6 +65,13 @@ async def test_every_provider_is_plug_and_play(core, provider_id):
         assert core.twin.get(key) == value, f"{key} not reseeded by {provider_id}"
 
 
+async def test_world_sim_flag_in_descriptor(core):
+    """The UI groups simulated sources apart from hardware via `world_sim`."""
+    assert core.integrations.describe("sim_energy")["world_sim"] is True
+    assert core.integrations.describe("chinese_heater")["world_sim"] is False
+    assert core.integrations.describe("simulated_van")["world_sim"] is False  # master switch
+
+
 async def test_bare_van_all_providers_removed(core):
     """No providers at all — a real van before any hardware is configured. The
     platform must stay alive and every reading must be honestly unknown."""
