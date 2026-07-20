@@ -21,14 +21,62 @@ async def core(tmp_path):
     await c.stop()
 
 
+PROVIDERS = [
+    "sim_energy", "sim_water", "sim_climate", "sim_vehicle",
+    "sim_fridge", "sim_connectivity", "sim_security", "sim_cameras",
+]
+
+
+def _provider_seeds(core, provider_id):
+    return core.integrations.get(provider_id).SEEDS
+
+
 async def test_providers_installed_and_seeding_by_default(core):
     installed = {r["id"] for r in core.integrations_list() if r["installed"]}
-    assert {"simulated_van", "sim_energy", "sim_water", "sim_climate", "sim_vehicle"} <= installed
+    assert set(PROVIDERS) | {"simulated_van"} <= installed
     # Their seeds are the world the UI shows.
     assert core.twin.get("house_battery.soc") == 82.0
     assert core.twin.get("cassette.level_pct") == 20.0
     assert core.twin.get("gps.lat") == 46.5405
+    assert core.twin.get("fridge.temp_c") == 4.0
+    assert core.twin.get("connectivity.signal_pct") == 74.0
+    assert core.twin.get("security.door_open") is False
+    assert core.twin.get("camera.rear.online") is True
     assert core.hub.entities["sensor.house_battery_soc"].state == 82.0
+
+
+@pytest.mark.parametrize("provider_id", PROVIDERS)
+async def test_every_provider_is_plug_and_play(core, provider_id):
+    """The plug-and-play contract, for every card: remove → the whole domain
+    reads unknown and nothing crashes; re-add → seeded again."""
+    seeds = _provider_seeds(core, provider_id)
+    assert seeds, f"{provider_id} has no seeds"
+    # Unplug.
+    assert await core.set_integration_enabled(provider_id, False) is True
+    for key in seeds:
+        assert core.twin.get(key) is None, f"{key} not released by {provider_id}"
+    # The van keeps running: physics ticks and every advisor evaluates cleanly
+    # against the unknowns.
+    await core.simulation.step(5.0)
+    await core.advisors.evaluate()
+    # Replug.
+    assert await core.set_integration_enabled(provider_id, True) is True
+    for key, value in seeds.items():
+        assert core.twin.get(key) == value, f"{key} not reseeded by {provider_id}"
+
+
+async def test_bare_van_all_providers_removed(core):
+    """No providers at all — a real van before any hardware is configured. The
+    platform must stay alive and every reading must be honestly unknown."""
+    for provider_id in PROVIDERS:
+        await core.set_integration_enabled(provider_id, False)
+    await core.simulation.step(5.0)
+    await core.advisors.evaluate()
+    for provider_id in PROVIDERS:
+        for key in _provider_seeds(core, provider_id):
+            assert core.twin.get(key) is None
+    # Nothing pretends: no advisor can fire on unknown data.
+    assert core.advisors.active_notices() == []
 
 
 async def test_removing_a_provider_releases_its_domain(core):

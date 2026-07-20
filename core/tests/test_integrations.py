@@ -62,7 +62,10 @@ async def test_only_simulator_installed_by_default(core):
     installed = {r["id"] for r in core.integrations_list() if r["installed"]}
     # The standard set: the simulator master switch + the removable world-sim
     # provider cards ("everything is an integration").
-    assert installed == {"simulated_van", "sim_energy", "sim_water", "sim_climate", "sim_vehicle"}
+    assert installed == {
+        "simulated_van", "sim_energy", "sim_water", "sim_climate", "sim_vehicle",
+        "sim_fridge", "sim_connectivity", "sim_security", "sim_cameras",
+    }
 
 
 async def test_builtin_cannot_be_removed(core):

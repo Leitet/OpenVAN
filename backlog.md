@@ -92,10 +92,12 @@ findings back:
 
 ## Integrations
 
-- **World-sim provider cards for the remaining domains** (energy/water/climate/
-  vehicle shipped): fridge, connectivity, security, cameras still seed from
-  `Config.seed_twin` — give each its own removable `WorldSimProvider` so every
-  visible value traces to an installed integration.
+- **World-sim provider cards — SHIPPED for all domains** (energy, water/tanks,
+  climate/air, vehicle/GPS, fridge, connectivity, security, cameras). Every
+  visible value now traces to an installed integration; `seed_twin` holds only
+  actuator rest-states, the HA presence input and the sim clock. Plug-and-play
+  is contract-tested per card (remove → unknown, re-add → seeded, bare van
+  stays alive).
 - **HA bridge follow-ups** (export shipped): *import* other HA devices into the
   van (HA entities → twin signals, surfaced like device_sensors); Matter later;
   validate against a real Home Assistant instance (only mosquitto validated so far).

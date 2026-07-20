@@ -208,12 +208,13 @@ class Config:
     online_base_url: str = "https://api.openai.com/v1"
     online_model: str = ""
     online_api_key: str | None = None
-    # Seed the twin with the state the *platform itself* owns: actuator
-    # rest-states, the simulated clock, and domains without a provider card yet.
-    # The world's data (battery/solar, water/tanks, climate/air, vehicle/GPS) is
-    # NOT seeded here — it is *provided* by the per-domain world-sim provider
-    # integrations (integrations/sim_*), installed by default and removable, so
-    # what the UI shows always traces to an installed integration.
+    # Seed the twin with only the state the *platform itself* owns: actuator
+    # rest-states (the plugins' switches), the HA presence input and the
+    # simulated clock. ALL world data — battery/solar, water/tanks, climate/air,
+    # vehicle/GPS, fridge, connectivity, security, cameras — is *provided* by
+    # the per-domain world-sim provider integrations (integrations/sim_*),
+    # installed by default and removable, so every value the UI shows traces to
+    # an installed integration.
     seed_twin: dict[str, float | bool] = field(
         default_factory=lambda: {
             "water_pump.on": False,
@@ -221,36 +222,8 @@ class Config:
             "diesel_heater.on": False,
             "diesel_heater.setpoint": 20.0,
             "diesel_heater.power": 0.0,
-            # Fridge — cold, closed, drawing a typical compressor load.
-            "fridge.temp_c": 4.0,
-            "fridge.door_open": False,
-            "fridge.power": 45.0,
             # Home-Assistant presence input (van parked on the home network).
             "home_assistant.van_home": False,
-            # Connectivity — a physical fact of the van (it has a link, or it
-            # doesn't). The simulation/bench drive it; a router integration
-            # (Teltonika, Starlink, …) reads it on real hardware. Offline-first:
-            # Core never depends on this being True.
-            "connectivity.online": True,
-            "connectivity.network": "LTE",  # LTE | 5G | WiFi | Starlink | none
-            "connectivity.signal_pct": 74.0,
-            "connectivity.has_gps_fix": True,
-            # Security — quiet by default.
-            "security.door_open": False,
-            "security.motion": False,
-            # Cameras — all online, no motion, not recording.
-            "camera.rear.online": True,
-            "camera.rear.motion": False,
-            "camera.rear.recording": False,
-            "camera.cabin.online": True,
-            "camera.cabin.motion": False,
-            "camera.cabin.recording": False,
-            "camera.entry.online": True,
-            "camera.entry.motion": False,
-            "camera.entry.recording": False,
-            "camera.awning.online": True,
-            "camera.awning.motion": False,
-            "camera.awning.recording": False,
             # Simulated clock — ~2026-07-14 12:00 UTC (midday). clock.rate is a time
             # multiplier (0 = paused). The sim derives sun/day-night from it + GPS.
             "clock.epoch": 1784030400.0,

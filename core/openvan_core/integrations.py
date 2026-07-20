@@ -127,7 +127,8 @@ BUILTIN: frozenset[str] = frozenset({"simulated_van"})
 # are what provides the reference van's data out of the box. Remove one and its
 # domain honestly reads "unknown" until a real integration takes it over.
 DEFAULT_INSTALLED: frozenset[str] = BUILTIN | frozenset(
-    {"sim_energy", "sim_water", "sim_climate", "sim_vehicle"}
+    {"sim_energy", "sim_water", "sim_climate", "sim_vehicle",
+     "sim_fridge", "sim_connectivity", "sim_security", "sim_cameras"}
 )
 
 

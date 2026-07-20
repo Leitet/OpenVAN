@@ -15,9 +15,13 @@ What has landed, newest first. The forward-looking list lives in
 - **Per-domain mixed mode**: a provider never overwrites a value another
   source already supplies, so a real BMS can own the battery while the water
   tanks stay simulated — swap each domain to real hardware card by card.
-- `Config.seed_twin` shrinks to what the platform itself owns (actuator
-  rest-states, the simulated clock, domains without provider cards yet:
-  fridge, connectivity, security, cameras).
+- **Completed for all domains**: `sim_fridge`, `sim_connectivity`,
+  `sim_security` and `sim_cameras` cards added — `seed_twin` now holds only
+  actuator rest-states, the HA presence input and the sim clock. A
+  parametrized **plug-and-play contract test** covers every provider (remove →
+  whole domain unknown, physics + advisors keep running, re-add → reseeded)
+  plus the bare-van case: all providers removed, the platform stays alive and
+  no advisor fires on unknown data.
 
 ## 2026-07 — Sim / real / mixed: the simulator card becomes the physics switch
 
