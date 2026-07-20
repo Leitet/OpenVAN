@@ -31,6 +31,11 @@ voice = [
     "faster-whisper>=1.0",
     "piper-tts>=1.2",
 ]
+# Real BLE adapter for the shared scanner (ble.py). Optional: without it the
+# BLE substrate runs the sim radio (bench-injected advertisements) or is off.
+ble = [
+    "bleak>=0.22",
+]
 
 [project.scripts]
 openvan-core = "openvan_core.__main__:main"

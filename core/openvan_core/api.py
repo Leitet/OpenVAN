@@ -127,6 +127,14 @@ class SpeakBody(BaseModel):
     voice: str | None = None
 
 
+class BleAdvBody(BaseModel):
+    address: str
+    name: str = ""
+    rssi: int = -60
+    manufacturer_data: dict[str, str] = {}  # company id (int as str) -> hex payload
+    service_data: dict[str, str] = {}  # short uuid -> hex payload
+
+
 class IntegrationConfigBody(BaseModel):
     id: str
     values: dict[str, Any]
@@ -319,6 +327,27 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
     @app.post("/api/vehicle")
     async def set_vehicle(body: VehicleBody) -> dict[str, Any]:
         return await core.set_vehicle(body.profile)
+
+    @app.get("/api/ble")
+    async def ble_status() -> dict[str, Any]:
+        return core.ble.status()
+
+    @app.post("/api/sim/ble")
+    async def sim_ble(body: BleAdvBody) -> dict[str, str]:
+        from .ble import Advertisement
+
+        try:
+            adv = Advertisement(
+                address=body.address,
+                name=body.name,
+                rssi=body.rssi,
+                manufacturer_data={int(k): bytes.fromhex(v) for k, v in body.manufacturer_data.items()},
+                service_data={k.lower(): bytes.fromhex(v) for k, v in body.service_data.items()},
+            )
+        except ValueError as exc:
+            raise HTTPException(400, f"bad advertisement payload: {exc}")
+        await core.ble.inject(adv)
+        return {"status": "injected"}
 
     @app.get("/api/drivers")
     async def drivers() -> dict[str, Any]:

@@ -27,6 +27,9 @@ findings back:
   machine (piper speaks → whisper transcribes back verbatim); on the real Zap/edge
   hardware, profile CPU/latency and pick model sizes (`voice_whisper_model`), and
   pick a per-personality piper voice.
+- **BLE** — validate the bleak radio on a real adapter (Linux/BlueZ + macOS), and
+  the BTHome / Ruuvi RAWv2 / Mopeka parsers against real devices (formats are per
+  public docs/community RE, pinned only by synthetic vectors).
 - **Simulator realism** — once real telemetry exists, tune the illustrative constants
   (thermal, water, energy, solar cloud-loss) against measured values.
 - After each: replace the integration's honest "unvalidated" `warning` with a real
@@ -112,13 +115,17 @@ the HA/ESPHome smart-van scene — full evidence + sources in
 Every pick below has both *demand evidence* and (unless marked) an *existing
 open/RE'd protocol base* to build on.
 
-**Substrate first (highest leverage):**
-- **BLE substrate** — scan, advertisement parsing, GATT sessions, one shared
-  radio across drivers. Nearly everything the market wants is BLE; this makes
-  8+ integrations below cheap.
-- **Passive-advertisement family driver** (the RuuviTag pattern generalised):
-  one listener ships Mopeka (LPG/tanks) + BLE TPMS + BM2/Junctek shunts +
-  BTHome/Govee/Xiaomi thermometers (fridge + pet heat-safety) in one go.
+**Substrate — shipped 2026-07** (`ble.py`): one shared scanner/radio, filtered
+subscriptions, sim radio + bench injection, bleak as the optional `ble` extra.
+First drivers landed on it: **BTHome**, **Mopeka** (mirrors into core tank
+signals → existing advisors work on real hardware), **RuuviTag real mode**.
+Remaining substrate work:
+- **GATT session support** (connect/read/notify) — needed for BLE BMS, fridges,
+  power stations; the scanner only covers broadcast advertisements today.
+- Remaining passive parsers: **BLE TPMS** (fragmented formats) and **BM2/Junctek
+  shunts** — small additions on the existing pattern.
+- Per-device aliasing/bind UI (name a MAC "fridge probe", assign a Mopeka puck to
+  a tank from the library card).
 
 **Wave 1 — unanimous picks (demand × proven protocol):**
 1. **Truma iNet-box emulation** (LIN) — the single biggest demand signal in the
@@ -132,7 +139,7 @@ open/RE'd protocol base* to build on.
 4. **Victron BLE Instant Readout** — official spec; covers the huge
    SmartShunt/SmartSolar-but-no-GX fleet our Venus driver misses.
 5. **Tank senders: Garnet SeeLevel II** (NA standard, pulse RE'd) — tank data
-   feeds our existing water advisors directly.
+   feeds our existing water advisors directly. (Mopeka side already shipped.)
 6. **Votronic** (UART/BLE, RE'd) — "the German Victron", OEM in EU vans,
    uncovered by anyone.
 

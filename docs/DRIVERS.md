@@ -76,6 +76,25 @@ Key rules (enforced by the architecture — see `CLAUDE.md`):
 - Failures are contained: if your import or setup raises, your driver shows an
   *error* state in the catalog and the van keeps running — but don't rely on it.
 
+### BLE drivers
+
+Never own a radio — subscribe to the shared scanner with a filter and parse:
+
+```python
+    async def async_setup(self) -> None:
+        await super().async_setup()
+        if self.ble is not None:
+            self._unsub = self.ble.subscribe(self._on_adv, manufacturer_id=0x0499)
+
+    async def _on_adv(self, adv) -> None:
+        data = my_parser(adv.manufacturer_data.get(0x0499, b""))
+        ...  # normalise into twin signals
+```
+
+Keep the parser a pure function with test vectors. The bench (or
+`POST /api/sim/ble`) injects canned frames into the same dispatch path a real
+adapter uses, so your driver is fully testable with no radio.
+
 ## 3. Installing
 
 Bundled drivers live in the repo (`integrations/`, `plugins/`, `campsources/`).

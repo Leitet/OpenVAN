@@ -186,6 +186,10 @@ class Config:
     voice_tts: str = "auto"
     voice_whisper_model: str = "base"  # faster-whisper model size
     voice_piper_model: str = ""  # path to a piper .onnx voice (required for piper)
+    # BLE substrate (see ble.py): one shared scanner all BLE drivers subscribe to.
+    # "auto" prefers a real adapter via the optional `ble` extra (bleak), else the
+    # sim radio in simulate mode. "off" | "sim" | "bleak" pin it.
+    ble_radio: str = "auto"
     # Offline models: a local Ollama server.
     llm_base_url: str = "http://127.0.0.1:11434"
     llm_model: str = "llama3.2"
@@ -348,6 +352,7 @@ class Config:
         cfg.voice_tts = os.environ.get("OPENVAN_VOICE_TTS", cfg.voice_tts)
         cfg.voice_whisper_model = os.environ.get("OPENVAN_WHISPER_MODEL", cfg.voice_whisper_model)
         cfg.voice_piper_model = os.environ.get("OPENVAN_PIPER_MODEL", cfg.voice_piper_model)
+        cfg.ble_radio = os.environ.get("OPENVAN_BLE_RADIO", cfg.ble_radio)
         if os.environ.get("OPENVAN_DATA_DIR"):
             cfg.data_dir = Path(os.environ["OPENVAN_DATA_DIR"])
         if os.environ.get("OPENVAN_AI") is not None:

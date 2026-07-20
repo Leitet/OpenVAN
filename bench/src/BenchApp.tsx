@@ -335,6 +335,61 @@ function ConnectivityPanel({ twin }: { twin: Record<string, unknown> }) {
   );
 }
 
+// BLE without a radio (Rule 1): inject canned advertisement frames through the
+// shared scanner — the same path real air takes with the `ble` extra installed.
+function BlePanel() {
+  const [status, setStatus] = useState<{ radio: string | null; available: boolean } | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/ble").then((r) => r.json()).then(setStatus).catch(() => {});
+  }, []);
+
+  const inject = async (label: string, body: object) => {
+    const res = await fetch("/api/sim/ble", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setResult(res.ok ? `sent: ${label}` : `error: ${res.status}`);
+  };
+
+  return (
+    <>
+      <p className="note">radio: {status ? (status.available ? status.radio : "off") : "…"}</p>
+      <button className="toggle" onClick={() => inject("BTHome fridge probe 25.06°C", {
+        address: "AA:BB:CC:DD:EE:01", name: "Fridge Probe",
+        service_data: { fcd2: "40015502ca0903bf13" },
+      })}>
+        BTHome thermometer (25.1°C / 50.6%)
+      </button>
+      <button className="toggle" onClick={() => inject("Ruuvi RAWv2 11.94°C", {
+        address: "C4:64:00:00:BE:EF",
+        manufacturer_data: { "1177": "0509545194c87e000000000000ac20" },
+      })}>
+        RuuviTag RAWv2 (11.9°C)
+      </button>
+      <button className="toggle" onClick={() => inject("Mopeka 80%", {
+        address: "DD:00:00:00:00:01",
+        manufacturer_data: { "89": "03593e9001" },
+      })}>
+        Mopeka LPG puck (~80%)
+      </button>
+      <button className="toggle" onClick={() => inject("Mopeka LOW 16%", {
+        address: "DD:00:00:00:00:01",
+        manufacturer_data: { "89": "03593e5000" },
+      })}>
+        Mopeka LOW (~16% — trips propane advisor)
+      </button>
+      {result && <p className="note">{result}</p>}
+      <p className="note">
+        Enable the matching integration first (product UI → library). Frames enter
+        the shared BLE scanner exactly where a real adapter would deliver them.
+      </p>
+    </>
+  );
+}
+
 // Voice pipeline without a mic (Rule 1): feed a canned utterance as SIMVOICE
 // "audio" through /api/voice/transcribe, and play the TTS output. With the real
 // engines installed (the `voice` extra) the same endpoints run whisper/piper.
@@ -632,6 +687,11 @@ export function BenchApp() {
         <section className="card">
           <h2>Voice</h2>
           <VoicePanel />
+        </section>
+
+        <section className="card">
+          <h2>BLE</h2>
+          <BlePanel />
         </section>
 
         <section className="card">

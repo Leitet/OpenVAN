@@ -163,6 +163,18 @@ never loads. CLI: `openvan-driver keygen|sign|verify`. `GET /api/drivers` lists
 records; the library UI shows provenance badges. Trust proves *publisher +
 integrity*, not safety — loaded drivers run in-process with full access.
 
+**BLE substrate** (`ble.py`): the market's hardware is overwhelmingly BLE, so
+Core owns **one scanner on one radio** and BLE drivers just `self.ble.subscribe()`
+with a filter (manufacturer id / service UUID) — they never touch a radio.
+`SimBleRadio` is the Rule-1 stand-in (the bench and `POST /api/sim/ble` inject
+canned advertisement frames into the same dispatch path real air uses);
+`BleakRadio` drives a real adapter via the optional `ble` extra
+(`pip install -e ".[ble]"`, unvalidated on real adapters yet). Config
+`ble_radio: auto|off|sim|bleak`; status at `GET /api/ble`; subscriber failures
+are contained. First drivers on it: **BTHome** (the open sensor standard),
+**Mopeka** tank pucks (which mirror into `propane.level_pct` etc. so existing
+tank advisors run on real hardware unchanged) and **RuuviTag** RAWv2 real mode.
+
 **Real transports** (`transports/`): a driver moves from sim to hardware by
 overriding `run_transport()` and picking a `mode` in its config. The
 **HA bridge** (`habridge.py`, run by the `mqtt_homeassistant` integration in

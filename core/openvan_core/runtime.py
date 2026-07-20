@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .backends import Backend, SimBackend
+from .ble import BleScanner
 from .camp import CampService
 from .companion import Companion
 from .config import DEFAULT_TUNING, Config
@@ -147,6 +148,7 @@ class Core:
     coverage: CoverageMemory
     trip: TripLedger
     voice: VoiceService
+    ble: BleScanner
     roads: RoadNetwork | None = None
     registry: Any = None  # DriverRegistry, built in start()
 
@@ -186,6 +188,10 @@ class Core:
             user_key_dirs=[self.config.data_dir / "trust"],
             require_signed=self.config.require_signed,
         )
+        # One shared BLE radio for every BLE driver (sim radio in simulate mode).
+        await self.ble.start()
+        self.integrations.hub = self.hub
+        self.integrations.ble = self.ble
         self.integrations.discover(self.config.integrations_dir, self.registry)
         await self.integrations.setup_all()
         await self.router.refresh()  # probe the effective model for the active profile
@@ -217,6 +223,7 @@ class Core:
             await self.telemetry_recorder.stop()
             self.telemetry.close()
         await self.integrations.teardown_all()
+        await self.ble.stop()
         await self.plugins.teardown_all()
         self.store.close()
 
@@ -665,6 +672,7 @@ def build_core(config: Config | None = None) -> Core:
     security = SecuritySystem()
     coverage = CoverageMemory(bus, twin)
     voice = VoiceService(config)
+    ble = BleScanner(config)
     # Build the full advisor set from config-driven thresholds (nothing hardcoded).
     advisors.advisors = _build_advisors(config, weather, maintenance, security, coverage)
     return Core(
@@ -692,6 +700,7 @@ def build_core(config: Config | None = None) -> Core:
         coverage=coverage,
         trip=trip,
         voice=voice,
+        ble=ble,
         router=router,
         roads=roads,
     )

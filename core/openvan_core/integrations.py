@@ -159,6 +159,8 @@ class Integration(ABC):
         # Drivers that accept inbound commands (e.g. the HA bridge) MUST route
         # them through hub.execute_intent — never actuate directly (Rule 2).
         self.hub: Any = None
+        # The shared BLE scanner (set by the manager) — subscribe, never own a radio.
+        self.ble: Any = None
         self.enabled = False
         self._control_entities: list[str] = []
         self._control_unsubs: list[Any] = []
@@ -326,6 +328,7 @@ class IntegrationManager:
         self.bus = bus
         self.store = store
         self.hub = hub
+        self.ble: Any = None
         self.registry: Any = None
         self.integrations: dict[str, Integration] = {}
 
@@ -381,6 +384,7 @@ class IntegrationManager:
             try:
                 instance = cls(self.twin, self.bus, self._config_for(info.id))
                 instance.hub = self.hub
+                instance.ble = self.ble
                 self.integrations[info.id] = instance
                 want = persisted.get(info.id, _default_enabled(info))
                 if want:

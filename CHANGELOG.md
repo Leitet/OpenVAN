@@ -3,6 +3,21 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — BLE substrate + first BLE drivers
+
+- **One radio, shared by every BLE driver** (`ble.py`): Core owns a single
+  scanner; drivers subscribe with a filter and never touch the radio. Sim radio
+  for bench/test injection (`POST /api/sim/ble`), real adapters via the optional
+  `ble` extra (bleak), contained subscriber failures, `GET /api/ble` status.
+- **BTHome driver** — the open BLE sensor standard (Shelly BLU, Xiaomi-ATC…):
+  one driver for every compliant thermometer; auto-surfaced as entities.
+- **Mopeka Pro Check driver** — BLE tank pucks, with the level mirrored into the
+  core tank signal so the existing propane/water advisors run on real hardware
+  unchanged (verified: a low LPG frame fires the untouched LowPropane advisor).
+- **RuuviTag real mode** — RAWv2 advertisement parsing on the substrate.
+- All parsers are pure functions pinned by test vectors; formats flagged for
+  real-device validation.
+
 ## 2026-07 — Integration market research
 
 - Three parallel scouted research passes (commercial products, user forums incl.
