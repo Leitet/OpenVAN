@@ -27,6 +27,9 @@ findings back:
   machine (piper speaks → whisper transcribes back verbatim); on the real Zap/edge
   hardware, profile CPU/latency and pick model sizes (`voice_whisper_model`), and
   pick a per-personality piper voice.
+- **Serial links & RTU** — validate the TCP-bridge link against a real EW11-class
+  device, the `serial` extra against a USB-RS485 stick, and the EPEver register
+  map against a real Tracer.
 - **BLE** — validate the bleak radio on a real adapter (Linux/BlueZ + macOS), and
   the BTHome / Ruuvi RAWv2 / Mopeka / TPMS TypeA parsers against real devices, the
   **JBD BMS** frames against a real pack, and **Victron Instant Readout**
@@ -123,29 +126,33 @@ Remaining substrate work (GATT sessions + TPMS TypeA shipped 2026-07):
   a tank from the library card).
 
 **Wave 1 — status after the 2026-07 autonomous build session:**
-1. **Truma iNet-box emulation** (LIN) — REMAINS (the biggest one). Needs the LIN
-   protocol port from inetbox.py/esphome-truma_inetbox (license check first) and
-   a serial transport; recommend fetching the reference repos when starting.
+1. **Truma iNet-box emulation** (LIN) — REMAINS (the biggest one). The transport
+   is no longer a blocker (the link layer reaches the LIN adapter via a TCP
+   bridge or the `serial` extra); what remains is the protocol port from
+   inetbox.py/esphome-truma_inetbox (license check first).
 2. **BLE BMS — JBD/Overkill SHIPPED** (`ble_bms`, GATT, feeds house_battery so
    all advisors/safety run on non-Victron packs). Remains: JK, Daly, Seplos
    protocol modules in the same driver.
-3. **Chinese diesel heaters** — REMAINS. Blue-wire UART needs a serial transport
-   (pyserial optional extra) or an ESPHome-bridge recipe; BLE variants fragmented.
+3. **Chinese diesel heaters** — REMAINS; unblocked by the link layer (blue-wire
+   UART over a TCP bridge or the `serial` extra) — the remaining work is the
+   Ray-Jones protocol port.
 4. **Victron BLE Instant Readout — SHIPPED** (`victron_ble`: pure-stdlib AES-CTR
    FIPS-pinned, battery-monitor + solar records, per-device keys, optional
    house-battery mirror). Remains: more record types (DC-DC, inverter, aux modes).
 5. **Garnet SeeLevel II** — REMAINS (12V pulse bus needs GPIO/ESP hardware — an
    ESPHome-bridge recipe is the realistic path; document rather than driver?).
-6. **Votronic** (UART/BLE, RE'd) — REMAINS; needs serial transport or the BLE
-   Connector GATT protocol.
+6. **Votronic** (UART/BLE, RE'd) — REMAINS; transport unblocked (link layer for
+   the display UART, GATT substrate for the BLE Connector) — remaining work is
+   the protocol port from syssi/esphome-votronic.
 
 **Wave 2 — strong demand, mostly easy:**
 **BLE TPMS TypeA SHIPPED** (`tpms`; SYTPMS/Michelin/WODHMIEY families remain) ·
 MaxxFan IR (protocol decoded; needs an IR bridge recipe) · Dometic **CFX3** +
 Alpicool/Brass Monkey BLE fridges (GATT — substrate ready) · EcoFlow (**local
 BLE**, not cloud — Rule 3) / Bluetti BLE / Anker SOLIX (official local Modbus-TCP
-→ near-free on our driver) · EPEver as a **register-map preset** (needs Modbus
-RTU/serial) · Starlink local gRPC (grpc dep decision; GPS dropped from local API
+→ near-free on our driver) · **EPEver SHIPPED** (`epever`: Modbus RTU over the
+link layer — EW11 TCP bridge with zero extras, or USB via the `serial` extra;
+live PV feeds solar.power) · Starlink local gRPC (grpc dep decision; GPS dropped from local API
 2026-05) · OBD-II via **WiCAN** (rides our MQTT client — good next candidate) ·
 Shelly 12V (HTTP RPC, loopback-testable) + Tasmota (rides our MQTT client;
 VanPi-ecosystem compat) · Simarine Pico (passive UDP — easy) · Webasto/

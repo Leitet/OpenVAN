@@ -95,6 +95,19 @@ Keep the parser a pure function with test vectors. The bench (or
 `POST /api/sim/ble`) injects canned frames into the same dispatch path a real
 adapter uses, so your driver is fully testable with no radio.
 
+### Serial-device drivers
+
+Never open ports directly — ask the link layer, so the user chooses how the wire
+is reached (TCP bridge with no extras, USB with the `serial` extra, sim):
+
+```python
+from openvan_core.transports.links import create_link
+from openvan_core.transports.modbus_rtu import AsyncModbusRtuClient
+
+link = create_link(self.config)          # config: link=tcp|serial|sim, host/device…
+client = AsyncModbusRtuClient(link, unit_id=1)
+```
+
 ## 3. Installing
 
 Bundled drivers live in the repo (`integrations/`, `plugins/`, `campsources/`).

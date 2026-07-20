@@ -3,6 +3,20 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Pluggable serial links + Modbus RTU + EPEver
+
+- **Link layer** (`transports/links.py`): a serial device is reached by a chosen
+  *link*, like choosing a driver — `tcp` (EW11/ser2net bridges, pure stdlib,
+  works with zero extras), `serial` (USB/UART via the optional `serial` extra),
+  `sim` (scripted stand-in). Extensible registry for new link types.
+- **Modbus RTU** (`transports/modbus_rtu.py`): CRC-16 framing over any link —
+  the protocol RS-485 van gear actually speaks.
+- **EPEver driver**: Tracer/XTRA MPPT over RTU; live PV mirrors into
+  `solar.power` so forecasting/advisors run on real hardware. End-to-end tested
+  against a scripted device; register map flagged for real-Tracer validation.
+- The wave-1 "serial blocker" (Truma, Chinese heaters, Votronic, W-Bus) is
+  dissolved — those now need only their protocol ports.
+
 ## 2026-07 — Autonomous build session (roadmap waves + small items)
 
 - **GATT sessions** in the BLE substrate (programmable SimBleDevice; bleak

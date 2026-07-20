@@ -36,6 +36,11 @@ voice = [
 ble = [
     "bleak>=0.22",
 ]
+# Directly attached USB/UART serial ports for the link layer (links.py). Optional:
+# TCP serial bridges (EW11/ser2net) work with zero extras.
+serial = [
+    "pyserial-asyncio>=0.6",
+]
 
 [project.scripts]
 openvan-core = "openvan_core.__main__:main"
