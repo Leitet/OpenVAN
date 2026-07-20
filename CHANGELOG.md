@@ -3,6 +3,23 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Chinese diesel heater driver (Wave 1 #3)
+
+- **`chinese_heater` driver**: the generic "blue wire" heaters (Vevor, Hcalory,
+  eBay clones — the highest-unit-volume heater in the van world) over their
+  half-duplex single-wire UART. Frames byte-for-byte per Ray Jones' Afterburner
+  reverse engineering (fetched, not recalled): 24-byte controller/heater frames,
+  0xA0 start / 0x05 stop, Modbus CRC-16 stored MSB-first, non-standard 25000
+  baud, echo-skip on the shared wire. Reaches hardware through the link layer
+  (EW11-class TCP bridge with zero extras, or the `serial` extra).
+- **Rule 2 by construction**: the driver never accepts commands — it follows the
+  twin's `diesel_heater.on`/`setpoint`, which only the diesel-heater plugin
+  writes *after* the safety layer approved the intent. Tested end-to-end: an
+  empty-tank refusal never puts a start frame on the wire.
+- Heater telemetry (supply voltage, fan RPM, heat-exchanger temp, glow plug,
+  pump Hz, run state, honest error text) flows back as `cdh.*` signals →
+  auto-surfaced sensor entities. Sim mode reflects the twin heater (Rule 1).
+
 ## 2026-07 — Pluggable serial links + Modbus RTU + EPEver
 
 - **Link layer** (`transports/links.py`): a serial device is reached by a chosen

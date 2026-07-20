@@ -21,7 +21,7 @@ from openvan_core import Entity, Plugin
 
 # Signal namespaces to surface. Kept to device-owned extras — the *core* van signals
 # (battery, water, climate) already have their own dedicated plugins/entities.
-DEFAULT_PREFIXES = ("ruuvitag.", "esphome.", "signalk.", "bthome.", "mopeka.", "blebms.", "tpms.", "victronble.", "epever.")
+DEFAULT_PREFIXES = ("ruuvitag.", "esphome.", "signalk.", "bthome.", "mopeka.", "blebms.", "tpms.", "victronble.", "epever.", "cdh.")
 
 # Unit guessed from the last path segment (best-effort — a raw signal carries none).
 _UNIT_HINTS = (

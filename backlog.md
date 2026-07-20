@@ -30,6 +30,10 @@ findings back:
 - **Serial links & RTU** — validate the TCP-bridge link against a real EW11-class
   device, the `serial` extra against a USB-RS485 stick, and the EPEver register
   map against a real Tracer.
+- **Chinese diesel heater** — validate the blue-wire frames against a real unit
+  (with the OEM controller on hand): start/stop commands, 25000 baud over an
+  EW11-class bridge, echo behaviour on the single wire, run-state/error maps.
+  **Combustion appliance — bench-test outside the van first.**
 - **BLE** — validate the bleak radio on a real adapter (Linux/BlueZ + macOS), and
   the BTHome / Ruuvi RAWv2 / Mopeka / TPMS TypeA parsers against real devices, the
   **JBD BMS** frames against a real pack, and **Victron Instant Readout**
@@ -133,9 +137,12 @@ Remaining substrate work (GATT sessions + TPMS TypeA shipped 2026-07):
 2. **BLE BMS — JBD/Overkill SHIPPED** (`ble_bms`, GATT, feeds house_battery so
    all advisors/safety run on non-Victron packs). Remains: JK, Daly, Seplos
    protocol modules in the same driver.
-3. **Chinese diesel heaters** — REMAINS; unblocked by the link layer (blue-wire
-   UART over a TCP bridge or the `serial` extra) — the remaining work is the
-   Ray-Jones protocol port.
+3. **Chinese diesel heaters — SHIPPED** (`chinese_heater`: the Ray-Jones/
+   Afterburner blue-wire frames — 0xA0/0x05 commands, Modbus CRC MSB-first,
+   half-duplex echo handling, non-standard 25000 baud — over the link layer;
+   follows the safety-approved `diesel_heater.*` twin state, telemetry back as
+   `cdh.*` auto-entities). Remains: BLE-controller variants
+   (warehog/esphome-diesel-heater-ble) and fixed-Hz mode surfaced as a setting.
 4. **Victron BLE Instant Readout — SHIPPED** (`victron_ble`: pure-stdlib AES-CTR
    FIPS-pinned, battery-monitor + solar records, per-device keys, optional
    house-battery mirror). Remains: more record types (DC-DC, inverter, aux modes).
