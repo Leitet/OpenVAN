@@ -84,3 +84,20 @@ def test_road_restriction_lookahead(tmp_path):
     net._prev, net._cur = 1, 2  # driving toward the bridge
     ahead = net.restriction_ahead()
     assert ahead["maxheight"] == 2.8
+
+
+async def test_narrow_road_advisor(core):
+    from openvan_core.notices import NarrowRoad
+
+    # The fixture's profile has no width — give it one (incl. mirrors).
+    core.config.vehicle["width_mirrors_mm"] = 2350
+    # A 2.0 m limit is too tight for a 2.35 m van.
+    await core.twin.set_signal("road.max_width_m", 2.0)
+    notice = NarrowRoad(core.config).evaluate(core.hub)
+    assert notice is not None and "Narrow road" in notice.title
+    # Wide enough limit → quiet.
+    await core.twin.set_signal("road.max_width_m", 3.5)
+    assert NarrowRoad(core.config).evaluate(core.hub) is None
+    # No limit → quiet.
+    await core.twin.set_signal("road.max_width_m", 0.0)
+    assert NarrowRoad(core.config).evaluate(core.hub) is None

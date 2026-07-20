@@ -47,7 +47,7 @@ export function Scenes() {
               title={s.description}
             >
               <Icon className="scene-icon" />
-              <span className="scene-name">{s.name}</span>
+              <span className="scene-name">{(() => { const k = t(`scene.${s.id}`); return k === `scene.${s.id}` ? s.name : k; })()}</span>
             </button>
           );
         })}

@@ -1,3 +1,4 @@
+import { TriangleAlert } from "lucide-react";
 import type { Twin } from "@shared/types";
 import { useT } from "../i18n";
 import { useVan } from "../state";
@@ -88,6 +89,21 @@ export function Journey({ twin }: { twin: Twin }) {
         <span><i className="dot camp" /> {t("journey.camp")}</span>
         {coverage && <span><i className="dot coverage" /> {t("journey.coverage")}</span>}
       </div>
+      {(num(twin["road.max_height_m"]) || num(twin["road.max_weight_t"]) || num(twin["road.max_width_m"])) ? (
+        <div className="restrictions-strip">
+          <TriangleAlert size={15} />
+          <span>{t("journey.restrictions")}:</span>
+          {Boolean(num(twin["road.max_height_m"])) && (
+            <span className="restriction">{num(twin["road.max_height_m"])?.toFixed(1)} m {t("journey.maxHeight")}</span>
+          )}
+          {Boolean(num(twin["road.max_weight_t"])) && (
+            <span className="restriction">{num(twin["road.max_weight_t"])?.toFixed(1)} t {t("journey.maxWeight")}</span>
+          )}
+          {Boolean(num(twin["road.max_width_m"])) && (
+            <span className="restriction">{num(twin["road.max_width_m"])?.toFixed(1)} m {t("journey.maxWidth")}</span>
+          )}
+        </div>
+      ) : null}
       <div className="journey-readouts">
         <div className="stat">
           <span className="sys-k">{t("journey.speed")}</span>

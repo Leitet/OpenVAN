@@ -623,6 +623,7 @@ export function BenchApp() {
           <h2>Road ahead</h2>
           <SignalSlider label="Max height (0 = none)" signalKey="road.max_height_m" value={num(twin["road.max_height_m"])} min={0} max={5} step={0.1} unit=" m" />
           <SignalSlider label="Max weight (0 = none)" signalKey="road.max_weight_t" value={num(twin["road.max_weight_t"])} min={0} max={40} step={0.5} unit=" t" />
+          <SignalSlider label="Max width (0 = none)" signalKey="road.max_width_m" value={num(twin["road.max_width_m"])} min={0} max={4} step={0.1} unit=" m" />
           <p className="note">
             Checked against the vehicle profile (Settings → Vehicle). Set a limit
             below the van's height/weight to trigger a routing warning. On a real

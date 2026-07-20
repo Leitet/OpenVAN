@@ -174,12 +174,15 @@ class RoadNetwork:
             tags = el.get("tags") or {}
             mh = _parse_limit(tags.get("maxheight"))
             mw = _parse_limit(tags.get("maxweight"))
+            mwd = _parse_limit(tags.get("maxwidth"))
             for i in range(len(ids) - 1):
                 a, b = ids[i], ids[i + 1]
                 self.adj[a].add(b)
                 self.adj[b].add(a)
-                if mh is not None or mw is not None:
-                    self._seg_limits[(min(a, b), max(a, b))] = {"maxheight": mh, "maxweight": mw}
+                if mh is not None or mw is not None or mwd is not None:
+                    self._seg_limits[(min(a, b), max(a, b))] = {
+                        "maxheight": mh, "maxweight": mw, "maxwidth": mwd,
+                    }
 
     def restriction_ahead(self, lookahead: int = 8) -> dict[str, float | None]:
         """Tightest height/weight limit on the current road and the next few segments
@@ -188,6 +191,7 @@ class RoadNetwork:
         prev, cur = self._prev, self._cur
         heights: list[float] = []
         weights: list[float] = []
+        widths: list[float] = []
         for _ in range(lookahead):
             if prev is None or cur is None:
                 break
@@ -197,11 +201,14 @@ class RoadNetwork:
                     heights.append(lim["maxheight"])
                 if lim.get("maxweight") is not None:
                     weights.append(lim["maxweight"])
+                if lim.get("maxwidth") is not None:
+                    widths.append(lim["maxwidth"])
             nxt = [n for n in self.adj.get(cur, ()) if n != prev]
             if not nxt:
                 break
             prev, cur = cur, nxt[0]
         return {
+            "maxwidth": min(widths) if widths else None,
             "maxheight": min(heights) if heights else None,
             "maxweight": min(weights) if weights else None,
         }

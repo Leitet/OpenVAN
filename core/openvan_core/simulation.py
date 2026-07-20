@@ -222,6 +222,7 @@ class VanSimulation:
                 limit = self._roads.restriction_ahead()
                 await self._twin.set_signal("road.max_height_m", limit.get("maxheight") or 0.0)
                 await self._twin.set_signal("road.max_weight_t", limit.get("maxweight") or 0.0)
+                await self._twin.set_signal("road.max_width_m", limit.get("maxwidth") or 0.0)
                 return
 
         # Dead reckoning: heading 0 = north, 90 = east.

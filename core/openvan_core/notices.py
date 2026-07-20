@@ -698,6 +698,36 @@ class LowClearance(Advisor):
         )
 
 
+class NarrowRoad(Advisor):
+    """Warn when a width-limited lane/tunnel ahead is tighter than the van —
+    using width *including mirrors* when the profile has it."""
+
+    key = "narrow_road"
+
+    def __init__(self, config: Any = None, margin_m: float = 0.1) -> None:
+        self.config = config
+        self.margin_m = margin_m
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        limit = _twin_float(hub, "road.max_width_m")
+        if limit is None or limit <= 0:
+            return None
+        veh = (getattr(self.config, "vehicle", None) or {}) if self.config is not None else {}
+        w_mm = veh.get("width_mirrors_mm") or veh.get("width_mm")
+        try:
+            width_m = float(w_mm) / 1000.0
+        except (TypeError, ValueError):
+            return None
+        if width_m + self.margin_m <= limit:
+            return None
+        return Notice(
+            self.key, "warning", "journey", "Narrow road ahead",
+            f"Width limit {limit:.1f} m ahead — the van is {width_m:.2f} m "
+            f"(incl. mirrors). Check for another route.",
+            {"limit_m": limit, "van_width_m": width_m},
+        )
+
+
 class OverweightRoad(Advisor):
     """Warn when a weight-limited road/bridge ahead is below the van's gross weight."""
 
@@ -796,6 +826,7 @@ def default_advisors(config: Any = None) -> list[Advisor]:
         # Routing hazards for a tall/heavy van (checked against the vehicle profile)
         LowClearance(config),
         OverweightRoad(config),
+        NarrowRoad(config),
     ]
 
 

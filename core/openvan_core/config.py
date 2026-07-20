@@ -297,6 +297,7 @@ class Config:
             # bench to simulate approaching a low bridge or a weight-limited road.
             "road.max_height_m": 0.0,
             "road.max_weight_t": 0.0,
+            "road.max_width_m": 0.0,
         }
     )
 
