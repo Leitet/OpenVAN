@@ -569,6 +569,14 @@ body {
   color: var(--text);
   background: var(--bg);
 }
+/* Simulated data source — unmistakably not real hardware */
+.badge-sim {
+  color: var(--accent);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font-weight: 600;
+}
 .integration-warning {
   display: flex;
   align-items: flex-start;

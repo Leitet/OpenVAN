@@ -119,6 +119,7 @@ function IntegrationCard({
   status?: React.ReactNode;
   footer?: React.ReactNode;
 }) {
+  const t = useT();
   const tone = STATUS_TONE[it.status] ?? "warn";
   const safetyTone = it.safety_class >= 3 ? "bad" : it.safety_class >= 2 ? "warn" : "good";
   const Glyph = it.world_sim || it.builtin ? FlaskConical : Plug;
@@ -138,6 +139,13 @@ function IntegrationCard({
       {it.description && <p className="integration-desc">{it.description}</p>}
 
       <div className="integration-badges">
+        {(it.world_sim || it.builtin) && (
+          // Unmissable in both the installed view and the library: this card is
+          // a simulated data source, not real hardware.
+          <span className="badge badge-sim" title={t("integrations.simulatorHint")}>
+            <FlaskConical size={13} /> {t("integrations.simulator")}
+          </span>
+        )}
         {status}
         <TrustBadge trust={it.trust} />
         <span className={`badge badge-${tone}`} title="Support status">

@@ -3,6 +3,13 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Simulator cards clearly marked
+
+- Every simulated data source (the world-sim providers + the master switch)
+  now carries a dashed **Simulator** badge with the flask glyph on its card —
+  in the installed view *and* the library, where there is no grouping to rely
+  on. Tooltip: "Simulated data source — not real hardware."
+
 ## 2026-07 — Plug-and-play bench: signal browser + integration toggles
 
 - The twin now records each signal's **last writer** (`VanTwin.sources()`,

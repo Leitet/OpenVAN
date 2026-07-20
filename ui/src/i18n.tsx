@@ -477,6 +477,16 @@ const T: Record<string, Entry> = {
     sv: "Simulering pausad",
     de: "Simulation pausiert",
   },
+  "integrations.simulator": {
+    en: "Simulator",
+    sv: "Simulator",
+    de: "Simulator",
+  },
+  "integrations.simulatorHint": {
+    en: "Simulated data source — not real hardware",
+    sv: "Simulerad datakälla — inte riktig hårdvara",
+    de: "Simulierte Datenquelle — keine echte Hardware",
+  },
   "integrations.hardware": {
     en: "Your hardware",
     sv: "Din hårdvara",
