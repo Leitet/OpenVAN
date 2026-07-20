@@ -41,8 +41,12 @@ Concretely, a new plugin must:
 1. Read/write hardware **only** through a `Backend` (never touch hardware
    directly), so it runs against the simulated `VanTwin` out of the box.
 2. Expose its raw signals so the **bench** can inject sensor values and observe
-   actuator effects (add a `SignalSlider`/scenario to `bench/` when introducing
-   new signal keys), and surface the result in the **product UI**.
+   actuator effects, and surface the result in the **product UI**. Both are
+   automatic for signal-emitting drivers: the bench's **Signal browser** grows
+   an injector for every twin signal (grouped by data source), and
+   `device_sensors` auto-surfaces prefixed readings as entities — add a
+   hand-crafted `SignalSlider`/scenario to `bench/` only for curated
+   experiences (drive dash, scenario buttons), not as a requirement.
 3. Ship a test in `core/tests/` proving its behaviour against the twin.
 
 This is not busywork — it is what keeps the AI feedback loop fast: change → run

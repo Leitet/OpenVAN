@@ -506,3 +506,73 @@ input[type="range"]::-moz-range-thumb {
     grid-template-columns: 1fr;
   }
 }
+
+/* Signal browser — auto-generated injectors grouped by data source */
+.signal-browser details {
+  border-top: 1px solid var(--line, #ddd);
+  padding: 4px 0;
+}
+.signal-browser summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 4px 0;
+}
+.signal-browser summary em {
+  font-style: normal;
+  opacity: 0.6;
+  font-weight: 400;
+}
+.sig-filter {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+.sig-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0 2px 12px;
+}
+.sig-key {
+  flex: 1;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sig-input {
+  width: 110px;
+  padding: 2px 6px;
+  font: inherit;
+  font-size: 12px;
+}
+.sig-text {
+  width: 160px;
+}
+.sig-toggle {
+  width: 110px;
+  padding: 2px 6px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.sig-toggle.on {
+  background: var(--ok, #4a7c59);
+  color: #fff;
+}
+.sig-unknown,
+.sig-empty {
+  font-size: 12px;
+  opacity: 0.6;
+}
+.bench-int-add {
+  margin-top: 6px;
+}
+.bench-int-add summary {
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px 0;
+}

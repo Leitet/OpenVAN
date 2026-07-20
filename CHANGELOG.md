@@ -3,6 +3,22 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Plug-and-play bench: signal browser + integration toggles
+
+- The twin now records each signal's **last writer** (`VanTwin.sources()`,
+  exposed in `/api/state` and the WS snapshot), so tooling can group signals
+  by the integration that provides them.
+- The bench's read-only signal inspector became a **Signal browser**: an
+  auto-generated, filterable injector for *every* twin signal, grouped by data
+  source — booleans toggle, numbers/strings edit inline. A new integration's
+  signals appear there the moment it emits them, with zero bench code.
+- The bench's Integrations card can now **add** any catalog driver, not just
+  remove installed ones — a new driver is fully plug-and-play from the bench
+  alone: enable it, watch its signal group appear, inject, see the product UI
+  react.
+- Rule 1 updated: hand-crafted bench sliders are for curated scenarios only;
+  coverage of new signal keys is automatic.
+
 ## 2026-07 — Everything is an integration: world-sim provider cards
 
 - The reference van's data (battery/solar, water/tanks, climate/air,

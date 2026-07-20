@@ -17,6 +17,7 @@ import {
 import type { Weather, IntegrationInfo, VoiceCaps } from "@shared/types";
 import { useVanState } from "@shared/useVanState";
 import { SignalSlider } from "./components/SignalSlider";
+import { SignalBrowser } from "./components/SignalBrowser";
 import { VanView } from "./components/VanView";
 import { TurboDash } from "./components/TurboDash";
 
@@ -184,8 +185,11 @@ function IntegrationsPanel({ twin }: { twin: Record<string, unknown> }) {
     }
   };
 
-  // Only the installed set — the full searchable library lives in the product UI.
+  // Installed first; the rest of the catalog is addable right here so a new
+  // integration is plug-and-play from the bench alone (the product UI has the
+  // full searchable library with badges/config).
   const installed = items.filter((it) => it.installed);
+  const available = items.filter((it) => !it.installed);
 
   return (
     <>
@@ -218,10 +222,26 @@ function IntegrationsPanel({ twin }: { twin: Record<string, unknown> }) {
           ))
         )}
       </div>
-      <p className="note">
-        Installed integrations only — add more from the product UI (Settings →
-        Integrations → Browse library).
-      </p>
+      {available.length > 0 && (
+        <details className="bench-int-add">
+          <summary>Add integration ({available.length} available)</summary>
+          {available.map((it) => (
+            <div key={it.id} className="bench-int-row">
+              <button
+                className="toggle"
+                disabled={busy === it.id}
+                onClick={() => toggle(it.id, true)}
+              >
+                add
+              </button>
+              <div className="bench-int-meta">
+                <strong>{it.name}</strong>
+                <span className="note">{it.status} · {it.category}</span>
+              </div>
+            </div>
+          ))}
+        </details>
+      )}
       <button
         className={"toggle" + (twin["home_assistant.van_home"] ? " on" : "")}
         onClick={() => injectSignal("home_assistant.van_home", !twin["home_assistant.van_home"])}
@@ -458,7 +478,7 @@ function VoicePanel() {
 }
 
 export function BenchApp() {
-  const { twin, connected, entities } = useVanState();
+  const { twin, sources, connected, entities } = useVanState();
   const [wx, setWx] = useState<Weather>({});
   const [simulate, setSimulate] = useState<boolean | null>(null);
 
@@ -477,7 +497,6 @@ export function BenchApp() {
   };
 
   const ignition = Boolean(twin["vehicle.ignition"]);
-  const twinKeys = Object.keys(twin).sort();
 
   return (
     <div className="bench">
@@ -702,19 +721,13 @@ export function BenchApp() {
         </section>
 
         <section className="card span-2">
-          <h2>Signal inspector</h2>
-          <div className="signal-table">
-            {twinKeys.length === 0 ? (
-              <span className="note">No signals yet — waiting for Core…</span>
-            ) : (
-              twinKeys.map((k) => (
-                <div key={k} className="signal-row">
-                  <span className="sig-k">{k}</span>
-                  <span className="sig-v">{fmt(twin[k])}</span>
-                </div>
-              ))
-            )}
-          </div>
+          <h2>Signal browser — every signal, injectable</h2>
+          <p className="note">
+            Auto-generated from the live twin, grouped by data source. A new
+            integration's signals appear here the moment it emits them — no
+            bench code needed. Edit a value to inject it, exactly like a sensor.
+          </p>
+          <SignalBrowser twin={twin} sources={sources} />
         </section>
       </main>
     </div>

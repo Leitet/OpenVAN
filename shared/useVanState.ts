@@ -11,6 +11,8 @@ const MAX_LOG = 40;
 export function useVanState() {
   const [entities, setEntities] = useState<Record<string, Entity>>({});
   const [twin, setTwin] = useState<Twin>({});
+  // Last writer per signal key (integration id / plugin domain / "seed" / "sim").
+  const [sources, setSources] = useState<Record<string, string>>({});
   const [log, setLog] = useState<LogEntry[]>([]);
   const [assistant, setAssistant] = useState<Assistant>({ llm: false, model: null });
   const [notices, setNotices] = useState<Record<string, Notice>>({});
@@ -32,6 +34,7 @@ export function useVanState() {
           for (const e of msg.data.entities as Entity[]) map[e.entity_id] = e;
           setEntities(map);
           setTwin(msg.data.twin as Twin);
+          setSources((msg.data.sources ?? {}) as Record<string, string>);
           if (msg.data.assistant) setAssistant(msg.data.assistant as Assistant);
           {
             const map2: Record<string, Notice> = {};
@@ -57,6 +60,9 @@ export function useVanState() {
         }
         case "twin.signal_changed": {
           setTwin((prev) => ({ ...prev, [msg.data.key]: msg.data.value }));
+          if (msg.data.source) {
+            setSources((prev) => ({ ...prev, [msg.data.key]: msg.data.source }));
+          }
           break;
         }
         case "assistant.changed": {
@@ -119,6 +125,7 @@ export function useVanState() {
   return {
     entities,
     twin,
+    sources,
     log,
     assistant,
     notices: Object.values(notices),

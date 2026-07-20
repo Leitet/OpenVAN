@@ -25,10 +25,15 @@ class VanTwin:
     def __init__(self, bus: EventBus) -> None:
         self._bus = bus
         self._signals: dict[str, Any] = {}
+        # Last writer per key (integration id / plugin domain / "seed" / "sim").
+        # Lets the bench group and auto-generate injectors per data source — the
+        # plug-and-play counterpart of the product UI's auto entities.
+        self._sources: dict[str, str] = {}
 
     async def set_signal(self, key: str, value: Any, source: str = "sim") -> None:
         changed = self._signals.get(key) != value
         self._signals[key] = value
+        self._sources[key] = source
         if changed:
             await self._bus.publish(
                 SIGNAL_CHANGED, {"key": key, "value": value, "source": source}
@@ -39,3 +44,6 @@ class VanTwin:
 
     def snapshot(self) -> dict[str, Any]:
         return dict(self._signals)
+
+    def sources(self) -> dict[str, str]:
+        return dict(self._sources)

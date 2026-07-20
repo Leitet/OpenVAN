@@ -211,6 +211,9 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
         return {
             "entities": [e.as_dict() for e in core.hub.entities.values()],
             "twin": core.twin.snapshot(),
+            # Last writer per signal — the bench groups its auto-generated
+            # injectors by data source (plug-and-play for new integrations).
+            "sources": core.twin.sources(),
             "notices": core.advisors.active_notices(),
             "assistant": core.assistant_state(),
         }

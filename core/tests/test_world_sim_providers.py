@@ -65,6 +65,18 @@ async def test_every_provider_is_plug_and_play(core, provider_id):
         assert core.twin.get(key) == value, f"{key} not reseeded by {provider_id}"
 
 
+async def test_signal_sources_are_tracked(core):
+    """The twin records each signal's last writer — the bench groups its
+    auto-generated injectors by data source (plug-and-play for new drivers)."""
+    sources = core.twin.sources()
+    assert sources["house_battery.soc"] == "sim_energy"
+    assert sources["fresh_water.level_pct"] == "sim_water"
+    assert sources["cabin_light.on"] == "seed"
+    # An injection (bench slider / API) takes over as last writer.
+    await core.twin.set_signal("house_battery.soc", 50.0, source="sim")
+    assert core.twin.sources()["house_battery.soc"] == "sim"
+
+
 async def test_world_sim_flag_in_descriptor(core):
     """The UI groups simulated sources apart from hardware via `world_sim`."""
     assert core.integrations.describe("sim_energy")["world_sim"] is True
