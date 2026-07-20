@@ -511,6 +511,7 @@ export function BenchApp() {
           <SignalSlider label="Battery SoC" signalKey="house_battery.soc" value={num(twin["house_battery.soc"])} min={0} max={100} unit="%" />
           <SignalSlider label="Solar power" signalKey="solar.power" value={num(twin["solar.power"])} min={0} max={600} step={10} unit="W" />
           <SignalSlider label="Fresh water" signalKey="fresh_water.level_pct" value={num(twin["fresh_water.level_pct"])} min={0} max={100} unit="%" />
+          <SignalSlider label="Toilet cassette" signalKey="cassette.level_pct" value={num(twin["cassette.level_pct"])} min={0} max={100} unit="%" />
           <SignalSlider label="Outside temp" signalKey="outside.temperature" value={num(twin["outside.temperature"])} min={-20} max={40} step={0.5} unit="°C" />
           <SignalSlider label="Diesel fuel" signalKey="diesel_tank.level_pct" value={num(twin["diesel_tank.level_pct"])} min={0} max={100} unit="%" />
           <SignalSlider label="Propane" signalKey="propane.level_pct" value={num(twin["propane.level_pct"])} min={0} max={100} unit="%" />

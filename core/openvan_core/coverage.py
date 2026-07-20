@@ -15,6 +15,7 @@ model, so it lives here as a tiny service the advisor reads.
 from __future__ import annotations
 
 import math
+import time
 from collections import deque
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable
@@ -47,6 +48,7 @@ class CoverageSpot:
     lat: float
     lon: float
     signal_pct: float
+    ts: float = 0.0  # wall-clock when recorded (age-capped in best_nearby)
 
 
 @dataclass(frozen=True)
@@ -74,11 +76,13 @@ class CoverageMemory:
         good_pct: float = 50.0,
         min_move_m: float = 40.0,
         max_samples: int = 400,
+        max_age_s: float = 6 * 3600.0,
     ) -> None:
         self.bus = bus
         self.twin = twin
         self.good_pct = good_pct
         self.min_move_m = min_move_m
+        self.max_age_s = max_age_s
         self._samples: deque[CoverageSpot] = deque(maxlen=max_samples)
         self._unsub: Callable[[], None] | None = None
 
@@ -119,9 +123,9 @@ class CoverageMemory:
             if _haversine_km(last.lat, last.lon, lat, lon) * 1000.0 < self.min_move_m:
                 # Same place — keep the better reading of the two.
                 if signal > last.signal_pct:
-                    self._samples[-1] = CoverageSpot(last.lat, last.lon, signal)
+                    self._samples[-1] = CoverageSpot(last.lat, last.lon, signal, time.time())
                 return
-        self._samples.append(CoverageSpot(lat, lon, signal))
+        self._samples.append(CoverageSpot(lat, lon, signal, time.time()))
 
     def best_nearby(
         self, lat: float, lon: float, *, within_km: float = 2.0, better_than: float = 0.0
@@ -131,8 +135,12 @@ class CoverageMemory:
         beats the current reading. ``None`` if there's nowhere better to point to."""
         best: NearbyCoverage | None = None
         threshold = max(self.good_pct, better_than + 10.0)  # clearly better, not marginal
+        now = time.time()
         for spot in self._samples:
             if spot.signal_pct < threshold:
+                continue
+            # A spot from hours ago isn't "just back there" — age-cap the trail.
+            if spot.ts and now - spot.ts > self.max_age_s:
                 continue
             dist_m = _haversine_km(lat, lon, spot.lat, spot.lon) * 1000.0
             if dist_m < self.min_move_m or dist_m > within_km * 1000.0:

@@ -216,6 +216,25 @@ class WeakSignal(Advisor):
         )
 
 
+class CassetteFull(Advisor):
+    """The cassette/black tank counterpart of GreyWaterFull (#17)."""
+
+    key = "cassette_full"
+
+    def __init__(self, threshold: float = 85.0) -> None:
+        self.threshold = threshold
+
+    def evaluate(self, hub: "Hub") -> Notice | None:
+        level = _twin_float(hub, "cassette.level_pct")
+        if level is None or level < self.threshold:
+            return None
+        return Notice(
+            self.key, "warning", "water", "Toilet cassette almost full",
+            f"The cassette is at {level:.0f}%. Find an emptying point soon.",
+            {"level": level},
+        )
+
+
 class SolarWindow(Advisor):
     """Smart, on-brand: help time energy use to the sun. When there's a strong solar
     stretch ahead and the battery has room to benefit, suggest running high-draw
@@ -493,9 +512,13 @@ class CabinClimateExtreme(Advisor):
 
     key = "cabin_climate_extreme"
 
-    def __init__(self, cold_c: float = 3.0, hot_c: float = 30.0) -> None:
+    def __init__(self, cold_c: float = 3.0, hot_c: float = 30.0,
+                 pet_mode: bool = False, pet_hot_c: float = 26.0, pet_cold_c: float = 5.0) -> None:
         self.cold_c = cold_c
         self.hot_c = hot_c
+        self.pet_mode = pet_mode
+        self.pet_hot_c = pet_hot_c
+        self.pet_cold_c = pet_cold_c
 
     def evaluate(self, hub: "Hub") -> Notice | None:
         if hub.twin.get("vehicle.ignition"):
@@ -503,6 +526,22 @@ class CabinClimateExtreme(Advisor):
         cabin = _twin_float(hub, "cabin.temperature")
         if cabin is None:
             return None
+        # A pet aboard tightens the band — heat is a life-safety fear (top pain
+        # point in the market research), so the alarm comes earlier and harder.
+        if self.pet_mode:
+            if cabin >= self.pet_hot_c:
+                return Notice(
+                    self.key, "warning", "climate", "Too hot for your pet",
+                    f"It's {cabin:.0f}°C inside with a pet aboard — act now: "
+                    f"ventilate, shade or cooling.",
+                    {"cabin_c": cabin, "kind": "hot", "pet": True},
+                )
+            if cabin <= self.pet_cold_c:
+                return Notice(
+                    self.key, "warning", "climate", "Too cold for your pet",
+                    f"It's {cabin:.0f}°C inside with a pet aboard — add heat.",
+                    {"cabin_c": cabin, "kind": "cold", "pet": True},
+                )
         if cabin <= self.cold_c:
             return Notice(
                 self.key, "warning", "climate", "Cabin freezing",
@@ -735,6 +774,7 @@ def default_advisors(config: Any = None) -> list[Advisor]:
     return [
         LowFreshWater(g("fresh_water_low_pct", 15.0)),
         GreyWaterFull(g("grey_water_full_pct", 85.0)),
+        CassetteFull(g("cassette_full_pct", 85.0)),
         LowDiesel(g("diesel_low_pct", 15.0)),
         LowPropane(g("propane_low_pct", 20.0)),
         FridgeWarm(g("fridge_warm_c", 8.0)),
@@ -749,7 +789,9 @@ def default_advisors(config: Any = None) -> list[Advisor]:
         Smoke(),
         HighCO2(g("co2_high_ppm", 1500.0)),
         Condensation(g("condensation_humidity_pct", 60.0), g("condensation_margin_c", 1.5)),
-        CabinClimateExtreme(g("cabin_cold_c", 3.0), g("cabin_hot_c", 30.0)),
+        CabinClimateExtreme(g("cabin_cold_c", 3.0), g("cabin_hot_c", 30.0),
+                            pet_mode=bool(g("pet_mode", 0.0)),
+                            pet_hot_c=g("pet_hot_c", 26.0), pet_cold_c=g("pet_cold_c", 5.0)),
         NotLevel(g("level_threshold_deg", 1.5), track_m, wheelbase_m),
         # Routing hazards for a tall/heavy van (checked against the vehicle profile)
         LowClearance(config),

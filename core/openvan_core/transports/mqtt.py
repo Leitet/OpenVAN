@@ -220,7 +220,16 @@ class AsyncMqttClient:
             if packet_type == PUBLISH:
                 qos = (fixed[0] & 0x06) >> 1
                 yield parse_publish(body, qos)
-            # SUBACK / PINGRESP / others: nothing to surface, keep reading.
+            elif packet_type == SUBACK and len(body) >= 3 and body[2] == 0x80:
+                # A rejected subscription would otherwise just silently never
+                # yield — make the failure visible.
+                import logging
+
+                logging.getLogger(__name__).warning(
+                    "MQTT broker rejected subscription (packet id %d)",
+                    int.from_bytes(body[:2], "big"),
+                )
+            # PINGRESP / others: nothing to surface, keep reading.
             # Even while receiving steadily, ping if we've been silent too long.
             if interval is not None and (time.monotonic() - self._last_send) >= interval:
                 await self._ping()

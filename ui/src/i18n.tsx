@@ -199,6 +199,13 @@ const T: Record<string, Entry> = {
   "comfort.climate": { en: "Climate", sv: "Klimat", de: "Klima" },
   "comfort.water": { en: "Water", sv: "Vatten", de: "Wasser" },
   "comfort.sensors": { en: "Device sensors", sv: "Enhetssensorer", de: "Gerätesensoren" },
+  "comfort.pet": { en: "Pet aboard", sv: "Husdjur ombord", de: "Haustier an Bord" },
+  "comfort.petHint": {
+    en: "Tightens the cabin temperature alarms while a pet is in the van",
+    sv: "Skärper kupétemperatur-larmen när ett husdjur är i bilen",
+    de: "Verschärft die Kabinentemperatur-Alarme, wenn ein Haustier im Van ist",
+  },
+  "label.cassette": { en: "Cassette", sv: "Kassett", de: "Kassette" },
   "comfort.setpoint": { en: "Setpoint", sv: "Börvärde", de: "Sollwert" },
   "heater.heating": {
     en: "Diesel heater: HEATING",

@@ -19,6 +19,8 @@ const METRICS: Metric[] = [
   { key: "grey_water.level_pct", labelKey: "label.greyWater", unit: "%", min: 0, max: 100 },
   { key: "cabin.temperature", labelKey: "label.cabin", unit: "°C" },
   { key: "outside.temperature", labelKey: "label.outside", unit: "°C" },
+  { key: "air.co2_ppm", labelKey: "label.co2", unit: "ppm" },
+  { key: "cabin.humidity_pct", labelKey: "label.humidity", unit: "%", min: 0, max: 100 },
 ];
 
 const RANGES: { label: string; minutes: number; bucket?: number }[] = [

@@ -48,6 +48,7 @@ DEFAULT_TUNING = {
     # Water / energy / journey (existing advisors)
     "fresh_water_low_pct": 15.0,
     "grey_water_full_pct": 85.0,
+    "cassette_full_pct": 85.0,
     "diesel_low_pct": 15.0,
     "battery_low_hours": 24.0,
     "long_drive_hours": 2.0,
@@ -64,6 +65,10 @@ DEFAULT_TUNING = {
     "condensation_margin_c": 1.5,
     "cabin_cold_c": 3.0,
     "cabin_hot_c": 30.0,
+    # Pet mode: 1 = a pet is aboard → tighter cabin band + urgent phrasing.
+    "pet_mode": 0.0,
+    "pet_hot_c": 26.0,
+    "pet_cold_c": 5.0,
     # Propane
     "propane_low_pct": 20.0,
     # Fridge
@@ -213,6 +218,7 @@ class Config:
             "solar.power": 240.0,
             "fresh_water.level_pct": 55.0,
             "grey_water.level_pct": 8.0,
+            "cassette.level_pct": 20.0,
             "water_pump.on": False,
             "cabin.temperature": 19.5,
             "outside.temperature": 11.0,

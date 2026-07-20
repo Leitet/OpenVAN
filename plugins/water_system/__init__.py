@@ -29,6 +29,7 @@ class _SensorMap:
 TANKS = [
     _SensorMap("sensor.fresh_water_level", "Fresh Water", "fresh_water.level_pct"),
     _SensorMap("sensor.grey_water_level", "Grey Water", "grey_water.level_pct"),
+    _SensorMap("sensor.cassette_level", "Toilet Cassette", "cassette.level_pct"),
 ]
 
 
