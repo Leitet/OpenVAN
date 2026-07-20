@@ -44,7 +44,14 @@ export function CameraTile({ entity }: { entity: Entity }) {
 
   return (
     <div className={"cam-tile" + (offline ? " offline" : "") + (motion ? " motion" : "")}>
-      <div className={"cam-feed loc-" + loc + " ph-" + phase + (nightVision ? " nightvision" : "")}>
+      {/* The green IR filter only dresses up the SVG fallback — the real night
+          stills ARE the IR frames, shown as-is. */}
+      <div
+        className={
+          "cam-feed loc-" + loc + " ph-" + phase +
+          (nightVision && stillMissing ? " nightvision" : "")
+        }
+      >
         {!offline &&
           (stillMissing ? (
             <CameraScene location={loc} motion={motion} />
