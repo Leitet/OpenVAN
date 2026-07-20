@@ -123,6 +123,9 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  /* Narrow windows: chips flow to a second row instead of overflowing. */
+  flex-wrap: wrap;
+  row-gap: 6px;
   padding: 14px 24px;
   border-bottom: 1px solid var(--line);
   background: var(--panel);
@@ -274,30 +277,29 @@ body {
 }
 
 /* A dashboard that fills the viewport — every cell equal, no ragged holes, cards
-   grow so vitals/controls stay big and glanceable on a van screen. */
+   grow so vitals/controls stay big and glanceable on a van screen.
+   Resize-safe: rows never shrink BELOW their content (minmax(auto, 1fr)) — on a
+   big screen the free space is shared equally (fill), on a small window the grid
+   simply grows past the viewport and .tabview scrolls. No clipping, no squash. */
 .tab-grid.fill {
   flex: 1;
-  min-height: 0;
-  grid-auto-rows: 1fr;
+  grid-auto-rows: minmax(auto, 1fr);
   align-content: stretch;
 }
 .tab-grid.fill > .panel {
-  min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 .tab-grid.fill .gauge-grid,
 .tab-grid.fill .quick-grid,
 .tab-grid.fill .scene-grid,
 .tab-grid.fill .companion {
   flex: 1;
-  min-height: 0;
 }
 .tab-grid.fill .gauge-grid,
 .tab-grid.fill .quick-grid,
 .tab-grid.fill .scene-grid {
-  grid-auto-rows: 1fr; /* items stretch to fill — bigger, touch-friendlier */
+  grid-auto-rows: minmax(auto, 1fr); /* tiles stretch, but never below content */
 }
 .tab-grid.fill .companion {
   display: flex;
@@ -2463,17 +2465,18 @@ body {
 }
 
 /* Assistant tab: a chat should fill the screen, not float in a short card. The
-   panel grows to the viewport and the message log takes the slack (input pinned). */
+   panel grows to the viewport and the message log takes the slack (input pinned).
+   Resize-safe: the chat keeps a usable minimum, so a short window scrolls the tab
+   instead of crushing the conversation. */
 .assistant-tab {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  height: 100%;
-  min-height: 0;
+  flex: 1;
 }
 .assistant-tab .chat {
   flex: 1;
-  min-height: 0;
+  min-height: 340px;
   display: flex;
   flex-direction: column;
 }
