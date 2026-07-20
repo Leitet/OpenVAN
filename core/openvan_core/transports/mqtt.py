@@ -65,9 +65,25 @@ def _encode_string(s: str) -> bytes:
     return struct.pack("!H", len(raw)) + raw
 
 
-def build_connect(client_id: str, keepalive: int, username: str | None, password: str | None) -> bytes:
+def build_connect(
+    client_id: str,
+    keepalive: int,
+    username: str | None,
+    password: str | None,
+    will_topic: str | None = None,
+    will_payload: bytes = b"",
+    will_retain: bool = True,
+) -> bytes:
+    """A Last Will lets the broker announce our death (e.g. availability=offline
+    retained) when the connection drops without a clean DISCONNECT."""
     flags = 0x02  # clean session
     payload = _encode_string(client_id)
+    if will_topic:
+        flags |= 0x04  # will flag, QoS 0
+        if will_retain:
+            flags |= 0x20
+        payload += _encode_string(will_topic)
+        payload += struct.pack("!H", len(will_payload)) + will_payload
     if username:
         flags |= 0x80
         payload += _encode_string(username)
@@ -84,9 +100,10 @@ def build_subscribe(packet_id: int, topic: str, qos: int = 0) -> bytes:
     return bytes([SUBSCRIBE]) + encode_remaining_length(len(body)) + body
 
 
-def build_publish(topic: str, payload: bytes) -> bytes:
+def build_publish(topic: str, payload: bytes, retain: bool = False) -> bytes:
     body = _encode_string(topic) + payload  # QoS 0 → no packet id
-    return bytes([PUBLISH]) + encode_remaining_length(len(body)) + body
+    header = PUBLISH | (0x01 if retain else 0x00)
+    return bytes([header]) + encode_remaining_length(len(body)) + body
 
 
 def parse_publish(body: bytes, qos: int) -> tuple[str, bytes]:
@@ -119,6 +136,8 @@ class AsyncMqttClient:
         username: str | None = None,
         password: str | None = None,
         timeout: float = 5.0,
+        will_topic: str | None = None,
+        will_payload: bytes = b"",
     ) -> None:
         self.host = host
         self.port = port
@@ -127,6 +146,8 @@ class AsyncMqttClient:
         self.username = username
         self.password = password
         self.timeout = timeout
+        self.will_topic = will_topic
+        self.will_payload = will_payload
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self._packet_id = 0
@@ -142,7 +163,12 @@ class AsyncMqttClient:
         self._reader, self._writer = await asyncio.wait_for(
             asyncio.open_connection(self.host, self.port), self.timeout
         )
-        await self._send(build_connect(self.client_id, self.keepalive, self.username, self.password))
+        await self._send(
+            build_connect(
+                self.client_id, self.keepalive, self.username, self.password,
+                will_topic=self.will_topic, will_payload=self.will_payload,
+            )
+        )
         fixed = await asyncio.wait_for(self._reader.readexactly(1), self.timeout)
         if fixed[0] != CONNACK:
             raise MqttError(f"expected CONNACK, got 0x{fixed[0]:02x}")
@@ -157,10 +183,10 @@ class AsyncMqttClient:
         self._packet_id = (self._packet_id % 0xFFFF) + 1
         await self._send(build_subscribe(self._packet_id, topic, qos))
 
-    async def publish(self, topic: str, payload: bytes) -> None:
+    async def publish(self, topic: str, payload: bytes, retain: bool = False) -> None:
         if self._writer is None:
             raise MqttError("not connected")
-        await self._send(build_publish(topic, payload))
+        await self._send(build_publish(topic, payload, retain))
 
     async def _ping(self) -> None:
         if self._writer is not None:

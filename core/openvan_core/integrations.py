@@ -155,6 +155,10 @@ class Integration(ABC):
         self.twin = twin
         self.bus = bus
         self.config = config or {}
+        # Set by the manager: entity registry + the safety-checked intent path.
+        # Drivers that accept inbound commands (e.g. the HA bridge) MUST route
+        # them through hub.execute_intent — never actuate directly (Rule 2).
+        self.hub: Any = None
         self.enabled = False
         # True while a real transport is connected and owns the signals; the sim
         # driver stands down (offline-first: sim only fills in when no hardware).
@@ -237,10 +241,11 @@ class IntegrationManager:
 
     NS = "integrations"
 
-    def __init__(self, twin: "VanTwin", bus: "EventBus", store: Any = None) -> None:
+    def __init__(self, twin: "VanTwin", bus: "EventBus", store: Any = None, hub: Any = None) -> None:
         self.twin = twin
         self.bus = bus
         self.store = store
+        self.hub = hub
         self.integrations: dict[str, Integration] = {}
 
     def get(self, integration_id: str) -> Integration | None:
@@ -270,6 +275,7 @@ class IntegrationManager:
         for cls in registered_integrations():
             info = cls.info
             instance = cls(self.twin, self.bus, self._config_for(info.id))
+            instance.hub = self.hub
             self.integrations[info.id] = instance
             want = persisted.get(info.id, _default_enabled(info))
             if want:

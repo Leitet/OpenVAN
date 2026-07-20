@@ -3,6 +3,18 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Voice + the Home Assistant bridge
+
+- **Voice** — offline-first STT/TTS behind one seam: sim engines for the bench and
+  tests, real faster-whisper + piper as the optional `voice` extra (validated
+  end-to-end: piper speaks, whisper transcribes it back verbatim over the API);
+  the UI prefers a real Core engine and falls back to the browser speech APIs.
+- **Home Assistant bridge** — the van federates into the home: HA MQTT Discovery
+  export (one retained "OpenVan" device with every sensor/switch/light/climate),
+  live state topics, availability via MQTT Last Will, HA-restart republish, and
+  commands from HA routed through the safety layer (refusals snap back). Validated
+  live against mosquitto. MQTT client gained Last-Will + retained publishes.
+
 ## 2026-07 — UI polish for the van screen
 
 - **Fill-the-screen dashboards** — Home is a 2×2 cockpit that fills the viewport

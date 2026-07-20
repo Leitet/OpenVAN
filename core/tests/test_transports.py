@@ -121,6 +121,25 @@ async def test_mqtt_remaining_length_roundtrip():
     assert await read_remaining_length(reader) == 300
 
 
+def test_mqtt_connect_will_flags_and_payload():
+    from openvan_core.transports.mqtt import build_connect
+
+    frame = build_connect("van", 60, None, None, will_topic="openvan/availability",
+                          will_payload=b"offline", will_retain=True)
+    body = frame[2:]  # short frame: 1 header + 1 length byte
+    flags = body[7]
+    assert flags & 0x04  # will flag
+    assert flags & 0x20  # will retain
+    assert b"openvan/availability" in body and b"offline" in body
+
+
+def test_mqtt_publish_retain_bit():
+    from openvan_core.transports.mqtt import build_publish
+
+    assert build_publish("t", b"x", retain=True)[0] == 0x31
+    assert build_publish("t", b"x", retain=False)[0] == 0x30
+
+
 # --- MQTT loopback -----------------------------------------------------------
 
 async def _mqtt_broker(topic: str, payload: bytes):

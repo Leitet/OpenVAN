@@ -83,8 +83,9 @@ findings back:
 
 ## Integrations
 
-- **MQTT broker + Home Assistant discovery** — import *and* export ("the van
-  federates into the home"); the MQTT client exists, this is the bridge on top.
+- **HA bridge follow-ups** (export shipped): *import* other HA devices into the
+  van (HA entities → twin signals, surfaced like device_sensors); Matter later;
+  validate against a real Home Assistant instance (only mosquitto validated so far).
 - **Writes/control through the safety layer** — transports are read-only; actuation
   (ESPHome switch/light, inverter on/off, charge limits, heater setpoint) must route
   through `Hub.execute_intent` → safety, never a bare transport write. Includes a

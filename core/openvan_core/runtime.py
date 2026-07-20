@@ -612,7 +612,7 @@ def build_core(config: Config | None = None) -> Core:
     hub = Hub(bus, twin, safety, resolver)
     plugins = PluginManager(hub, backend)
     store = ConfigStore(config.data_dir / "store.db")
-    integrations = IntegrationManager(twin, bus, store)
+    integrations = IntegrationManager(twin, bus, store, hub=hub)
     roads = RoadNetwork(config) if config.roads_enabled else None
     simulation = VanSimulation(bus, twin, roads=roads, integrations=integrations)
     weather = WeatherService(

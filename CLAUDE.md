@@ -142,7 +142,14 @@ New integrations: add an `Integration` subclass under `integrations/<id>/` with 
 `info` descriptor and a `simulate()` that feeds the twin.
 
 **Real transports** (`transports/`): a driver moves from sim to hardware by
-overriding `run_transport()` and picking a `mode` in its config. The base runs a
+overriding `run_transport()` and picking a `mode` in its config. The
+**HA bridge** (`habridge.py`, run by the `mqtt_homeassistant` integration in
+`mqtt` mode) exports OpenVan's entities to Home Assistant via MQTT Discovery —
+one retained "OpenVan" device, live state topics, availability backed by an MQTT
+Last Will (drive away → entities go *unavailable*), and commands from HA coming
+back as Intents **through the safety layer** (a refused command re-publishes the
+actual state so HA snaps back). Mapping logic is pure (`discovery`/`render_state`/
+`parse_command`); validated against a real mosquitto broker. The base runs a
 reconnecting supervisor and — offline-first (Rule 3) — a driver only owns the
 signals while `live`; when the device is unreachable it falls straight back to
 `simulate()`. The transport clients are **pure-stdlib, no vendor SDKs**
