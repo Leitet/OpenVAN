@@ -3,6 +3,15 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Real camera stills, day and night
+
+- The Security tab's camera tiles now show real stills per camera position
+  (`ui/public/cameras/<location>-<day|night>.jpg`: rear, cabin, door, awning),
+  switched by the sim clock's phase — at night every camera flips to its IR
+  still under the night-vision treatment (cabin included: lights out). Custom
+  cameras without a still fall back to the stylised SVG scene. A real
+  RTSP/ONVIF backend still just drops its stream into the same tile.
+
 ## 2026-07 — Library scroll fix + prefix auto-derivation
 
 - **Fixed**: the integration library reset its scroll position (and search

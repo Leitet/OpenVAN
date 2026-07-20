@@ -6,16 +6,23 @@ import { CameraScene } from "./CameraScene";
 
 const CONN: Record<string, string> = { wired: "WIRED", wifi: "WI-FI", "4g": "4G LTE" };
 
-// A camera tile. In the simulator the "feed" is a stylised placeholder (there's no
-// real video); a real RTSP/ONVIF backend would drop its stream/snapshot in here.
+// A camera tile. In the simulator the "feed" is a real still (day/IR-night per
+// camera position, `ui/public/cameras/<location>-<day|night>.jpg`), switched by
+// the sim clock's phase; a real RTSP/ONVIF backend would drop its live
+// stream/snapshot in here instead. Cameras without a still (custom locations
+// added from the bench) fall back to the stylised SVG scene.
 export function CameraTile({ entity }: { entity: Entity }) {
   const t = useT();
   const { twin } = useVan();
-  // The sim clock drives day/night; interior cabin cam is unaffected by daylight.
+  // The sim clock drives day/night; dawn/dusk still use the daylight still.
   const phase = String(twin["environment.phase"] ?? "day");
   const loc0 = String((entity.attributes as Record<string, unknown>).location ?? "cabin");
-  // Interior cabin cam is always lit; exterior cams go IR only at true night.
-  const nightVision = loc0 !== "cabin" && phase === "night";
+  // At night every cam switches to its IR still (the cabin one included —
+  // lights out when sleeping).
+  const nightVision = phase === "night";
+  const still = `/cameras/${loc0}-${nightVision ? "night" : "day"}.jpg`;
+  const [stillMissing, setStillMissing] = useState(false);
+  useEffect(() => setStillMissing(false), [still]);
 
   // Feed clock ticks off the simulated time, sped up by clock.rate.
   const epoch = typeof twin["clock.epoch"] === "number" ? (twin["clock.epoch"] as number) : null;
@@ -38,7 +45,17 @@ export function CameraTile({ entity }: { entity: Entity }) {
   return (
     <div className={"cam-tile" + (offline ? " offline" : "") + (motion ? " motion" : "")}>
       <div className={"cam-feed loc-" + loc + " ph-" + phase + (nightVision ? " nightvision" : "")}>
-        {!offline && <CameraScene location={loc} motion={motion} />}
+        {!offline &&
+          (stillMissing ? (
+            <CameraScene location={loc} motion={motion} />
+          ) : (
+            <img
+              className="cam-still"
+              src={still}
+              alt=""
+              onError={() => setStillMissing(true)}
+            />
+          ))}
         <div className="cam-scan" />
         {offline ? (
           <div className="cam-nosignal">{t("cam.nosignal")}</div>
