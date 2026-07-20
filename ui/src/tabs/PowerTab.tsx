@@ -84,9 +84,10 @@ export function PowerTab() {
         </div>
       </section>
 
+      {/* Predictions + Maintenance share a row (no ragged hole); Trends spans last. */}
       <Predictions />
-      <Trends />
       <Maintenance />
+      <Trends />
     </div>
   );
 }

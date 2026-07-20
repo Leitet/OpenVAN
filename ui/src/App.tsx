@@ -13,6 +13,7 @@ import {
   Cpu,
   Signal,
   SignalZero,
+  SunMoon,
 } from "lucide-react";
 import { useVanState } from "@shared/useVanState";
 import { VanProvider, useVan, num } from "./state";
@@ -47,9 +48,30 @@ const TABS: { id: TabId; labelKey: string; icon: string }[] = [
 
 const PHASE_ICON = { day: Sun, night: Moon, dawn: Sunrise, dusk: Sunset } as const;
 
+// Night / driving mode: "auto" follows the van's real day/night state; "day"/"night"
+// force it. Persisted per device (it's a property of this screen, not the van).
+type NightMode = "auto" | "day" | "night";
+const NIGHT_KEY = "openvan.nightMode";
+const NIGHT_ICON = { auto: SunMoon, day: Sun, night: Moon } as const;
+const NIGHT_NEXT: Record<NightMode, NightMode> = { auto: "night", night: "day", day: "auto" };
+
 function StatusBar() {
   const { twin, assistant, connected } = useVan();
   const t = useT();
+  const [nightMode, setNightMode] = useState<NightMode>(
+    () => (localStorage.getItem(NIGHT_KEY) as NightMode) || "auto",
+  );
+  const isDay = twin["environment.is_day"] !== false;
+  const nightOn = nightMode === "night" || (nightMode === "auto" && !isDay);
+  useEffect(() => {
+    document.documentElement.setAttribute("data-night", nightOn ? "on" : "off");
+  }, [nightOn]);
+  const cycleNight = () => {
+    const next = NIGHT_NEXT[nightMode];
+    setNightMode(next);
+    localStorage.setItem(NIGHT_KEY, next);
+  };
+  const NightIcon = NIGHT_ICON[nightMode];
   const soc = num(twin["house_battery.soc"]);
   const water = num(twin["fresh_water.level_pct"]);
   const cabin = num(twin["cabin.temperature"]);
@@ -112,6 +134,14 @@ function StatusBar() {
             <span>{clock}</span>
           </span>
         )}
+        <button
+          className="sb-night"
+          data-on={nightOn}
+          onClick={cycleNight}
+          title={t(`night.${nightMode}`)}
+        >
+          <NightIcon className="sb-ico" />
+        </button>
         <span className="sb-chip sb-ai" data-on={assistant.llm} title={aiTitle}>
           <Sparkles className="sb-ico sb-ai-spark" />
           {assistant.llm ? (

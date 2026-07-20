@@ -141,6 +141,13 @@ const T: Record<string, Entry> = {
   "state.off": { en: "Off", sv: "Av", de: "Aus" },
   "connectivity.offline": { en: "Offline — no signal", sv: "Offline — ingen signal", de: "Offline — kein Signal" },
   "connectivity.off": { en: "Off", sv: "Av", de: "Aus" },
+  "night.auto": {
+    en: "Night mode: auto (follows the sun)",
+    sv: "Nattläge: auto (följer solen)",
+    de: "Nachtmodus: auto (folgt der Sonne)",
+  },
+  "night.day": { en: "Night mode: forced day", sv: "Nattläge: alltid dag", de: "Nachtmodus: immer Tag" },
+  "night.night": { en: "Night mode: forced night", sv: "Nattläge: alltid natt", de: "Nachtmodus: immer Nacht" },
   "predictions.title": { en: "Predictions", sv: "Prognoser", de: "Prognosen" },
   "predictions.batteryEmpty": {
     en: "Battery empty in",

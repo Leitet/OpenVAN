@@ -30,7 +30,7 @@ export function DeviceSensors() {
   if (sensors.length === 0) return null;
 
   return (
-    <section className="panel">
+    <section className="panel span2">
       <h2>{t("comfort.sensors")}</h2>
       <div className="energy-stats">
         {sensors.map((e) => (

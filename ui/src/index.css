@@ -18,6 +18,26 @@
   font-family: var(--ov-app-font);
 }
 
+/* ---- Night / driving mode ----
+   A high-contrast dim override that sits ON TOP of any persona theme: surfaces go
+   near-black and text bright, while the persona keeps its accent so the van still
+   feels like "yours". Toggled from the status bar; "auto" follows the van's actual
+   day/night (environment.is_day from the sim clock / real sensors). */
+:root[data-night="on"] {
+  --ov-bg: #0b0b0a;
+  --ov-surface: #151512;
+  --ov-surface-2: #1f1f1a;
+  --ov-text: #ede8da;
+  --ov-text-muted: #a9a395;
+  --ov-text-faint: #767161;
+  --ov-border: rgba(237, 232, 218, 0.14);
+  --ov-accent-soft: rgba(255, 255, 255, 0.08);
+  --ov-statusbar-bg: #151512;
+  --ov-statusbar-text: #ede8da;
+  /* Dark basemap so the map doesn't blind you at night. */
+  --map-filter: invert(1) hue-rotate(180deg) grayscale(0.35) brightness(0.85) contrast(1.05);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -171,6 +191,32 @@ body {
   font-size: 13px;
   color: var(--muted);
   white-space: nowrap;
+}
+/* Night-mode toggle: a real control, touch-sized without inflating the bar. */
+.sb-night {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 40px;
+  margin: -8px 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-2);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.sb-night:hover {
+  color: var(--text);
+}
+.sb-night[data-on="true"] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.sb-night .sb-ico {
+  width: 18px;
+  height: 18px;
 }
 .sb-chip .sb-ico {
   width: 15px;
@@ -445,7 +491,7 @@ body {
 }
 .integration-card {
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 14px;
   background: var(--panel-2);
   display: flex;
@@ -844,17 +890,72 @@ body {
   letter-spacing: 0.04em;
 }
 .mini {
-  padding: 4px 10px;
-  border-radius: 7px;
+  /* Touch floor: this UI is operated by fingers on a van screen (sometimes on a
+     bumpy road) — even small controls get a >=44px hit area. */
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: 10px;
   border: 1px solid var(--line);
   background: transparent;
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
 }
 .mini.danger {
   color: var(--bad);
   border-color: color-mix(in srgb, var(--bad) 40%, transparent);
+}
+
+/* Segmented control (e.g. the Trends 1h/24h/7d/30d range) — previously unstyled
+   native buttons. Touch-sized, themed, one clear active segment. */
+.tabs {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.tabs .tab {
+  min-height: 38px;
+  min-width: 52px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.tabs .tab:hover {
+  color: var(--text);
+}
+.tabs .tab.active {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* Touch floor for the remaining common controls. */
+.setting-row select,
+.text-setting,
+.integration-filters select,
+.integration-config input,
+.integration-config select {
+  min-height: 44px;
+}
+.setting-row input[type="checkbox"],
+.integration-offline input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+}
+.subtab {
+  min-height: 44px;
+}
+.briefing-btn {
+  min-height: 44px;
 }
 .fork-row {
   display: flex;
@@ -1061,7 +1162,7 @@ body {
   align-items: center;
   gap: 10px;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: 14px;
   border: 1px solid var(--line);
   background: var(--panel-2);
 }
@@ -1890,9 +1991,9 @@ body {
 }
 /* re-follow-the-van control */
 .journey-recenter {
-  width: 32px;
-  height: 32px;
-  font-size: 18px;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
   line-height: 1;
   cursor: pointer;
   border: none;
