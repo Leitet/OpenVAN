@@ -98,10 +98,6 @@ findings back:
   actuator rest-states, the HA presence input and the sim clock. Plug-and-play
   is contract-tested per card (remove → unknown, re-add → seeded, bare van
   stays alive).
-- **Auto-derive device_sensors prefixes from descriptors**: today an external
-  driver's signal prefix must be PR'd into `DEFAULT_PREFIXES` or added to the
-  plugin config by the user; deriving prefixes from enabled integrations'
-  `provides` would close the last non-self-contained step.
 - **HA bridge follow-ups** (export shipped): *import* other HA devices into the
   van (HA entities → twin signals, surfaced like device_sensors); Matter later;
   validate against a real Home Assistant instance (only mosquitto validated so far).

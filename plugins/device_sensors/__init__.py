@@ -66,16 +66,26 @@ class DeviceSensors(Plugin):
         self._known: set[str] = set()
 
     def _prefixes(self) -> tuple[str, ...]:
-        return tuple(self.config.get("prefixes") or DEFAULT_PREFIXES)
+        configured = tuple(self.config.get("prefixes") or DEFAULT_PREFIXES)
+        # Self-contained drivers: prefixes declared by enabled integrations
+        # (descriptor `provides`) are honoured automatically — no edit to the
+        # bundled list needed. The manager caches this, so it's cheap per event.
+        manager = getattr(self.hub, "integrations", None)
+        dynamic = manager.declared_prefixes() if manager is not None else ()
+        return tuple(dict.fromkeys(configured + dynamic))
 
     async def async_setup(self) -> None:
-        prefixes = self._prefixes()
-        # Surface anything already present, then watch for new keys appearing.
+        # Surface anything already present, then watch *all* signals and filter
+        # per event — the dynamic prefix set grows when integrations are enabled
+        # later, so a fixed per-prefix watcher registration would miss them.
         for key, value in self.backend.snapshot().items():
-            if key.startswith(prefixes):
+            if key.startswith(self._prefixes()):
                 await self._apply(key, value)
-        for prefix in prefixes:
-            self._unwatchers.append(self.backend.watch_prefix(prefix, self._apply))
+        self._unwatchers.append(self.backend.watch_prefix("", self._on_signal))
+
+    async def _on_signal(self, key: str, value) -> None:
+        if key.startswith(self._prefixes()):
+            await self._apply(key, value)
 
     async def _apply(self, key: str, value) -> None:
         # A signal owned by a *control* entity (a switch an integration registered
@@ -85,6 +95,11 @@ class DeviceSensors(Plugin):
             if attrs.get("device_control") and attrs.get("signal") == key:
                 return
         eid = entity_id_for(key)
+        # Never hijack an entity another plugin owns (e.g. a driver whose
+        # `provides` also lists core mirrors like house_battery.soc — the
+        # dedicated battery entity already covers it).
+        if eid not in self._known and eid in self.hub.entities:
+            return
         if eid not in self._known:
             self._known.add(eid)
             await self.hub.register_entity(

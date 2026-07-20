@@ -372,6 +372,7 @@ class IntegrationManager:
         # physics* is running. Per-driver sims tick regardless — this only feeds
         # the descriptor so the UI can show the simulator card paused/running.
         self.sim_engine_on = True
+        self._prefix_cache: tuple[str, ...] | None = None
 
     def get(self, integration_id: str) -> Integration | None:
         return self.integrations.get(integration_id)
@@ -445,6 +446,7 @@ class IntegrationManager:
         if instance.enabled:
             return
         instance.enabled = True
+        self._prefix_cache = None
         await instance.async_setup()
         await self.bus.publish("integration.changed", self.describe(instance.info.id))
 
@@ -452,8 +454,33 @@ class IntegrationManager:
         if not instance.enabled:
             return
         instance.enabled = False
+        self._prefix_cache = None
         await instance.async_teardown()
         await self.bus.publish("integration.changed", self.describe(instance.info.id))
+
+    def declared_prefixes(self) -> tuple[str, ...]:
+        """Signal-namespace prefixes ("cdh.", "acme.", …) declared by *enabled*
+        ecosystem drivers via their descriptor's ``provides``.
+
+        This is what makes an external driver fully self-contained: the
+        ``device_sensors`` plugin auto-surfaces readings under these prefixes as
+        entities without anyone editing its bundled prefix list. World-sim
+        providers and the built-in simulator are excluded — their ``provides``
+        are *core* van signals that already have dedicated plugins/entities.
+        """
+        if self._prefix_cache is None:
+            prefixes: dict[str, None] = {}
+            for instance in self.integrations.values():
+                if not instance.enabled or isinstance(instance, WorldSimProvider):
+                    continue
+                if instance.info.id in BUILTIN:
+                    continue
+                for entry in instance.info.provides:
+                    token = entry.split()[0] if entry else ""
+                    if "." in token:
+                        prefixes[token.split(".", 1)[0] + "."] = None
+            self._prefix_cache = tuple(prefixes)
+        return self._prefix_cache
 
     async def set_enabled(self, integration_id: str, enabled: bool) -> bool:
         instance = self.integrations.get(integration_id)

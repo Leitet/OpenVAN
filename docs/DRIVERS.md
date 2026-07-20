@@ -99,12 +99,13 @@ For this to work, follow two conventions:
 2. **Always pass `source=self.info.id`** when writing twin signals — that is
    what groups your signals in the bench and attributes them in tooling.
 
-Auto-entity coverage: bundled ecosystems are listed in
-`plugins/device_sensors/DEFAULT_PREFIXES`. If your driver is external, either PR
-your prefix into that list or tell users to add it to the `device_sensors`
-plugin config (`prefixes`). Signals that mirror *core* van state
-(`house_battery.soc`, `propane.level_pct`, …) need no prefix work at all — the
-dedicated plugins, advisors and safety rules pick them up as-is.
+Auto-entity coverage is fully automatic: `device_sensors` honours every
+prefix declared by an **enabled** driver's `provides`
+(`IntegrationManager.declared_prefixes()`), so listing your keys in the
+descriptor is all it takes — no edits to any bundled list. Signals that mirror
+*core* van state (`house_battery.soc`, `propane.level_pct`, …) are picked up by
+the dedicated plugins, advisors and safety rules as-is, and are never
+duplicated as auto entities.
 
 ### World-sim providers — simulated data sources as drivers
 

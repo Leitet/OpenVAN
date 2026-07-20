@@ -191,6 +191,9 @@ class Core:
         # One shared BLE radio for every BLE driver (sim radio in simulate mode).
         await self.ble.start()
         self.integrations.hub = self.hub
+        # Back-reference for plugins that adapt to the enabled driver set (e.g.
+        # device_sensors deriving signal prefixes from descriptors' `provides`).
+        self.hub.integrations = self.integrations
         self.integrations.ble = self.ble
         self.integrations.discover(self.config.integrations_dir, self.registry)
         await self.integrations.setup_all()

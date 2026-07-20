@@ -3,6 +3,17 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Library scroll fix + prefix auto-derivation
+
+- **Fixed**: the integration library reset its scroll position (and search
+  focus) on every WS tick — the view was a component defined inside its parent,
+  so each render remounted it. It is a plain render function now.
+- **Self-containment completed**: `device_sensors` now honours every signal
+  prefix declared by an enabled driver's `provides`
+  (`IntegrationManager.declared_prefixes()`, cached, world-sim providers
+  excluded) — an external driver's readings become entities with no edits to
+  any bundled list. Core-mirror entries never hijack existing entities.
+
 ## 2026-07 — Simulator cards clearly marked
 
 - Every simulated data source (the world-sim providers + the master switch)

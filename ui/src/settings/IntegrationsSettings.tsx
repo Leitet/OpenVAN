@@ -375,7 +375,7 @@ export function IntegrationsSettings() {
           )}
         </>
       ) : (
-        <LibraryView />
+        renderLibrary()
       )}
     </section>
   );
@@ -439,7 +439,10 @@ export function IntegrationsSettings() {
     );
   }
 
-  function LibraryView() {
+  // Plain render helper, NOT a nested component: a component defined inside the
+  // parent gets a new identity every render, so React would remount the whole
+  // library on each WS tick — resetting scroll position and input focus.
+  function renderLibrary() {
     return (
         <>
           <div className="integration-searchbar">
