@@ -148,6 +148,38 @@ export interface SceneInfo {
   description: string;
 }
 
+// Routines — user-programmable automations (openvan_core.routines).
+export interface RoutineTrigger {
+  type: "manual" | "signal" | "time";
+  signal?: string;
+  op?: "above" | "below" | "equals" | "on" | "off";
+  value?: number;
+  at?: string; // "HH:MM" for time triggers
+}
+
+export interface RoutineStep {
+  type: "action" | "wait" | "condition" | "notify";
+  entity_id?: string;
+  command?: string;
+  params?: Record<string, unknown>;
+  seconds?: number;
+  signal?: string;
+  op?: "above" | "below" | "equals" | "on" | "off";
+  value?: number;
+  message?: string;
+}
+
+export interface Routine {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  enabled: boolean;
+  show_on_home: boolean;
+  triggers: RoutineTrigger[];
+  steps: RoutineStep[];
+}
+
 export type VehicleProfile = Record<string, string | number>;
 
 export interface VehicleState {

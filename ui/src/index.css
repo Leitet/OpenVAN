@@ -2974,3 +2974,151 @@ body {
     gap: 16px;
   }
 }
+
+/* Routines — automation builder (Settings → Routines) */
+.rt-basics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: end;
+  margin-bottom: 6px;
+}
+.rt-basics label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.rt-basics input[type="text"],
+.rt-basics select {
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+.rt-check {
+  display: flex;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+}
+.rt-section {
+  margin: 16px 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.rt-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+  font-size: 13px;
+}
+.rt-block select,
+.rt-block input {
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+.rt-block-icon {
+  color: var(--accent);
+  display: inline-flex;
+  flex: none;
+}
+.rt-order {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--panel);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.rt-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.rt-value input {
+  width: 72px;
+}
+.rt-value em {
+  font-style: normal;
+  color: var(--muted);
+  font-size: 12px;
+}
+.rt-message {
+  flex: 1;
+}
+.rt-tools {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 4px;
+}
+.rt-x {
+  margin-left: auto;
+}
+.rt-adders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.rt-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-2);
+}
+.rt-row.off {
+  opacity: 0.55;
+}
+.rt-row-icon {
+  color: var(--accent);
+  display: inline-flex;
+  flex: none;
+}
+.rt-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.rt-row-when {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rt-row-when em {
+  font-style: normal;
+  font-size: 11.5px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.rt-row-when .rt-count {
+  border-style: dashed;
+}
+.routine-editor h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

@@ -436,6 +436,16 @@ every LLM system prompt via `llm.with_language()` — it defaults to the app lan
 but is overridable, and the directive still lets the model honour a one-off request
 ("say it in German"). Advisory/notice text is still English (backend) for now.
 
+**Routines** (`routines.py`): user-programmable automations, superseding the
+fixed scenes. Triggers (manual button / sensor threshold, edge-triggered / local
+time via the sim clock) + ordered steps (safety-checked `action`, clamped
+`wait`, `condition` = only-continue-if, `notify`). The four classic scenes ship
+as editable defaults; persisted in the store (`routines` ns); `/api/routines`
+(GET, POST save, POST `/run`, POST `/reset`), `/api/scenes` stays as the
+home-screen subset. Edited in Settings → Routines as sentence-like blocks (no
+node graph — deliberately); every action still goes through
+`Hub.execute_intent` → safety (Rule 2).
+
 **Ideas go in [backlog.md](backlog.md)**, not lost in chat — capture, don't build,
 until scheduled.
 

@@ -3,6 +3,26 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Routines: the automation builder
+
+- **Scenes grew into routines** (`routines.py`): fully user-programmable
+  automations. Triggers — manual button, sensor threshold (edge-triggered,
+  fires once per crossing), local time of day (sim-clock based, so bench time
+  travel exercises it). Steps, in order — control an entity (through the
+  safety layer, always), wait, "only continue if" guard (stops the routine),
+  notify. The four classic scenes ship as editable defaults; user edits
+  persist and survive restarts; tuning changes only refresh *unmodified*
+  defaults.
+- **Settings → Routines**: a sentence-block editor, deliberately not a node
+  graph (per the industry's convergence — HA's editor evolution toward
+  plain-language blocks). List view with trigger-phrase chips, enable
+  toggles, run-now; editor with When/Do sections, readable blocks with
+  dropdowns, reorder arrows, add-buttons per block type. Live-verified:
+  built "Battery saver" (When Battery < 20% → light on + notify) entirely in
+  the UI, dropped the battery, watched it fire.
+- Voice and the home Routines panel keep working unchanged (`/api/scenes` is
+  now the home-screen subset; run-by-phrase matches routines).
+
 ## 2026-07 — Top-down camera placement: drag to place, drag to aim
 
 - Camera placement graduated from a dropdown to a **spatial editor**: the

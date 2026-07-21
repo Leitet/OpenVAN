@@ -403,6 +403,29 @@ export async function runScene(id: string): Promise<{ applied: number; ok: boole
   return res.json();
 }
 
+import type { Routine } from "./types";
+
+export async function getRoutines(): Promise<Routine[]> {
+  const data = await (await fetch("/api/routines")).json();
+  return data.routines as Routine[];
+}
+
+export async function saveRoutines(routines: Routine[]): Promise<Routine[]> {
+  const res = await fetch("/api/routines", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ routines }),
+  });
+  if (!res.ok) return [];
+  return ((await res.json()).routines ?? []) as Routine[];
+}
+
+export async function resetRoutines(): Promise<Routine[]> {
+  const res = await fetch("/api/routines/reset", { method: "POST" });
+  if (!res.ok) return [];
+  return ((await res.json()).routines ?? []) as Routine[];
+}
+
 export async function clearAssistantMemory(): Promise<AssistantMemory> {
   return (await fetch("/api/assistant/memory", { method: "DELETE" })).json();
 }

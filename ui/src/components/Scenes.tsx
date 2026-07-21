@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
-import { Moon, Sun, DoorOpen, Tent, Sparkles, Check } from "lucide-react";
+import { Moon, Sun, DoorOpen, Tent, Sparkles, Check, Zap, Bell, Droplet, Thermometer, Shield, Car } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { getScenes, runScene } from "@shared/api";
 import type { SceneInfo } from "@shared/types";
 import { useT } from "../i18n";
 
-const ICON = { moon: Moon, sun: Sun, door: DoorOpen, tent: Tent } as const;
+// User-created routines can pick any of these icons; unknown → Sparkles.
+const ICON: Record<string, LucideIcon> = {
+  moon: Moon, sun: Sun, door: DoorOpen, tent: Tent, zap: Zap, bell: Bell,
+  droplet: Droplet, thermometer: Thermometer, shield: Shield, car: Car,
+};
 
 /** One-tap routines. Each scene runs a bundle of safety-checked intents in Core
  * (the same ones the assistant would), so "Goodnight" dims the whole van at once. */

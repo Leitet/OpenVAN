@@ -9,6 +9,7 @@ import { SystemSettings } from "../settings/SystemSettings";
 import { TuningSettings } from "../settings/TuningSettings";
 import { VehicleSettings } from "../settings/VehicleSettings";
 import { IntegrationsSettings } from "../settings/IntegrationsSettings";
+import { RoutinesSettings } from "../settings/RoutinesSettings";
 import { Personalities } from "../components/Personalities";
 
 type Category =
@@ -18,6 +19,7 @@ type Category =
   | "vehicle"
   | "integrations"
   | "camping"
+  | "routines"
   | "tuning"
   | "system";
 
@@ -29,6 +31,7 @@ const CATEGORIES: { id: Category; labelKey: string }[] = [
   { id: "personalities", labelKey: "personalities.title" },
   { id: "vehicle", labelKey: "settings.vehicle" },
   { id: "integrations", labelKey: "settings.integrations" },
+  { id: "routines", labelKey: "settings.routines" },
   { id: "camping", labelKey: "settings.camping" },
   { id: "tuning", labelKey: "settings.tuning" },
   { id: "system", labelKey: "settings.system" },
@@ -81,6 +84,7 @@ function SettingsCategories() {
         {cat === "personalities" && <Personalities />}
         {cat === "vehicle" && <VehicleSettings />}
         {cat === "integrations" && <IntegrationsSettings />}
+        {cat === "routines" && <RoutinesSettings />}
         {cat === "camping" && <CampingSettings />}
         {cat === "tuning" && <TuningSettings />}
         {cat === "system" && <SystemSettings />}

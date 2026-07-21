@@ -54,7 +54,7 @@ from .safety import (
     SafetyValidator,
 )
 from .roads import RoadNetwork
-from .scenes import SceneEngine, default_scenes
+from .routines import RoutineEngine
 from .security import SecuritySystem
 from .simulation import VanSimulation
 from .store import ConfigStore
@@ -142,7 +142,7 @@ class Core:
     camp: CampService
     store: ConfigStore
     memory_chat: ChatMemory
-    scenes: SceneEngine
+    routines: RoutineEngine
     maintenance: MaintenanceLog
     security: SecuritySystem
     coverage: CoverageMemory
@@ -213,6 +213,10 @@ class Core:
         # Record the coverage trail, then subscribe advisors and evaluate once
         # against the seeded state.
         self.coverage.start()
+        # Routines: load the user's saved set (or the defaults) and arm the
+        # signal/time triggers.
+        self.routines.load()
+        self.routines.start()
         self.advisors.start()
         await self.advisors.evaluate()
         if self.config.weather_enabled:
@@ -228,6 +232,7 @@ class Core:
         if self.config.weather_enabled:
             await self.weather.stop()
         self.coverage.stop()
+        await self.routines.stop()
         await self.advisors.stop()
         await self.simulation.stop()
         if self.config.telemetry_enabled:
@@ -325,8 +330,9 @@ class Core:
         return {"reply": answer, "action": False, "ok": True, "blocked_by_safety": False}
 
     async def run_scene(self, scene_id: str) -> dict[str, Any] | None:
-        """Run a scene's steps through the safety-checked intent path."""
-        return await self.scenes.run(scene_id)
+        """Run a routine's steps through the safety-checked intent path
+        (scenes-compat name — routines superseded scenes)."""
+        return await self.routines.run(scene_id)
 
     # --- vehicle profile -------------------------------------------------
     def vehicle_state(self) -> dict[str, Any]:
@@ -422,9 +428,8 @@ class Core:
         self.advisors.advisors = _build_advisors(
             self.config, self.weather, self.maintenance, self.security, self.coverage
         )
-        self.scenes = SceneEngine(
-            self.hub,
-            default_scenes(self.config.tune("scene_sleep_c"), self.config.tune("scene_comfort_c")),
+        self.routines.refresh_defaults(
+            self.config.tune("scene_sleep_c"), self.config.tune("scene_comfort_c")
         )
         self.maintenance.intervals = self.config.maintenance_intervals
         self.maintenance.load()
@@ -437,7 +442,7 @@ class Core:
         return self.security.status()
 
     async def _run_scene_reply(self, scene_id: str) -> dict[str, Any]:
-        result = await self.scenes.run(scene_id)
+        result = await self.routines.run(scene_id)
         if result is None:
             return {"reply": "I don't know that routine.", "action": False,
                     "ok": False, "blocked_by_safety": False}
@@ -691,9 +696,8 @@ def build_core(config: Config | None = None) -> Core:
         store=store,
     )
     memory_chat = ChatMemory(store, router)
-    scenes = SceneEngine(
-        hub, default_scenes(config.tune("scene_sleep_c"), config.tune("scene_comfort_c"))
-    )
+    routines = RoutineEngine(hub, bus, twin, store=store)
+    routines.refresh_defaults(config.tune("scene_sleep_c"), config.tune("scene_comfort_c"))
     maintenance = MaintenanceLog(
         store,
         get_odometer=lambda: twin.get("vehicle.odometer_km"),
@@ -724,7 +728,7 @@ def build_core(config: Config | None = None) -> Core:
         camp=camp,
         store=store,
         memory_chat=memory_chat,
-        scenes=scenes,
+        routines=routines,
         maintenance=maintenance,
         security=security,
         coverage=coverage,

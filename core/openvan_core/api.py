@@ -94,6 +94,10 @@ class CampSourceConfigBody(BaseModel):
     config: dict[str, Any]
 
 
+class RoutinesBody(BaseModel):
+    routines: list[dict[str, Any]]
+
+
 class SceneBody(BaseModel):
     id: str
 
@@ -267,7 +271,8 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
 
     @app.get("/api/scenes")
     async def scenes() -> dict[str, Any]:
-        return {"scenes": core.scenes.list()}
+        # Scenes-compat: the home-screen subset of the routines.
+        return {"scenes": core.routines.home_list()}
 
     @app.post("/api/scenes/run")
     async def run_scene(body: SceneBody) -> dict[str, Any]:
@@ -275,6 +280,27 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
         if result is None:
             raise HTTPException(404, f"unknown scene '{body.id}'")
         return result
+
+    @app.get("/api/routines")
+    async def routines() -> dict[str, Any]:
+        return {"routines": core.routines.list()}
+
+    @app.post("/api/routines")
+    async def save_routines(body: RoutinesBody) -> dict[str, Any]:
+        return {"routines": await core.routines.save(body.routines)}
+
+    @app.post("/api/routines/run")
+    async def run_routine(body: SceneBody) -> dict[str, Any]:
+        result = await core.routines.run(body.id)
+        if result is None:
+            raise HTTPException(404, f"unknown routine '{body.id}'")
+        return result
+
+    @app.post("/api/routines/reset")
+    async def reset_routines() -> dict[str, Any]:
+        return {"routines": await core.routines.reset(
+            core.config.tune("scene_sleep_c"), core.config.tune("scene_comfort_c")
+        )}
 
     @app.get("/api/maintenance")
     async def maintenance() -> dict[str, Any]:
