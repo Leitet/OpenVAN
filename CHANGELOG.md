@@ -3,6 +3,26 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Signal staleness + WiCAN OBD-II + Tasmota
+
+- **Signal freshness**: when a live transport drops, the driver's readings are
+  now marked **stale** in the twin (kept visible as last-known, never shown as
+  current). The device-sensors panel greys them with a dashed "stale" tag, the
+  bench signal browser marks them, and `/api/state` + the WS stream carry the
+  set. A fresh write (reconnect, sim fallback, bench) clears the flag.
+- **WiCAN (OBD-II)** (`wican`): MeatPi's dongle via its AutoPID MQTT feed —
+  topics/payloads taken from the wican-fw *source*, not memory. Parameters
+  normalise to `obd.*` auto-entities; live `VehicleSpeed` mirrors into
+  `vehicle.speed_kmh` so the journey advisors run on real engine data.
+  End-to-end tested against an in-process loopback broker, including the
+  drop→stale transition.
+- **Tasmota** (`tasmota`): smart switches/plugs/sensors over Tasmota's
+  documented MQTT interface. The device list is a `list` config on the card's
+  settings page; each device gets a **safety-checked switch** (live commands
+  publish `cmnd/<t>/POWER`, the device's own `stat` echo drives the state —
+  a refused command never reaches the broker) and `tele/SENSOR` JSON is
+  flattened into auto-surfaced sensor entities.
+
 ## 2026-07 — Learned setpoints: "likes the cabin around 21°C" becomes real
 
 - **The learned-setpoints seam**: `ChatMemory.learned_setpoints()`

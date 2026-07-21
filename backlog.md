@@ -112,9 +112,6 @@ findings back:
   real hardware first; validate ESPHome switch control against a real node.
 - **VE.Direct (USB serial)** for Victron products without a GX.
 - **RuuviTag BLE scan** and **Autoterm UART** real transports.
-- **Signal freshness / staleness** — when a live transport drops, a reader driver
-  leaves its last value frozen with no marker; add per-signal freshness or a
-  `live=false` banner so stale readings aren't shown as current.
 - **Discovery** — mDNS/DHCP/BLE auto-fills host/port so the user rarely types an IP.
 - **Vehicle-aware routing** — maxwidth checks + the Journey "restrictions ahead"
   strip shipped; remaining: a height/weight/width-aware route planner
@@ -170,9 +167,12 @@ BLE**, not cloud — Rule 3) / Bluetti BLE / Anker SOLIX (official local Modbus-
 → near-free on our driver) · **EPEver SHIPPED** (`epever`: Modbus RTU over the
 link layer — EW11 TCP bridge with zero extras, or USB via the `serial` extra;
 live PV feeds solar.power) · Starlink local gRPC (grpc dep decision; GPS dropped from local API
-2026-05) · OBD-II via **WiCAN** (rides our MQTT client — good next candidate) ·
-Shelly 12V (HTTP RPC, loopback-testable) + Tasmota (rides our MQTT client;
-VanPi-ecosystem compat) · Simarine Pico (passive UDP — easy) · Webasto/
+2026-05) · **WiCAN OBD-II SHIPPED** (`wican`: AutoPID MQTT feed → `obd.*`
+auto-entities, live speed mirrors `vehicle.speed_kmh`; signal staleness marks
+readings honestly when the dongle drops) · Shelly 12V (HTTP RPC,
+loopback-testable) · **Tasmota SHIPPED** (`tasmota`: configurable device list,
+safety-checked switches via `cmnd/…/POWER` with stat echo, `tele/SENSOR`
+flattened to auto-entities; VanPi-ecosystem compat) · Simarine Pico (passive UDP — easy) · Webasto/
 Eberspächer W-Bus (serial) · Micro-Air EasyTouch (GATT).
 
 **Wave 3 — strategic/regional bets:**

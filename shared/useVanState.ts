@@ -13,6 +13,8 @@ export function useVanState() {
   const [twin, setTwin] = useState<Twin>({});
   // Last writer per signal key (integration id / plugin domain / "seed" / "sim").
   const [sources, setSources] = useState<Record<string, string>>({});
+  // Signals whose provider dropped — last-known values, not current readings.
+  const [stale, setStale] = useState<Set<string>>(new Set());
   const [log, setLog] = useState<LogEntry[]>([]);
   const [assistant, setAssistant] = useState<Assistant>({ llm: false, model: null });
   const [notices, setNotices] = useState<Record<string, Notice>>({});
@@ -35,6 +37,7 @@ export function useVanState() {
           setEntities(map);
           setTwin(msg.data.twin as Twin);
           setSources((msg.data.sources ?? {}) as Record<string, string>);
+          setStale(new Set((msg.data.stale ?? []) as string[]));
           if (msg.data.assistant) setAssistant(msg.data.assistant as Assistant);
           {
             const map2: Record<string, Notice> = {};
@@ -54,6 +57,16 @@ export function useVanState() {
           setEntities((prev) => {
             const next = { ...prev };
             delete next[id];
+            return next;
+          });
+          break;
+        }
+        case "twin.stale_changed": {
+          const keys = (msg.data.keys ?? []) as string[];
+          const isStale = Boolean(msg.data.stale);
+          setStale((prev) => {
+            const next = new Set(prev);
+            for (const k of keys) (isStale ? next.add(k) : next.delete(k));
             return next;
           });
           break;
@@ -126,6 +139,7 @@ export function useVanState() {
     entities,
     twin,
     sources,
+    stale,
     log,
     assistant,
     notices: Object.values(notices),

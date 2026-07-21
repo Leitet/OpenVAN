@@ -46,7 +46,15 @@ function TextControl({ signalKey, value }: { signalKey: string; value: string })
   );
 }
 
-function SignalRow({ signalKey, value }: { signalKey: string; value: unknown }) {
+function SignalRow({
+  signalKey,
+  value,
+  stale,
+}: {
+  signalKey: string;
+  value: unknown;
+  stale?: boolean;
+}) {
   let control: React.ReactNode;
   if (typeof value === "boolean") {
     control = (
@@ -67,6 +75,7 @@ function SignalRow({ signalKey, value }: { signalKey: string; value: unknown }) 
   return (
     <div className="sig-row">
       <code className="sig-key">{signalKey}</code>
+      {stale && <em className="sig-stale" title="Provider dropped — last known value">stale</em>}
       {control}
     </div>
   );
@@ -75,9 +84,11 @@ function SignalRow({ signalKey, value }: { signalKey: string; value: unknown }) 
 export function SignalBrowser({
   twin,
   sources,
+  stale,
 }: {
   twin: Twin;
   sources: Record<string, string>;
+  stale?: Set<string>;
 }) {
   const [filter, setFilter] = useState("");
 
@@ -108,7 +119,7 @@ export function SignalBrowser({
             {source} <em>({entries.length})</em>
           </summary>
           {entries.map(([key, value]) => (
-            <SignalRow key={key} signalKey={key} value={value} />
+            <SignalRow key={key} signalKey={key} value={value} stale={stale?.has(key)} />
           ))}
         </details>
       ))}

@@ -478,7 +478,7 @@ function VoicePanel() {
 }
 
 export function BenchApp() {
-  const { twin, sources, connected, entities } = useVanState();
+  const { twin, sources, stale, connected, entities } = useVanState();
   const [wx, setWx] = useState<Weather>({});
   const [simulate, setSimulate] = useState<boolean | null>(null);
 
@@ -727,7 +727,7 @@ export function BenchApp() {
             integration's signals appear here the moment it emits them — no
             bench code needed. Edit a value to inject it, exactly like a sensor.
           </p>
-          <SignalBrowser twin={twin} sources={sources} />
+          <SignalBrowser twin={twin} sources={sources} stale={stale} />
         </section>
       </main>
     </div>

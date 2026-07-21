@@ -22,7 +22,7 @@ function fmt(state: unknown): string {
 }
 
 export function DeviceSensors() {
-  const { entities } = useVan();
+  const { entities, stale } = useVan();
   const t = useT();
   const sensors = Object.values(entities)
     .filter((e: Entity) => e.attributes?.device_sensor)
@@ -57,18 +57,30 @@ export function DeviceSensors() {
         </div>
       )}
       <div className="energy-stats">
-        {sensors.map((e) => (
-          <div className="energy-stat" key={e.entity_id}>
-            <span className="energy-stat-icon">{iconFor(e.unit)}</span>
-            <div>
-              <div className="energy-stat-value">
-                {fmt(e.state)}
-                {e.unit && typeof e.state === "number" ? ` ${e.unit}` : ""}
+        {sensors.map((e) => {
+          // The provider of this reading dropped — show the last-known value
+          // honestly greyed, never as a current measurement.
+          const isStale = stale.has(String(e.attributes?.signal ?? ""));
+          return (
+            <div
+              className={"energy-stat" + (isStale ? " stale" : "")}
+              key={e.entity_id}
+              title={isStale ? t("sensors.stale") : undefined}
+            >
+              <span className="energy-stat-icon">{iconFor(e.unit)}</span>
+              <div>
+                <div className="energy-stat-value">
+                  {fmt(e.state)}
+                  {e.unit && typeof e.state === "number" ? ` ${e.unit}` : ""}
+                </div>
+                <div className="energy-stat-label">
+                  {e.name}
+                  {isStale && <em className="stale-tag">{t("sensors.staleTag")}</em>}
+                </div>
               </div>
-              <div className="energy-stat-label">{e.name}</div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

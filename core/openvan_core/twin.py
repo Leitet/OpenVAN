@@ -17,6 +17,7 @@ from typing import Any
 from .events import EventBus
 
 SIGNAL_CHANGED = "twin.signal_changed"
+STALE_CHANGED = "twin.stale_changed"
 
 
 class VanTwin:
@@ -29,11 +30,18 @@ class VanTwin:
         # Lets the bench group and auto-generate injectors per data source — the
         # plug-and-play counterpart of the product UI's auto entities.
         self._sources: dict[str, str] = {}
+        # Keys whose last value is STALE — the transport that provided them
+        # dropped, so the reading is frozen history, not a current measurement.
+        # A fresh write clears the flag.
+        self._stale: set[str] = set()
 
     async def set_signal(self, key: str, value: Any, source: str = "sim") -> None:
         changed = self._signals.get(key) != value
         self._signals[key] = value
         self._sources[key] = source
+        if key in self._stale:
+            self._stale.discard(key)
+            await self._bus.publish(STALE_CHANGED, {"keys": [key], "stale": False})
         if changed:
             await self._bus.publish(
                 SIGNAL_CHANGED, {"key": key, "value": value, "source": source}
@@ -47,3 +55,15 @@ class VanTwin:
 
     def sources(self) -> dict[str, str]:
         return dict(self._sources)
+
+    async def mark_stale(self, keys: list[str]) -> None:
+        """Flag signals as stale (their provider dropped). Values stay visible —
+        last-known is useful — but honestly marked, never shown as current."""
+        fresh = [k for k in keys if k in self._signals and k not in self._stale]
+        if not fresh:
+            return
+        self._stale.update(fresh)
+        await self._bus.publish(STALE_CHANGED, {"keys": fresh, "stale": True})
+
+    def stale(self) -> list[str]:
+        return sorted(self._stale)

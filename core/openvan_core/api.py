@@ -218,6 +218,8 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
             # Last writer per signal — the bench groups its auto-generated
             # injectors by data source (plug-and-play for new integrations).
             "sources": core.twin.sources(),
+            # Signals whose provider dropped: last-known values, honestly marked.
+            "stale": core.twin.stale(),
             "notices": core.advisors.active_notices(),
             "assistant": core.assistant_state(),
         }

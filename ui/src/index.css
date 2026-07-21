@@ -3138,3 +3138,19 @@ body {
   font-weight: 600;
   border-color: color-mix(in srgb, var(--accent) 50%, transparent);
 }
+
+/* Stale readings — provider dropped, last-known value shown honestly */
+.energy-stat.stale {
+  opacity: 0.55;
+}
+.stale-tag {
+  font-style: normal;
+  font-size: 10px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px dashed var(--warn);
+  border-radius: 999px;
+  color: var(--warn);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

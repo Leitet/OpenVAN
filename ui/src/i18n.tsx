@@ -514,6 +514,12 @@ const T: Record<string, Entry> = {
   "routines.steps": { en: "steps", sv: "steg", de: "Schritte" },
   "routines.test": { en: "Run now", sv: "Kör nu", de: "Jetzt ausführen" },
   "routines.message": { en: "Message", sv: "Meddelande", de: "Nachricht" },
+  "sensors.stale": {
+    en: "Connection lost — showing the last known value",
+    sv: "Anslutningen tappad — visar senast kända värde",
+    de: "Verbindung verloren — letzter bekannter Wert",
+  },
+  "sensors.staleTag": { en: "stale", sv: "inaktuell", de: "veraltet" },
   "memory.setpoints": {
     en: "Learned setpoints — these fill in the default routines:",
     sv: "Inlärda börvärden — dessa fyller i standardrutinerna:",

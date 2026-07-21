@@ -203,6 +203,8 @@ class Integration(ABC):
 
     async def stop_transport(self) -> None:
         await self.remove_controls()
+        if self.live:
+            await self._mark_owned_stale()
         self.live = False
         task, self._transport_task = self._transport_task, None
         if task is not None:
@@ -229,8 +231,12 @@ class Integration(ABC):
                 logger.info("integration %s has no real transport yet — staying simulated", self.info.id)
                 self.live = False
                 return
-            except Exception as exc:  # pragma: no cover - network/hardware paths
+            except Exception as exc:
                 logger.warning("integration %s transport error: %s", self.info.id, exc)
+            if self.live:
+                # The wire dropped mid-stream: the values this driver provided are
+                # now frozen history — mark them so the UI never shows them as live.
+                await self._mark_owned_stale()
             self.live = False
             await self.bus.publish("integration.changed", {"id": self.info.id, "live": False})
             await asyncio.sleep(backoff)
@@ -249,6 +255,15 @@ class Integration(ABC):
         world too (e.g. a camera set) to reconcile without a restart."""
         await self.stop_transport()
         await self.start_transport()
+
+    def owned_signals(self) -> list[str]:
+        """Signals this driver was the last writer of (via the twin source map)."""
+        return [k for k, src in self.twin.sources().items() if src == self.info.id]
+
+    async def _mark_owned_stale(self) -> None:
+        keys = self.owned_signals()
+        if keys:
+            await self.twin.mark_stale(keys)
 
     # --- controls: safety-checked actuation on integration devices ----------
 
