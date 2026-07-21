@@ -41,11 +41,13 @@ class MqttHomeAssistant(Integration):
         safety_class=2,  # inbound commands — but always via the safety layer
         status=Status.NATIVE,
         priority="P0",
-        provides=["home_assistant.connected", "home_assistant.van_home"],
+        provides=["home_assistant.connected", "home_assistant.van_home",
+                  "ha.<domain>.<object_id> (imported via MQTT Statestream)"],
         description=(
             "MQTT discovery both ways: export OpenVan's entities to Home Assistant "
-            "(one OpenVan device, commands returning through the safety layer), so "
-            "the van federates into the home when it arrives — never dissolves into it."
+            "(one OpenVan device, commands returning through the safety layer) AND "
+            "import the home's sensors via HA's MQTT Statestream — the van "
+            "federates into the home when it arrives, never dissolves into it."
         ),
         config_fields=[
             {"key": "mode", "label": "Connection", "type": "select",
@@ -57,6 +59,10 @@ class MqttHomeAssistant(Integration):
             {"key": "discovery_prefix", "label": "Discovery prefix", "type": "text",
              "default": "homeassistant"},
             {"key": "base_topic", "label": "Base topic", "type": "text", "default": "openvan"},
+            {"key": "import_statestream", "label": "Import HA sensors (Statestream)",
+             "type": "select", "options": ["yes", "no"], "default": "yes"},
+            {"key": "statestream_prefix", "label": "Statestream base topic", "type": "text",
+             "default": "homeassistant_statestream"},
         ],
     )
 
@@ -82,12 +88,19 @@ class MqttHomeAssistant(Integration):
         self.live = True
         await self.bus.publish("integration.changed", {"id": self.info.id, "live": True})
         await self.twin.set_signal("home_assistant.connected", True, source=self.info.id)
+        wants_import = str(self.config.get("import_statestream", "yes")) != "no"
         bridge = HaBridge(
             client,
             self.hub,
             self.bus,
             prefix=str(self.config.get("discovery_prefix") or "homeassistant"),
             base=base,
+            twin=self.twin if wants_import else None,
+            import_prefix=(
+                str(self.config.get("statestream_prefix") or "homeassistant_statestream")
+                if wants_import else None
+            ),
+            import_source=self.info.id,
         )
         try:
             await bridge.run()
@@ -104,4 +117,9 @@ class MqttHomeAssistant(Integration):
             "home_assistant.van_home",
             bool(twin.get("home_assistant.van_home")),
             source="mqtt_homeassistant",
+        )
+        # A taste of the import direction with no broker (Rule 1): one imported
+        # home sensor, so the ha.* auto-entities are visible in the catalog demo.
+        await twin.set_signal(
+            "ha.sensor.home_temperature", 21.5, source="mqtt_homeassistant"
         )

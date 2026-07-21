@@ -3,6 +3,18 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — HA import: the federation is bidirectional
+
+- The HA bridge now **imports the home's sensors** via Home Assistant's
+  official MQTT Statestream: `<base>/<domain>/<object_id>/state` maps into
+  read-only `ha.<domain>.<object_id>` twin signals → auto-surfaced entities
+  (temperature at home, doors, device trackers…). Filters keep it honest: the
+  van's own exported `openvan_*` mirror is never re-imported (no self-echo),
+  and `unknown`/`unavailable` never become fake readings.
+- Config on the card: import toggle + statestream base topic (HA side needs
+  `mqtt_statestream:` in configuration.yaml). Sim mode demos one imported
+  home sensor. Tested end-to-end against the scripted HA broker.
+
 ## 2026-07 — Votronic Display Link (Wave 1 #6) + Truma license verdict
 
 - **Votronic driver** (`votronic`): battery computers, solar regulators and

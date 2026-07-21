@@ -105,9 +105,11 @@ findings back:
   actuator rest-states, the HA presence input and the sim clock. Plug-and-play
   is contract-tested per card (remove → unknown, re-add → seeded, bare van
   stays alive).
-- **HA bridge follow-ups** (export shipped): *import* other HA devices into the
-  van (HA entities → twin signals, surfaced like device_sensors); Matter later;
-  validate against a real Home Assistant instance (only mosquitto validated so far).
+- **HA bridge follow-ups** (export + Statestream *import* shipped — the
+  federation is bidirectional): actuating HA devices *from* the van (imports
+  are read-only today); Matter later; validate against a real Home Assistant
+  instance (only mosquitto + the scripted broker validated so far — needs
+  `mqtt_statestream:` enabled in HA's configuration.yaml).
 - **Device-control follow-ups** (safety-layer writes shipped for switches):
   ESPHome *lights* (brightness/colour, needs a light entity model beyond on/off) and
   other control types (numbers, covers); Victron control writes (inverter on/off,

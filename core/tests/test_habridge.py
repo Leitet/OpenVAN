@@ -253,3 +253,46 @@ async def test_climate_temperature_command(ha_core):
     assert await _wait_for(
         lambda: ha.topics().get("openvan/climate.diesel_heater/temp/state") == b"21.5"
     )
+
+
+# --- import direction: HA MQTT Statestream → twin signals --------------------
+
+def test_parse_statestream_mapping():
+    from openvan_core.habridge import parse_statestream
+
+    p = "homeassistant_statestream"
+    assert parse_statestream(p, f"{p}/sensor/living_room_temperature/state", b"21.5") == \
+        ("ha.sensor.living_room_temperature", 21.5)
+    assert parse_statestream(p, f"{p}/binary_sensor/front_door/state", b"on") == \
+        ("ha.binary_sensor.front_door", True)
+    assert parse_statestream(p, f"{p}/device_tracker/johan_phone/state", b"not_home") == \
+        ("ha.device_tracker.johan_phone", False)
+    assert parse_statestream(p, f"{p}/sensor/mode/state", b"eco") == ("ha.sensor.mode", "eco")
+    # Never re-import our own exported mirror; never fake unavailable readings.
+    assert parse_statestream(p, f"{p}/sensor/openvan_house_battery_soc/state", b"82") is None
+    assert parse_statestream(p, f"{p}/sensor/x/state", b"unavailable") is None
+    # Shape/domain filters.
+    assert parse_statestream(p, f"{p}/climate/heater/state", b"heat") is None
+    assert parse_statestream(p, "other/sensor/x/state", b"1") is None
+    assert parse_statestream(p, f"{p}/sensor/x/attributes", b"{}") is None
+
+
+async def test_statestream_import_end_to_end(ha_core):
+    ha, core = ha_core
+    await ha.send(
+        "homeassistant_statestream/sensor/living_room_temperature/state", b"21.5"
+    )
+    assert await _wait_for(
+        lambda: core.twin.get("ha.sensor.living_room_temperature") == 21.5
+    )
+    # Auto-surfaced as an entity via the declared "ha." prefix — no UI code.
+    assert await _wait_for(
+        lambda: core.hub.get_entity("sensor.ha_sensor_living_room_temperature") is not None
+    )
+    entity = core.hub.get_entity("sensor.ha_sensor_living_room_temperature")
+    assert entity.state == 21.5 and entity.unit == "°C"
+    # Our own mirror coming back via statestream must NOT be re-imported.
+    await ha.send("homeassistant_statestream/sensor/openvan_solar_power/state", b"240")
+    await ha.send("homeassistant_statestream/binary_sensor/front_door/state", b"on")
+    assert await _wait_for(lambda: core.twin.get("ha.binary_sensor.front_door") is True)
+    assert core.twin.get("ha.sensor.openvan_solar_power") is None

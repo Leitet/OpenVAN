@@ -18,7 +18,11 @@ intent) is pure functions, unit-testable without a broker. :class:`HaBridge` is
 the runtime that wires them to an :class:`~openvan_core.transports.AsyncMqttClient`
 and the event bus; the ``mqtt_homeassistant`` integration owns its lifecycle.
 
-Importing *other* HA devices into the van is a separate, later step (backlog).
+The **import direction** rides HA's official *MQTT Statestream* integration:
+HA publishes ``<statestream_base>/<domain>/<object_id>/state`` and the bridge
+maps selected domains into ``ha.<domain>.<object_id>`` twin signals (auto-
+surfaced as entities). Our own exported mirror (``openvan_*`` object ids) is
+filtered out so the van never re-imports itself.
 """
 
 from __future__ import annotations
@@ -53,6 +57,41 @@ def command_topics(base: str) -> list[str]:
     """The subscription filters for inbound commands (narrow — never our own
     state topics, or we'd hear our own echoes)."""
     return [f"{base}/+/set", f"{base}/+/+/set"]
+
+
+# Domains worth importing as readings. Actuating *HA* devices from the van is a
+# separate, later step — imports are strictly read-only.
+_IMPORTABLE = {"sensor", "binary_sensor", "switch", "light", "device_tracker"}
+
+
+def parse_statestream(prefix: str, topic: str, payload: bytes) -> tuple[str, Any] | None:
+    """An HA MQTT-Statestream state message → ``("ha.<domain>.<object_id>", value)``.
+
+    Filters: only importable domains; never our own exported ``openvan_*``
+    mirror (no self-echo); ``unknown``/``unavailable`` yield nothing rather
+    than a fake reading. Values: numbers parse to float, on/off-ish states to
+    bool, anything else stays a (truncated) string."""
+    parts = topic.split("/")
+    if len(parts) != 4 or parts[0] != prefix or parts[3] != "state":
+        return None
+    domain, obj = parts[1], parts[2]
+    if domain not in _IMPORTABLE or not obj or obj.startswith("openvan"):
+        return None
+    text = payload.decode("utf-8", "replace").strip()
+    if not text or text.lower() in ("unknown", "unavailable", "none"):
+        return None
+    lowered = text.lower()
+    value: Any
+    if lowered in ("on", "true", "home", "open", "detected"):
+        value = True
+    elif lowered in ("off", "false", "not_home", "closed", "clear"):
+        value = False
+    else:
+        try:
+            value = float(text)
+        except ValueError:
+            value = text[:100]
+    return f"ha.{domain}.{obj}", value
 
 
 def _is_on(state: Any) -> bool:
@@ -149,12 +188,19 @@ class HaBridge:
         *,
         prefix: str = "homeassistant",
         base: str = "openvan",
+        twin: Any = None,
+        import_prefix: str | None = None,
+        import_source: str = "mqtt_homeassistant",
     ) -> None:
         self.client = client
         self.hub = hub
         self.bus = bus
         self.prefix = prefix
         self.base = base
+        # Statestream import (read-only): set both to enable.
+        self.twin = twin
+        self.import_prefix = import_prefix
+        self.import_source = import_source
         from . import __version__
 
         self.device = {
@@ -212,6 +258,8 @@ class HaBridge:
         for f in command_topics(self.base):
             await self.client.subscribe(f)
         await self.client.subscribe(f"{self.prefix}/status")
+        if self.twin is not None and self.import_prefix:
+            await self.client.subscribe(f"{self.import_prefix}/+/+/state")
         await self.announce_all()
 
         async def _on_state(event) -> None:
@@ -241,6 +289,11 @@ class HaBridge:
                     if payload.decode("utf-8", "replace").strip() == "online":
                         await self.announce_all()
                     continue
+                if self.twin is not None and self.import_prefix:
+                    hit = parse_statestream(self.import_prefix, topic, payload)
+                    if hit is not None:
+                        await self.twin.set_signal(hit[0], hit[1], source=self.import_source)
+                        continue
                 await self._handle_command(topic, payload)
         finally:
             for unsub in self._unsubs:

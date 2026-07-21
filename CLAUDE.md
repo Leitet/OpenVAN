@@ -198,7 +198,9 @@ overriding `run_transport()` and picking a `mode` in its config. The
 one retained "OpenVan" device, live state topics, availability backed by an MQTT
 Last Will (drive away → entities go *unavailable*), and commands from HA coming
 back as Intents **through the safety layer** (a refused command re-publishes the
-actual state so HA snaps back). Mapping logic is pure (`discovery`/`render_state`/
+actual state so HA snaps back). The *import* direction rides HA's MQTT
+Statestream: home sensors become read-only ``ha.<domain>.<object_id>`` signals →
+auto-entities (the van's own exported mirror is filtered out — no self-echo). Mapping logic is pure (`discovery`/`render_state`/
 `parse_command`); validated against a real mosquitto broker. The base runs a
 reconnecting supervisor and — offline-first (Rule 3) — a driver only owns the
 signals while `live`; when the device is unreachable it falls straight back to
