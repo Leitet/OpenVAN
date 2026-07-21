@@ -3,6 +3,20 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Top-down camera placement: drag to place, drag to aim
+
+- Camera placement graduated from a dropdown to a **spatial editor**: the
+  Cameras Simulator's settings page shows the van from above (front left) and
+  each camera is dragged into position and aimed by its arrow handle —
+  placement lands in the row as `x`/`y`/`heading` (van coords, degrees
+  clockwise from the direction of travel).
+- One `VanTopView` component serves both surfaces: interactive on the settings
+  page, live display on the Security tab (the old side-view map is gone) — so
+  the map always renders exactly what was configured, with motion lighting up
+  the mount.
+- Schema-level, not camera-specific: a list field flags `van_placement: true`
+  (+ hidden numeric item fields) and any driver gets the same editor.
+
 ## 2026-07 — Dedicated integration settings pages; cameras become config
 
 - **Every integration now gets a dedicated settings page**, defined entirely by

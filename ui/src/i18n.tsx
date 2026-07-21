@@ -462,6 +462,11 @@ const T: Record<string, Entry> = {
     sv: "Lägg till rad",
     de: "Zeile hinzufügen",
   },
+  "integrations.placeHint": {
+    en: "Drag a camera to place it on the van; drag its arrow to aim it.",
+    sv: "Dra en kamera för att placera den på bilen; dra pilen för att rikta den.",
+    de: "Kamera ziehen, um sie zu platzieren; Pfeil ziehen, um sie auszurichten.",
+  },
   "integrations.pauseSim": {
     en: "Pause simulation",
     sv: "Pausa simuleringen",

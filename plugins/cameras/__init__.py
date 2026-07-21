@@ -33,17 +33,17 @@ class Cameras(Plugin):
 
     def __init__(self, hub, backend, config=None):
         super().__init__(hub, backend, config)
-        self._cams: dict[str, dict[str, str]] = {}
+        self._cams: dict[str, dict] = {}
         self._unwatchers: dict[str, list] = {}
         self._unsub = None
 
-    def list(self) -> list[dict[str, str]]:
+    def list(self) -> list[dict]:
         return [dict(c) for c in self._cams.values()]
 
-    def _registry(self) -> dict[str, dict[str, str]]:
+    def _registry(self) -> dict[str, dict]:
         """Cameras provided by enabled integrations, first provider wins on id."""
         manager = getattr(self.hub, "integrations", None)
-        cams: dict[str, dict[str, str]] = {}
+        cams: dict[str, dict] = {}
         if manager is None:
             return cams
         for instance in manager.integrations.values():
@@ -78,7 +78,7 @@ class Cameras(Plugin):
     def _sig(self, cam_id: str, field: str) -> str:
         return f"camera.{cam_id}.{field}"
 
-    async def _register(self, cam: dict[str, str]) -> None:
+    async def _register(self, cam: dict) -> None:
         cam_id = cam["id"]
         online = bool(await self.backend.read(self._sig(cam_id, "online"), True))
         entity = Entity(
@@ -91,6 +91,11 @@ class Cameras(Plugin):
             attributes={
                 "location": cam["location"],
                 "connection": cam["connection"],
+                # Top-down placement (van coords + aim), straight from the
+                # provider's config — the security tab's van map renders it.
+                "x": cam.get("x", 50.0),
+                "y": cam.get("y", 50.0),
+                "heading": cam.get("heading", 0.0),
                 "motion": bool(await self.backend.read(self._sig(cam_id, "motion"), False)),
                 "recording": bool(await self.backend.read(self._sig(cam_id, "recording"), False)),
             },

@@ -214,6 +214,16 @@ export interface TripStats {
   solar_wh: number | null;
 }
 
+// Row schema of a "list" config field (raw from the driver's descriptor).
+export interface IntegrationConfigItemField {
+  key: string;
+  label: string;
+  type: string; // text | select | number
+  options?: string[];
+  hidden?: boolean; // managed by a dedicated editor (e.g. van placement), not the table
+  default?: string | number;
+}
+
 export interface IntegrationConfigField {
   key: string;
   label: string;
@@ -221,8 +231,9 @@ export interface IntegrationConfigField {
   options: string[];
   secret: boolean;
   set: boolean; // a value is stored (used for secrets, which aren't echoed)
-  value?: string | number | Record<string, string>[]; // omitted for secrets
-  item_fields?: IntegrationConfigField[]; // for type "list": the row schema
+  value?: string | number | Record<string, unknown>[]; // omitted for secrets
+  item_fields?: IntegrationConfigItemField[]; // for type "list": the row schema
+  van_placement?: boolean; // list rows are placed/aimed on a top-down van view
 }
 
 export interface MaintenanceItem {

@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { getIntegrations, setIntegration, setIntegrationConfig } from "@shared/api";
 import type { IntegrationConfigField, IntegrationInfo } from "@shared/types";
+import { VanTopView, type PlacedCamera } from "../components/VanTopView";
 import { useT } from "../i18n";
 
 // OpenVan will support thousands of integrations, so we don't show them all at once.
@@ -187,44 +188,78 @@ function IntegrationCard({
 // Row editor for a structured "list" config field (e.g. the camera set): the
 // integration declares the row schema (`item_fields`) and the UI renders a
 // dedicated table with add/remove — how a driver defines its own settings page
-// without shipping UI code.
+// without shipping UI code. Fields flagged `van_placement` additionally get a
+// top-down van where each row is dragged into position and aimed.
 function ListFieldEditor({
   field,
   rows,
   onChange,
 }: {
   field: IntegrationConfigField;
-  rows: Record<string, string>[];
-  onChange: (rows: Record<string, string>[]) => void;
+  rows: Record<string, unknown>[];
+  onChange: (rows: Record<string, unknown>[]) => void;
 }) {
   const t = useT();
+  const [selected, setSelected] = useState<number | null>(null);
   const itemFields = field.item_fields ?? [];
-  const columns = { gridTemplateColumns: `repeat(${itemFields.length}, 1fr) auto` };
-  const update = (i: number, key: string, v: string) =>
-    onChange(rows.map((r, j) => (j === i ? { ...r, [key]: v } : r)));
+  const tableFields = itemFields.filter((f) => !f.hidden);
+  const columns = { gridTemplateColumns: `repeat(${tableFields.length}, 1fr) auto` };
+  const update = (i: number, patch: Record<string, unknown>) =>
+    onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const addRow = () => {
-    const blank: Record<string, string> = {};
-    for (const f of itemFields) blank[f.key] = f.options?.[0] ?? "";
+    const blank: Record<string, unknown> = {};
+    for (const f of itemFields) blank[f.key] = f.default ?? f.options?.[0] ?? "";
+    setSelected(rows.length);
     onChange([...rows, blank]);
   };
+
+  const num = (v: unknown, fallback: number) =>
+    typeof v === "number" && Number.isFinite(v) ? v : Number(v) || fallback;
+  const placed: PlacedCamera[] = rows.map((row, i) => ({
+    id: String(i),
+    label: String(row.label ?? row.id ?? i + 1),
+    x: num(row.x, 50),
+    y: num(row.y, 50),
+    heading: num(row.heading, 0),
+  }));
+
   return (
     <div className="cfg-list">
+      {field.van_placement && (
+        <>
+          <VanTopView
+            cameras={placed}
+            selected={selected === null ? null : String(selected)}
+            onSelect={(id) => setSelected(Number(id))}
+            onMove={(id, x, y) =>
+              update(Number(id), { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 })
+            }
+            onAim={(id, heading) => update(Number(id), { heading })}
+          />
+          <p className="hint">{t("integrations.placeHint")}</p>
+        </>
+      )}
       <div className="cfg-list-row cfg-list-head" style={columns}>
-        {itemFields.map((f) => (
+        {tableFields.map((f) => (
           <span key={f.key}>{f.label}</span>
         ))}
         <span />
       </div>
       {rows.map((row, i) => (
-        <div className="cfg-list-row" style={columns} key={i}>
-          {itemFields.map((f) =>
+        <div
+          className={"cfg-list-row" + (selected === i ? " selected" : "")}
+          style={columns}
+          key={i}
+          onClick={() => setSelected(i)}
+        >
+          {tableFields.map((f) =>
             f.type === "select" ? (
               <select
                 key={f.key}
-                value={row[f.key] ?? ""}
-                onChange={(e) => update(i, f.key, e.target.value)}
+                value={String(row[f.key] ?? "")}
+                onChange={(e) => update(i, { [f.key]: e.target.value })}
               >
-                {f.options.map((o) => (
+                {(f.options ?? []).map((o) => (
                   <option key={o} value={o}>
                     {o}
                   </option>
@@ -234,15 +269,18 @@ function ListFieldEditor({
               <input
                 key={f.key}
                 type="text"
-                value={row[f.key] ?? ""}
-                onChange={(e) => update(i, f.key, e.target.value)}
+                value={String(row[f.key] ?? "")}
+                onChange={(e) => update(i, { [f.key]: e.target.value })}
               />
             ),
           )}
           <button
             className="mini danger"
             title={t("integrations.remove")}
-            onClick={() => onChange(rows.filter((_, j) => j !== i))}
+            onClick={() => {
+              setSelected(null);
+              onChange(rows.filter((_, j) => j !== i));
+            }}
           >
             <X size={13} />
           </button>
@@ -279,7 +317,7 @@ function ConfigEditor({
             <label>{f.label}</label>
             <ListFieldEditor
               field={f}
-              rows={(draft[f.key] ?? f.value ?? []) as Record<string, string>[]}
+              rows={(draft[f.key] ?? f.value ?? []) as Record<string, unknown>[]}
               onChange={(rows) => field(f.key, rows)}
             />
           </div>

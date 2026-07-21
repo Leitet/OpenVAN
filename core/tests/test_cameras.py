@@ -120,3 +120,19 @@ async def test_removing_the_camera_provider_removes_the_cameras(core):
     assert core.twin.get("camera.rear.online") is None
     await core.set_integration_enabled("sim_cameras", True)
     assert core.hub.get_entity("camera.rear") is not None
+
+
+async def test_placement_flows_from_config_to_entity(core):
+    """The top-down placement editor's x/y/heading land on the entity, so the
+    security tab's van map renders exactly what was configured."""
+    rear = core.hub.get_entity("camera.rear")
+    assert rear.attributes["x"] == 97.0 and rear.attributes["heading"] == 180.0
+    await core.set_integration_config(
+        "sim_cameras",
+        {"cameras": [{"id": "rear", "label": "Rear View", "location": "rear",
+                      "connection": "wired", "x": 80.0, "y": 20.0, "heading": 135.0}]},
+    )
+    rear = core.hub.get_entity("camera.rear")
+    assert rear.attributes["x"] == 80.0
+    assert rear.attributes["y"] == 20.0
+    assert rear.attributes["heading"] == 135.0

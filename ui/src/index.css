@@ -1570,6 +1570,82 @@ body {
   );
 }
 /* the placement diagram */
+/* Top-down van view — camera placement (settings editor + security map) */
+.vtv-svg {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  display: block;
+  margin: 4px auto 0;
+  touch-action: none;
+}
+.vtv-van {
+  fill: var(--panel-2);
+  stroke: var(--line);
+  stroke-width: 2;
+}
+.vtv-glass {
+  fill: color-mix(in srgb, var(--accent) 18%, var(--panel-2));
+}
+.vtv-mirror {
+  stroke: var(--line);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.vtv-front {
+  fill: var(--muted);
+  font-size: 14px;
+}
+.vtv-fov {
+  opacity: 0.18;
+  fill: var(--good);
+}
+.vtv-dot {
+  fill: var(--good);
+  stroke: var(--panel);
+  stroke-width: 1.5;
+}
+.vtv-svg.editable .vtv-dot {
+  cursor: grab;
+}
+.vtv-aim {
+  fill: var(--panel);
+  stroke: var(--accent);
+  stroke-width: 2;
+  cursor: crosshair;
+}
+.vtv-cam.state-motion .vtv-dot {
+  fill: var(--warn);
+  animation: air-pulse 1s ease-in-out infinite;
+}
+.vtv-cam.state-motion .vtv-fov {
+  fill: var(--warn);
+  opacity: 0.32;
+}
+.vtv-cam.state-off .vtv-dot {
+  fill: var(--muted);
+}
+.vtv-cam.state-off .vtv-fov {
+  fill: var(--muted);
+  opacity: 0.1;
+}
+.vtv-cam.selected .vtv-dot {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+.vtv-cam.selected .vtv-fov {
+  opacity: 0.34;
+}
+.vtv-label {
+  fill: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+}
+.cfg-list-row.selected input,
+.cfg-list-row.selected select {
+  border-color: var(--accent);
+}
+
 .vcm-svg {
   width: 100%;
   max-width: 480px;

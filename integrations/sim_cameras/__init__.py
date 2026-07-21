@@ -19,12 +19,19 @@ from typing import Any
 
 from openvan_core import IntegrationInfo, Permissions, Status, Transport, WorldSimProvider
 
-# A typical build, used until the user edits the camera list.
+# A typical build, used until the user edits the camera list. Placement is in
+# van coordinates seen from above (front left): x 0 (front) … 100 (rear) along
+# the length, y 0 … 100 across the width; heading in degrees clockwise from the
+# direction of travel (0 = forward, 90 = across, 180 = rearward).
 DEFAULT_CAMERAS = [
-    {"id": "rear", "label": "Rear View", "location": "rear", "connection": "wired"},
-    {"id": "cabin", "label": "Cabin", "location": "cabin", "connection": "wifi"},
-    {"id": "entry", "label": "Entry / Door", "location": "door", "connection": "wifi"},
-    {"id": "awning", "label": "Side / Awning", "location": "awning", "connection": "4g"},
+    {"id": "rear", "label": "Rear View", "location": "rear", "connection": "wired",
+     "x": 97.0, "y": 50.0, "heading": 180.0},
+    {"id": "cabin", "label": "Cabin", "location": "cabin", "connection": "wifi",
+     "x": 55.0, "y": 50.0, "heading": 0.0},
+    {"id": "entry", "label": "Entry / Door", "location": "door", "connection": "wifi",
+     "x": 40.0, "y": 95.0, "heading": 270.0},
+    {"id": "awning", "label": "Side / Awning", "location": "awning", "connection": "4g",
+     "x": 12.0, "y": 88.0, "heading": 0.0},
 ]
 
 LOCATIONS = ["rear", "cabin", "door", "awning"]
@@ -57,28 +64,40 @@ class SimCameras(WorldSimProvider):
                 "key": "cameras",
                 "label": "Cameras",
                 "type": "list",
+                # Rows are placed and aimed on a top-down van view in the UI.
+                "van_placement": True,
                 "default": DEFAULT_CAMERAS,
                 "item_fields": [
                     {"key": "id", "label": "Id", "type": "text"},
                     {"key": "label", "label": "Name", "type": "text"},
-                    {"key": "location", "label": "Mounting location", "type": "select",
+                    {"key": "location", "label": "View", "type": "select",
                      "options": LOCATIONS},
                     {"key": "connection", "label": "Connection", "type": "select",
                      "options": CONNECTIONS},
+                    # Managed by the placement editor, not the table.
+                    {"key": "x", "label": "X", "type": "number", "hidden": True, "default": 50.0},
+                    {"key": "y", "label": "Y", "type": "number", "hidden": True, "default": 50.0},
+                    {"key": "heading", "label": "Heading", "type": "number", "hidden": True, "default": 0.0},
                 ],
             },
         ],
     )
 
-    def provided_cameras(self) -> list[dict[str, str]]:
+    def provided_cameras(self) -> list[dict[str, Any]]:
         """The configured camera set — the registry the cameras plugin consumes.
         A real camera driver exposes the same method for its discovered cams."""
         configured = self.config.get("cameras")
         # Unset → the typical default build; an explicitly *emptied* list means
         # "no cameras" and must not resurrect the defaults.
         cams = configured if isinstance(configured, list) else DEFAULT_CAMERAS
-        out: list[dict[str, str]] = []
+        out: list[dict[str, Any]] = []
         seen: set[str] = set()
+        def _num(value: Any, default: float) -> float:
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return default
+
         for cam in cams:
             cam_id = str(cam.get("id", "")).strip().lower()
             if not cam_id or cam_id in seen:
@@ -89,6 +108,9 @@ class SimCameras(WorldSimProvider):
                 "label": str(cam.get("label") or cam_id),
                 "location": str(cam.get("location") or "cabin"),
                 "connection": str(cam.get("connection") or "wifi"),
+                "x": _num(cam.get("x"), 50.0),
+                "y": _num(cam.get("y"), 50.0),
+                "heading": _num(cam.get("heading"), 0.0),
             })
         return out
 

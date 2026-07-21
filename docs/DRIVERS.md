@@ -53,6 +53,9 @@ class AcmeFridge(Integration):
             # Structured lists render as a table with add/remove rows — e.g.
             # the Cameras Simulator's camera set. This is how a driver defines
             # a rich, dedicated settings page without shipping any UI code.
+            # Add `"van_placement": True` (+ hidden x/y/heading item fields) to
+            # get a top-down van editor where each row is dragged into position
+            # and aimed — placement lands back in the row as x/y/heading.
             {"key": "probes", "label": "Probes", "type": "list",
              "default": [],
              "item_fields": [

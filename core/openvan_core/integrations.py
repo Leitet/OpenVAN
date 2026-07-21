@@ -609,9 +609,12 @@ def _config_view(fields: list[dict[str, Any]], values: dict[str, Any]) -> list[d
             "set": key in values and values[key] not in (None, ""),
         }
         # Structured list fields ("cameras", "sensors", …): the item schema goes
-        # to the UI so it can render a dedicated row editor per entry.
+        # to the UI so it can render a dedicated row editor per entry. A field
+        # flagged `van_placement` additionally gets the top-down van editor
+        # (rows are placed/aimed via their x/y/heading item fields).
         if f.get("type") == "list":
             entry["item_fields"] = f.get("item_fields", [])
+            entry["van_placement"] = bool(f.get("van_placement"))
         if not secret:
             default = f.get("default", [] if f.get("type") == "list" else "")
             entry["value"] = values.get(key, default)
