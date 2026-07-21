@@ -47,11 +47,27 @@ class AcmeFridge(Integration):
         transports=[Transport.BLE],
         status=Status.COMMUNITY,               # be honest about robustness
         provides=["acme.fridge.temp"],
-        config_fields=[                        # settings shown in the library UI
+        config_fields=[                        # the driver's own settings page
             {"key": "mode", "label": "Connection", "type": "select",
              "options": ["sim", "ble"], "default": "sim"},
+            # Structured lists render as a table with add/remove rows — e.g.
+            # the Cameras Simulator's camera set. This is how a driver defines
+            # a rich, dedicated settings page without shipping any UI code.
+            {"key": "probes", "label": "Probes", "type": "list",
+             "default": [],
+             "item_fields": [
+                 {"key": "id", "label": "Id", "type": "text"},
+                 {"key": "location", "label": "Location", "type": "select",
+                  "options": ["fridge", "freezer"]},
+             ]},
         ],
     )
+
+    async def on_config_changed(self):
+        # Called when the user saves your settings page (while enabled).
+        # Default: reconnect the transport. WorldSimProviders instead reconcile
+        # their seeded signals; override for custom reactions.
+        await super().on_config_changed()
 
     async def simulate(self, dt: float) -> None:
         # The dev stand-in: inject the signals a real device would emit.

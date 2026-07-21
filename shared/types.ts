@@ -217,11 +217,12 @@ export interface TripStats {
 export interface IntegrationConfigField {
   key: string;
   label: string;
-  type: string; // text | select
+  type: string; // text | select | list
   options: string[];
   secret: boolean;
   set: boolean; // a value is stored (used for secrets, which aren't echoed)
-  value?: string | number; // omitted for secrets
+  value?: string | number | Record<string, string>[]; // omitted for secrets
+  item_fields?: IntegrationConfigField[]; // for type "list": the row schema
 }
 
 export interface MaintenanceItem {

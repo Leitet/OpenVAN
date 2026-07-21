@@ -3,6 +3,25 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Dedicated integration settings pages; cameras become config
+
+- **Every integration now gets a dedicated settings page**, defined entirely by
+  its own descriptor schema: the gear on a card opens a full page (card header
+  + badges + warning + editor). `config_fields` gains a structured `list` type
+  (`item_fields` row schema) rendered as a table with add/remove rows — how a
+  driver ships a rich settings UI without shipping UI code.
+- **Camera placement is the Cameras Simulator's config**: the camera set (id,
+  name, mounting location, connection) is a `list` field on that card,
+  defaulting to the typical four-camera build. Saving the page reshapes
+  everything live — seeded signals reconcile (dropped cameras release to
+  unknown), and the cameras *plugin* now consumes `provided_cameras()` from
+  enabled integrations instead of owning its own list, so the grid, the van
+  map and the intrusion alarm all follow the config. `/api/cameras` add/remove
+  and the bench adder now edit the same config. A future real camera driver
+  (RTSP/ONVIF, Frigate…) exposes the same `provided_cameras()` shape.
+- New integration hook `on_config_changed()` (default: reconnect transport;
+  world-sim providers reconcile their seeded world instead).
+
 ## 2026-07 — Real camera stills, day and night
 
 - The Security tab's camera tiles now show real stills per camera position

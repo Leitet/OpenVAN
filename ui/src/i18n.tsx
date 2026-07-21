@@ -457,6 +457,11 @@ const T: Record<string, Entry> = {
   },
   "integrations.configure": { en: "Configure", sv: "Konfigurera", de: "Konfigurieren" },
   "integrations.connection": { en: "Connection", sv: "Anslutning", de: "Verbindung" },
+  "integrations.addRow": {
+    en: "Add row",
+    sv: "Lägg till rad",
+    de: "Zeile hinzufügen",
+  },
   "integrations.pauseSim": {
     en: "Pause simulation",
     sv: "Pausa simuleringen",

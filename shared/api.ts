@@ -361,7 +361,7 @@ export async function setIntegration(
 
 export async function setIntegrationConfig(
   id: string,
-  values: Record<string, string>,
+  values: Record<string, unknown>,
 ): Promise<IntegrationInfo[]> {
   const res = await fetch("/api/integrations/config", {
     method: "POST",

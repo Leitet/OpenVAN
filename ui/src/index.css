@@ -569,6 +569,33 @@ body {
   color: var(--text);
   background: var(--bg);
 }
+/* Structured list editor in an integration's settings page (cameras, …) */
+.setting-block > label {
+  display: block;
+  font-size: 13px;
+  margin: 10px 0 6px;
+  color: var(--muted);
+}
+.cfg-list-row {
+  display: grid;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.cfg-list-row input,
+.cfg-list-row select {
+  width: 100%;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+.cfg-list-head span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
 /* Simulated data source — unmistakably not real hardware */
 .badge-sim {
   color: var(--accent);

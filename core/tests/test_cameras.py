@@ -85,6 +85,38 @@ async def test_removed_camera_cannot_trip_intrusion(core):
 
 
 async def test_camera_list_persists_to_store(core):
+    # The camera set is the Cameras Simulator *integration's* config now.
     await core.add_camera("garage", "Garage", "door", "wired")
-    saved = core.store.get_all("plugin:cameras").get("list")
+    saved = core.store.get_all("integrations:sim_cameras").get("cameras")
     assert any(c["id"] == "garage" for c in saved)
+
+
+async def test_camera_set_is_the_integrations_config(core):
+    """The dedicated settings page flow: saving a new camera list on the
+    Cameras Simulator card reshapes signals AND entities — no other API."""
+    ok = await core.set_integration_config(
+        "sim_cameras",
+        {"cameras": [
+            {"id": "rear", "label": "Rear View", "location": "rear", "connection": "wired"},
+            {"id": "roof", "label": "Roof 360", "location": "awning", "connection": "4g"},
+        ]},
+    )
+    assert ok
+    # New camera: seeded signals + entity with its configured metadata.
+    assert core.twin.get("camera.roof.online") is True
+    roof = core.hub.get_entity("camera.roof")
+    assert roof is not None and roof.name == "Roof 360"
+    assert roof.attributes["location"] == "awning" and roof.attributes["connection"] == "4g"
+    # Dropped cameras: entities gone, signals released to unknown.
+    assert core.hub.get_entity("camera.cabin") is None
+    assert core.twin.get("camera.cabin.online") is None
+    # Kept camera untouched.
+    assert core.hub.get_entity("camera.rear") is not None
+
+
+async def test_removing_the_camera_provider_removes_the_cameras(core):
+    await core.set_integration_enabled("sim_cameras", False)
+    assert core.hub.get_entity("camera.rear") is None
+    assert core.twin.get("camera.rear.online") is None
+    await core.set_integration_enabled("sim_cameras", True)
+    assert core.hub.get_entity("camera.rear") is not None

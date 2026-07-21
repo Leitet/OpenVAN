@@ -28,7 +28,7 @@ PROVIDERS = [
 
 
 def _provider_seeds(core, provider_id):
-    return core.integrations.get(provider_id).SEEDS
+    return core.integrations.get(provider_id).seeds()
 
 
 async def test_providers_installed_and_seeding_by_default(core):

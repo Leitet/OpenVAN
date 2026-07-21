@@ -242,6 +242,14 @@ class Integration(ABC):
         The default raises so sim-only integrations fall back cleanly."""
         raise NotImplementedError
 
+    async def on_config_changed(self) -> None:
+        """Called after the user saves this integration's settings (while it is
+        enabled). Default: reconnect the transport so host/port/mode changes take
+        effect live. Override for drivers whose config shapes their *simulated*
+        world too (e.g. a camera set) to reconcile without a restart."""
+        await self.stop_transport()
+        await self.start_transport()
+
     # --- controls: safety-checked actuation on integration devices ----------
 
     async def setup_sim_controls(self) -> None:
@@ -338,8 +346,14 @@ class WorldSimProvider(Integration):
     info = None  # abstract — subclasses define their descriptor
     SEEDS: dict[str, Any] = {}
 
+    def seeds(self) -> dict[str, Any]:
+        """The signals this provider owns right now. Defaults to the static
+        :attr:`SEEDS`; override when the provider's *config* shapes the set
+        (e.g. a user-defined camera list)."""
+        return dict(self.SEEDS)
+
     async def async_setup(self) -> None:
-        for key, value in self.SEEDS.items():
+        for key, value in self.seeds().items():
             # Don't overwrite a value some other source (real hardware, the
             # bench) already provides — only fill in the unknowns.
             if self.twin.get(key) is None:
@@ -347,8 +361,23 @@ class WorldSimProvider(Integration):
 
     async def async_teardown(self) -> None:
         # Release the domain: unknown, not a stale pretend-value.
-        for key in self.SEEDS:
+        for key in self.seeds():
             await self.twin.set_signal(key, None, source=self.info.id)
+
+    async def on_config_changed(self) -> None:
+        # Providers have no transport; reconcile the seeded world instead —
+        # seed what the new config added, release what it dropped.
+        current = self.seeds()
+        for key in self._seeded_keys - set(current):
+            await self.twin.set_signal(key, None, source=self.info.id)
+        for key, value in current.items():
+            if self.twin.get(key) is None:
+                await self.twin.set_signal(key, value, source=self.info.id)
+
+    @property
+    def _seeded_keys(self) -> set[str]:
+        # Keys this provider ever seeded, tracked via the twin's source map.
+        return {k for k, src in self.twin.sources().items() if src == self.info.id}
 
 
 class IntegrationManager:
@@ -515,8 +544,7 @@ class IntegrationManager:
         if self.store is not None:
             self.store.set_many(f"{self.NS}:{integration_id}", clean)
         if instance.enabled:
-            await instance.stop_transport()
-            await instance.start_transport()
+            await instance.on_config_changed()
         await self.bus.publish("integration.changed", self.describe(integration_id))
         return True
 
@@ -580,8 +608,13 @@ def _config_view(fields: list[dict[str, Any]], values: dict[str, Any]) -> list[d
             "secret": secret,
             "set": key in values and values[key] not in (None, ""),
         }
+        # Structured list fields ("cameras", "sensors", …): the item schema goes
+        # to the UI so it can render a dedicated row editor per entry.
+        if f.get("type") == "list":
+            entry["item_fields"] = f.get("item_fields", [])
         if not secret:
-            entry["value"] = values.get(key, f.get("default", ""))
+            default = f.get("default", [] if f.get("type") == "list" else "")
+            entry["value"] = values.get(key, default)
         view.append(entry)
     return view
 

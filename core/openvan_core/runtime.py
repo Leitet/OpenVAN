@@ -168,6 +168,10 @@ class Core:
         # provider integrations during setup_all, not here.)
         for key, value in self.config.seed_twin.items():
             await self.twin.set_signal(key, value, source="seed")
+        # Back-reference for plugins that adapt to the enabled driver set (the
+        # cameras plugin reads provided_cameras(); device_sensors derives signal
+        # prefixes) — set before plugin setup so they can subscribe/reconcile.
+        self.hub.integrations = self.integrations
         self.plugins.discover(self.config.plugins_dir)
         # Plugin config comes from the store (namespace "plugin:<domain>"), not env.
         plugin_configs = {
@@ -191,9 +195,6 @@ class Core:
         # One shared BLE radio for every BLE driver (sim radio in simulate mode).
         await self.ble.start()
         self.integrations.hub = self.hub
-        # Back-reference for plugins that adapt to the enabled driver set (e.g.
-        # device_sensors deriving signal prefixes from descriptors' `provides`).
-        self.hub.integrations = self.integrations
         self.integrations.ble = self.ble
         self.integrations.discover(self.config.integrations_dir, self.registry)
         await self.integrations.setup_all()
@@ -373,18 +374,27 @@ class Core:
         return plugin.list() if plugin is not None else []
 
     async def add_camera(self, cam_id: str, label: str, location: str, connection: str) -> bool:
-        plugin = self.plugins.get("cameras")
-        if plugin is None or not await plugin.add_camera(cam_id, label, location, connection):
+        """Convenience over the camera registry: appends to the Cameras
+        Simulator card's configured list (same as its settings page)."""
+        provider = self.integrations.get("sim_cameras")
+        if provider is None or not cam_id:
             return False
-        self.store.set_many("plugin:cameras", {"list": plugin.list()})
-        return True
+        cams = provider.provided_cameras()
+        if any(c["id"] == cam_id for c in cams):
+            return False
+        cams.append({"id": cam_id, "label": label or cam_id,
+                     "location": location or "cabin", "connection": connection or "wifi"})
+        return await self.set_integration_config("sim_cameras", {"cameras": cams})
 
     async def remove_camera(self, cam_id: str) -> bool:
-        plugin = self.plugins.get("cameras")
-        if plugin is None or not await plugin.remove_camera(cam_id):
+        provider = self.integrations.get("sim_cameras")
+        if provider is None:
             return False
-        self.store.set_many("plugin:cameras", {"list": plugin.list()})
-        return True
+        cams = provider.provided_cameras()
+        remaining = [c for c in cams if c["id"] != cam_id]
+        if len(remaining) == len(cams):
+            return False
+        return await self.set_integration_config("sim_cameras", {"cameras": remaining})
 
     # --- trip ledger -----------------------------------------------------
     def trip_stats(self) -> dict[str, Any]:

@@ -17,12 +17,13 @@ import {
   FlaskConical,
   Pause,
   Play,
+  X,
   BadgeCheck,
   Users,
   ShieldQuestion,
 } from "lucide-react";
 import { getIntegrations, setIntegration, setIntegrationConfig } from "@shared/api";
-import type { IntegrationInfo } from "@shared/types";
+import type { IntegrationConfigField, IntegrationInfo } from "@shared/types";
 import { useT } from "../i18n";
 
 // OpenVan will support thousands of integrations, so we don't show them all at once.
@@ -183,50 +184,133 @@ function IntegrationCard({
   );
 }
 
-// Connection editor for an installed integration that can point at real hardware.
-// Fields come from the descriptor (mode/host/port/…); saving reconnects the driver.
+// Row editor for a structured "list" config field (e.g. the camera set): the
+// integration declares the row schema (`item_fields`) and the UI renders a
+// dedicated table with add/remove — how a driver defines its own settings page
+// without shipping UI code.
+function ListFieldEditor({
+  field,
+  rows,
+  onChange,
+}: {
+  field: IntegrationConfigField;
+  rows: Record<string, string>[];
+  onChange: (rows: Record<string, string>[]) => void;
+}) {
+  const t = useT();
+  const itemFields = field.item_fields ?? [];
+  const columns = { gridTemplateColumns: `repeat(${itemFields.length}, 1fr) auto` };
+  const update = (i: number, key: string, v: string) =>
+    onChange(rows.map((r, j) => (j === i ? { ...r, [key]: v } : r)));
+  const addRow = () => {
+    const blank: Record<string, string> = {};
+    for (const f of itemFields) blank[f.key] = f.options?.[0] ?? "";
+    onChange([...rows, blank]);
+  };
+  return (
+    <div className="cfg-list">
+      <div className="cfg-list-row cfg-list-head" style={columns}>
+        {itemFields.map((f) => (
+          <span key={f.key}>{f.label}</span>
+        ))}
+        <span />
+      </div>
+      {rows.map((row, i) => (
+        <div className="cfg-list-row" style={columns} key={i}>
+          {itemFields.map((f) =>
+            f.type === "select" ? (
+              <select
+                key={f.key}
+                value={row[f.key] ?? ""}
+                onChange={(e) => update(i, f.key, e.target.value)}
+              >
+                {f.options.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                key={f.key}
+                type="text"
+                value={row[f.key] ?? ""}
+                onChange={(e) => update(i, f.key, e.target.value)}
+              />
+            ),
+          )}
+          <button
+            className="mini danger"
+            title={t("integrations.remove")}
+            onClick={() => onChange(rows.filter((_, j) => j !== i))}
+          >
+            <X size={13} />
+          </button>
+        </div>
+      ))}
+      <button className="mini" onClick={addRow}>
+        <Plus size={13} /> {t("integrations.addRow")}
+      </button>
+    </div>
+  );
+}
+
+// The integration's settings editor. Fields come from the descriptor — flat
+// connection fields (mode/host/port/…) and structured lists — so every driver
+// gets a dedicated settings page defined entirely by its own schema.
 function ConfigEditor({
   it,
   onSave,
   saving,
 }: {
   it: IntegrationInfo;
-  onSave: (values: Record<string, string>) => void;
+  onSave: (values: Record<string, unknown>) => void;
   saving: boolean;
 }) {
   const t = useT();
-  const [draft, setDraft] = useState<Record<string, string>>({});
-  const field = (k: string, v: string) => setDraft((d) => ({ ...d, [k]: v }));
+  const [draft, setDraft] = useState<Record<string, unknown>>({});
+  const field = (k: string, v: unknown) => setDraft((d) => ({ ...d, [k]: v }));
 
   return (
     <div className="integration-config">
-      {it.config.map((f) => (
-        <div className="setting-row" key={f.key}>
-          <label htmlFor={`${it.id}-${f.key}`}>{f.label}</label>
-          {f.type === "select" ? (
-            <select
-              id={`${it.id}-${f.key}`}
-              value={draft[f.key] ?? String(f.value ?? "")}
-              onChange={(e) => field(f.key, e.target.value)}
-            >
-              {f.options.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              id={`${it.id}-${f.key}`}
-              type={f.secret ? "password" : "text"}
-              value={draft[f.key] ?? (f.secret ? "" : String(f.value ?? ""))}
-              placeholder={f.secret && f.set ? "••••••• (stored)" : ""}
-              autoComplete="off"
-              onChange={(e) => field(f.key, e.target.value)}
+      {it.config.map((f) =>
+        f.type === "list" ? (
+          <div className="setting-block" key={f.key}>
+            <label>{f.label}</label>
+            <ListFieldEditor
+              field={f}
+              rows={(draft[f.key] ?? f.value ?? []) as Record<string, string>[]}
+              onChange={(rows) => field(f.key, rows)}
             />
-          )}
-        </div>
-      ))}
+          </div>
+        ) : (
+          <div className="setting-row" key={f.key}>
+            <label htmlFor={`${it.id}-${f.key}`}>{f.label}</label>
+            {f.type === "select" ? (
+              <select
+                id={`${it.id}-${f.key}`}
+                value={String(draft[f.key] ?? f.value ?? "")}
+                onChange={(e) => field(f.key, e.target.value)}
+              >
+                {f.options.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id={`${it.id}-${f.key}`}
+                type={f.secret ? "password" : "text"}
+                value={String(draft[f.key] ?? (f.secret ? "" : (f.value ?? "")))}
+                placeholder={f.secret && f.set ? "••••••• (stored)" : ""}
+                autoComplete="off"
+                onChange={(e) => field(f.key, e.target.value)}
+              />
+            )}
+          </div>
+        ),
+      )}
       <div className="setting-row">
         <span />
         <button className="mini primary" disabled={saving} onClick={() => onSave(draft)}>
@@ -265,7 +349,7 @@ export function IntegrationsSettings() {
     }
   };
 
-  const saveConfig = async (id: string, values: Record<string, string>) => {
+  const saveConfig = async (id: string, values: Record<string, unknown>) => {
     setBusy(id);
     try {
       const next = await setIntegrationConfig(id, values);
@@ -336,6 +420,34 @@ export function IntegrationsSettings() {
       })
       .sort((a, b) => a.priority.localeCompare(b.priority) || a.name.localeCompare(b.name));
   }, [items, q, cat, status, transport, offlineOnly]);
+
+  // Dedicated settings page for one integration — schema-defined by the driver.
+  const configTarget = configOpen ? items.find((i) => i.id === configOpen) : undefined;
+  if (configTarget) {
+    return (
+      <section className="panel span2">
+        <div className="integration-topbar">
+          <h2>{configTarget.name}</h2>
+          <button className="mini" onClick={() => setConfigOpen(null)}>
+            <ArrowLeft size={14} /> {t("integrations.back")}
+          </button>
+        </div>
+        <IntegrationCard
+          it={configTarget}
+          busy={busy === configTarget.id}
+          status={statusBadge(configTarget)}
+          action={undefined}
+          footer={
+            <ConfigEditor
+              it={configTarget}
+              saving={busy === configTarget.id}
+              onSave={(values) => saveConfig(configTarget.id, values)}
+            />
+          }
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="panel span2">
@@ -409,8 +521,8 @@ export function IntegrationsSettings() {
                       <div className="integration-actions">
                         {it.config.length > 0 && (
                           <button
-                            className={"mini" + (configOpen === it.id ? " primary" : "")}
-                            onClick={() => setConfigOpen(configOpen === it.id ? null : it.id)}
+                            className="mini"
+                            onClick={() => setConfigOpen(it.id)}
                             title={t("integrations.configure")}
                           >
                             <Settings2 size={13} />
@@ -425,15 +537,6 @@ export function IntegrationsSettings() {
                         </button>
                       </div>
                     )
-                  }
-                  footer={
-                    configOpen === it.id && it.config.length > 0 ? (
-                      <ConfigEditor
-                        it={it}
-                        saving={busy === it.id}
-                        onSave={(values) => saveConfig(it.id, values)}
-                      />
-                    ) : undefined
                   }
       />
     );
