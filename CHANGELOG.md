@@ -3,6 +3,22 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Votronic Display Link (Wave 1 #6) + Truma license verdict
+
+- **Votronic driver** (`votronic`): battery computers, solar regulators and
+  chargers via the passive Display Link bus — 16-byte `0xAA`/XOR frames at
+  Votronic's unusual 1000 baud, reached through the link layer (EW11 bridge
+  or USB adapter). Decoders for solar/charger/converter/battery-computer
+  frames, **pinned to real Smart Shunt 400 S captures**; while live the shunt
+  mirrors `house_battery.*` and the regulator `solar.power`, so every advisor,
+  prediction and safety rule runs on real Votronic data. Layout facts from
+  syssi/esphome-votronic (Apache-2.0, attributed).
+- **Truma license check** (the gate the backlog demanded): inetbox.py and
+  esphome-truma_inetbox are both GPL-3.0 — no code porting into core. Clean
+  paths recorded in the backlog: fact-extraction, or a separate GPL external
+  driver package (the driver ecosystem supports exactly that). Also flagged:
+  the repo itself has **no LICENSE file** yet.
+
 ## 2026-07 — Signal staleness + WiCAN OBD-II + Tasmota
 
 - **Signal freshness**: when a live transport drops, the driver's readings are

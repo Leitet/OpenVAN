@@ -30,6 +30,9 @@ findings back:
 - **Serial links & RTU** — validate the TCP-bridge link against a real EW11-class
   device, the `serial` extra against a USB-RS485 stick, and the EPEver register
   map against a real Tracer.
+- **Votronic** — validate the Display Link frames (1000 baud!) against a real
+  Smart Shunt / MPP regulator; confirm the charger-vs-converter frame-type
+  ambiguity the reference component flags (0x3A/0x7A).
 - **Chinese diesel heater** — validate the blue-wire frames against a real unit
   (with the OEM controller on hand): start/stop commands, 25000 baud over an
   EW11-class bridge, echo behaviour on the single wire, run-state/error maps.
@@ -137,10 +140,14 @@ Remaining substrate work (GATT sessions + TPMS TypeA shipped 2026-07):
   a tank from the library card).
 
 **Wave 1 — status after the 2026-07 autonomous build session:**
-1. **Truma iNet-box emulation** (LIN) — REMAINS (the biggest one). The transport
-   is no longer a blocker (the link layer reaches the LIN adapter via a TCP
-   bridge or the `serial` extra); what remains is the protocol port from
-   inetbox.py/esphome-truma_inetbox (license check first).
+1. **Truma iNet-box emulation** (LIN) — REMAINS, now with the license verdict:
+   inetbox.py AND esphome-truma_inetbox are **GPL-3.0**, so their code cannot
+   be ported into the core. Two clean paths: (a) fact-extraction only (frame
+   IDs/layouts, like the Afterburner approach — a careful dedicated session),
+   or (b) a **separate GPL-licensed external driver package** installed under
+   `data/drivers/` — the driver ecosystem supports exactly this, and GPL code
+   in its own distribution is legally clean. Related: **OpenVan has no LICENSE
+   file yet** — Johan to pick one (affects which path is preferable).
 2. **BLE BMS — JBD/Overkill SHIPPED** (`ble_bms`, GATT, feeds house_battery so
    all advisors/safety run on non-Victron packs). Remains: JK, Daly, Seplos
    protocol modules in the same driver.
@@ -155,9 +162,13 @@ Remaining substrate work (GATT sessions + TPMS TypeA shipped 2026-07):
    house-battery mirror). Remains: more record types (DC-DC, inverter, aux modes).
 5. **Garnet SeeLevel II** — REMAINS (12V pulse bus needs GPIO/ESP hardware — an
    ESPHome-bridge recipe is the realistic path; document rather than driver?).
-6. **Votronic** (UART/BLE, RE'd) — REMAINS; transport unblocked (link layer for
-   the display UART, GATT substrate for the BLE Connector) — remaining work is
-   the protocol port from syssi/esphome-votronic.
+6. **Votronic Display Link — SHIPPED** (`votronic`: passive 16-byte 0xAA/XOR
+   frames at the odd 1000 baud over the link layer; solar/charger/converter/
+   battery-computer decoders pinned to real Smart Shunt captures; mirrors
+   `house_battery.*` + `solar.power` while live; syssi component is
+   Apache-2.0 — clean). Remains: the BLE Connector variant on the GATT
+   substrate, and control frames (0xEA/0x7A writes) after real-hardware
+   validation.
 
 **Wave 2 — strong demand, mostly easy:**
 **BLE TPMS TypeA SHIPPED** (`tpms`; SYTPMS/Michelin/WODHMIEY families remain) ·
