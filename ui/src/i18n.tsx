@@ -514,6 +514,16 @@ const T: Record<string, Entry> = {
   "routines.steps": { en: "steps", sv: "steg", de: "Schritte" },
   "routines.test": { en: "Run now", sv: "Kör nu", de: "Jetzt ausführen" },
   "routines.message": { en: "Message", sv: "Meddelande", de: "Nachricht" },
+  "notice.ack": {
+    en: "Got it — hide until it happens again",
+    sv: "Uppfattat — dölj tills det händer igen",
+    de: "Verstanden — ausblenden bis es erneut auftritt",
+  },
+  "notice.snooze": {
+    en: "Snooze 4 h",
+    sv: "Snooza 4 tim",
+    de: "4 Std. stummschalten",
+  },
   "sensors.stale": {
     en: "Connection lost — showing the last known value",
     sv: "Anslutningen tappad — visar senast kända värde",

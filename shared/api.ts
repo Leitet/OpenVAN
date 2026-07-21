@@ -405,6 +405,22 @@ export async function runScene(id: string): Promise<{ applied: number; ok: boole
 
 import type { Routine } from "./types";
 
+export async function ackNotice(key: string): Promise<void> {
+  await fetch("/api/notices/ack", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key }),
+  });
+}
+
+export async function snoozeNotice(key: string, hours = 4): Promise<void> {
+  await fetch("/api/notices/snooze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key, hours }),
+  });
+}
+
 export async function getRoutines(): Promise<Routine[]> {
   const data = await (await fetch("/api/routines")).json();
   return data.routines as Routine[];

@@ -95,7 +95,10 @@ findings back:
 - Time- and context-triggered briefings pushed automatically (a real "good
   morning" at wake time; "you've been driving 2 hours — scenic break?").
 - Journey advisors (driving time, fuel range) on the vehicle data.
-- Snooze / acknowledge notices; per-notice preferences.
+- Notice snooze/acknowledge SHIPPED (ack = hidden until the condition clears
+  and fires again; snooze = hidden 4 h regardless; persisted; buttons on every
+  Companion notice). Remaining: per-notice preferences (mute an advisor
+  entirely / per-key thresholds).
 
 ## Integrations
 

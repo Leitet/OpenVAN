@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { getBriefing } from "@shared/api";
+import { AlarmClock, Check } from "lucide-react";
+import { ackNotice, getBriefing, snoozeNotice } from "@shared/api";
 import type { Notice } from "@shared/types";
 import { useT } from "../i18n";
 
@@ -34,8 +35,24 @@ export function Companion({ notices }: { notices: Notice[] }) {
         <ul className="notices">
           {notices.map((n) => (
             <li key={n.key} className={"notice " + n.level}>
-              <div className="notice-title">{n.title}</div>
-              <div className="notice-msg">{n.message}</div>
+              <div className="notice-body">
+                <div className="notice-title">{n.title}</div>
+                <div className="notice-msg">{n.message}</div>
+              </div>
+              {/* Acknowledge: gone until it clears and fires again.
+                  Snooze: gone for 4 h, whatever happens. The WS clears it. */}
+              <span className="notice-actions">
+                <button className="mini" title={t("notice.ack")} onClick={() => ackNotice(n.key)}>
+                  <Check size={13} />
+                </button>
+                <button
+                  className="mini"
+                  title={t("notice.snooze")}
+                  onClick={() => snoozeNotice(n.key)}
+                >
+                  <AlarmClock size={13} />
+                </button>
+              </span>
             </li>
           ))}
         </ul>

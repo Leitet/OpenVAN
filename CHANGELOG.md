@@ -3,6 +3,17 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Notice snooze & acknowledge
+
+- Every Companion notice now carries two actions: **acknowledge** ("got it" —
+  hidden while this occurrence keeps firing, auto-rearms when the condition
+  clears so the *next* occurrence shows again) and **snooze** (hidden for 4 h
+  regardless of clearing, re-announced if still firing when it expires).
+- Dispositions persist across restarts (`notices` store namespace); the edge-
+  triggered advisor semantics are untouched — muting only filters what the UI
+  sees, never what the engine knows. Routine notices dismiss on acknowledge.
+- API: `POST /api/notices/ack` and `/api/notices/snooze {key, hours}`.
+
 ## 2026-07 — Per-device BLE aliasing
 
 - Every BLE card (RuuviTag, BTHome, Mopeka, TPMS) gains a **Devices** list on

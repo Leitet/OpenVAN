@@ -846,7 +846,61 @@ class AdvisorEngine:
         # Transient notices (routine "notify" steps): shown like advisor notices
         # but time-limited — (notice, wall-clock expiry).
         self._transient: dict[str, tuple[Notice, float]] = {}
+        # User dispositions. Acknowledged: hidden while THIS occurrence keeps
+        # firing; auto-rearms when the condition clears. Snoozed: hidden until a
+        # wall-clock time, regardless of clearing. Both persisted.
+        self._acked: set[str] = set()
+        self._snoozed: dict[str, float] = {}
+        self.store: Any = None
         self._unsubscribers: list[Callable[[], None]] = []
+
+    def load(self) -> None:
+        if self.store is None:
+            return
+        saved = self.store.get_all("notices")
+        acked = saved.get("acked")
+        snoozed = saved.get("snoozed")
+        self._acked = set(acked) if isinstance(acked, list) else set()
+        self._snoozed = ({str(k): float(v) for k, v in snoozed.items()}
+                         if isinstance(snoozed, dict) else {})
+
+    def _persist(self) -> None:
+        if self.store is not None:
+            self.store.set_many(
+                "notices", {"acked": sorted(self._acked), "snoozed": self._snoozed}
+            )
+
+    def _muted(self, key: str) -> bool:
+        return key in self._acked or self._snoozed.get(key, 0.0) > time.time()
+
+    async def acknowledge(self, key: str) -> bool:
+        """"Seen it" — hide this occurrence; it re-appears only after the
+        condition clears and fires again. Transients are simply dismissed."""
+        if key in self._transient:
+            notice, _ = self._transient.pop(key)
+            await self.bus.publish("notice.cleared", {"notice": notice.as_dict()})
+            return True
+        if key not in self._active:
+            return False
+        self._acked.add(key)
+        self._persist()
+        await self.bus.publish("notice.cleared", {"notice": self._active[key].as_dict()})
+        return True
+
+    async def snooze(self, key: str, hours: float = 4.0) -> bool:
+        """Hide for a while regardless of the condition; re-announced when the
+        snooze expires if it is still firing."""
+        if key in self._transient:
+            return await self.acknowledge(key)
+        if key not in self._active:
+            return False
+        hours = max(0.25, min(48.0, hours))
+        was_visible = not self._muted(key)
+        self._snoozed[key] = time.time() + hours * 3600.0
+        self._persist()
+        if was_visible:
+            await self.bus.publish("notice.cleared", {"notice": self._active[key].as_dict()})
+        return True
 
     def start(self) -> None:
         self._unsubscribers.append(
@@ -897,12 +951,28 @@ class AdvisorEngine:
             firing.add(notice.key)
             is_new = notice.key not in self._active
             self._active[notice.key] = notice
-            if is_new:
+            if is_new and not self._muted(notice.key):
                 await self.bus.publish("notice.created", {"notice": notice.as_dict()})
         for key in list(self._active):
             if key not in firing:
                 cleared = self._active.pop(key)
-                await self.bus.publish("notice.cleared", {"notice": cleared.as_dict()})
+                if not self._muted(key):
+                    await self.bus.publish("notice.cleared", {"notice": cleared.as_dict()})
+                # The occurrence ended — an acknowledgement is spent; the next
+                # firing is a fresh event and shows again.
+                if key in self._acked:
+                    self._acked.discard(key)
+                    self._persist()
+        # Expired snoozes: still-firing notices come back into view.
+        now_wall = time.time()
+        for key, until in list(self._snoozed.items()):
+            if until <= now_wall:
+                del self._snoozed[key]
+                self._persist()
+                if key in self._active and not self._muted(key):
+                    await self.bus.publish(
+                        "notice.created", {"notice": self._active[key].as_dict()}
+                    )
         now = time.time()
         for key in list(self._transient):
             notice, expires = self._transient[key]
@@ -911,9 +981,9 @@ class AdvisorEngine:
                 await self.bus.publish("notice.cleared", {"notice": notice.as_dict()})
 
     def active_notices(self) -> list[dict[str, Any]]:
-        return [n.as_dict() for n in self._active.values()] + [
-            n.as_dict() for n, _ in self._transient.values()
-        ]
+        return [
+            n.as_dict() for n in self._active.values() if not self._muted(n.key)
+        ] + [n.as_dict() for n, _ in self._transient.values()]
 
     async def stop(self) -> None:
         for unsubscribe in self._unsubscribers:

@@ -98,6 +98,11 @@ class RoutinesBody(BaseModel):
     routines: list[dict[str, Any]]
 
 
+class NoticeActionBody(BaseModel):
+    key: str
+    hours: float | None = None
+
+
 class SceneBody(BaseModel):
     id: str
 
@@ -433,6 +438,18 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
 
     @app.get("/api/notices")
     async def notices() -> dict[str, Any]:
+        return {"notices": core.advisors.active_notices()}
+
+    @app.post("/api/notices/ack")
+    async def ack_notice(body: NoticeActionBody) -> dict[str, Any]:
+        if not await core.advisors.acknowledge(body.key):
+            raise HTTPException(404, f"no active notice '{body.key}'")
+        return {"notices": core.advisors.active_notices()}
+
+    @app.post("/api/notices/snooze")
+    async def snooze_notice(body: NoticeActionBody) -> dict[str, Any]:
+        if not await core.advisors.snooze(body.key, body.hours or 4.0):
+            raise HTTPException(404, f"no active notice '{body.key}'")
         return {"notices": core.advisors.active_notices()}
 
     @app.get("/api/assistant/memory")

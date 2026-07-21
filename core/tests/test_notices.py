@@ -90,3 +90,79 @@ def _collect(sink, label):
         sink.append((label, event.data["notice"]["key"]))
 
     return handler
+
+
+# --- snooze / acknowledge ----------------------------------------------------
+
+import time as _time
+
+from openvan_core import build_core
+from openvan_core.config import Config
+
+
+@pytest.fixture
+async def live_core(tmp_path):
+    c = build_core(
+        Config(ai_enabled=False, weather_enabled=False, memory_enabled=False,
+               telemetry_enabled=False, data_dir=tmp_path)
+    )
+    await c.start()
+    yield c
+    await c.stop()
+
+
+async def test_acknowledge_hides_until_it_fires_again(live_core):
+    core = live_core
+    await core.twin.set_signal("fresh_water.level_pct", 5.0)
+    assert "fresh_water_low" in {n["key"] for n in core.advisors.active_notices()}
+
+    assert await core.advisors.acknowledge("fresh_water_low") is True
+    assert "fresh_water_low" not in {n["key"] for n in core.advisors.active_notices()}
+    # Still firing → still hidden.
+    await core.twin.set_signal("fresh_water.level_pct", 4.0)
+    assert "fresh_water_low" not in {n["key"] for n in core.advisors.active_notices()}
+    # Condition clears → the ack is spent; the NEXT occurrence shows again.
+    await core.twin.set_signal("fresh_water.level_pct", 80.0)
+    await core.twin.set_signal("fresh_water.level_pct", 5.0)
+    assert "fresh_water_low" in {n["key"] for n in core.advisors.active_notices()}
+
+
+async def test_snooze_hides_for_a_while_then_reannounces(live_core, monkeypatch):
+    core = live_core
+    events: list[tuple[str, str]] = []
+
+    async def on_created(e):
+        events.append(("created", e.data["notice"]["key"]))
+
+    core.bus.subscribe("notice.created", on_created)
+    await core.twin.set_signal("grey_water.level_pct", 95.0)
+    assert "grey_water_full" in {n["key"] for n in core.advisors.active_notices()}
+
+    assert await core.advisors.snooze("grey_water_full", hours=1.0) is True
+    assert "grey_water_full" not in {n["key"] for n in core.advisors.active_notices()}
+    # Snooze survives a clear (unlike ack): still hidden while snoozed.
+    events.clear()
+    # Fast-forward the wall clock past the snooze.
+    real = _time.time()
+    import openvan_core.notices as notices_mod
+    monkeypatch.setattr(notices_mod.time, "time", lambda: real + 2 * 3600)
+    await core.advisors.evaluate()
+    assert "grey_water_full" in {n["key"] for n in core.advisors.active_notices()}
+    assert ("created", "grey_water_full") in events  # re-announced to the UI
+
+
+async def test_dispositions_persist_across_restart(live_core, tmp_path):
+    core = live_core
+    await core.twin.set_signal("fresh_water.level_pct", 5.0)
+    await core.advisors.snooze("fresh_water_low", hours=8.0)
+
+    fresh = build_core(
+        Config(ai_enabled=False, weather_enabled=False, memory_enabled=False,
+               telemetry_enabled=False, data_dir=tmp_path)
+    )
+    await fresh.start()
+    try:
+        await fresh.twin.set_signal("fresh_water.level_pct", 5.0)
+        assert "fresh_water_low" not in {n["key"] for n in fresh.advisors.active_notices()}
+    finally:
+        await fresh.stop()

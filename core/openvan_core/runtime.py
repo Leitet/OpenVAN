@@ -213,6 +213,9 @@ class Core:
         # Record the coverage trail, then subscribe advisors and evaluate once
         # against the seeded state.
         self.coverage.start()
+        # Notice dispositions (snoozed/acknowledged) survive restarts.
+        self.advisors.store = self.store
+        self.advisors.load()
         # Routines: load the user's saved set (or the defaults) and arm the
         # signal/time triggers.
         self.routines.load()
