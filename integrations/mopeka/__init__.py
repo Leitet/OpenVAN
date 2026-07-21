@@ -17,6 +17,7 @@ frames, ``ble`` extra = real air).
 
 from __future__ import annotations
 
+from openvan_core.ble import alias_for, find_alias
 from openvan_core import Integration, IntegrationInfo, Permissions, Status, Transport
 
 MOPEKA_MANUFACTURER_ID = 0x0059
@@ -76,6 +77,13 @@ class Mopeka(Integration):
             "real hardware."
         ),
         config_fields=[
+            {"key": "aliases", "label": "Devices", "type": "list", "default": [],
+             "item_fields": [
+                 {"key": "id", "label": "MAC / id", "type": "text"},
+                 {"key": "alias", "label": "Name", "type": "text"},
+                 {"key": "tank", "label": "Feeds tank", "type": "select",
+                  "options": ["", "propane", "fresh", "grey", "diesel", "none"]},
+             ]},
             {"key": "tank", "label": "Feeds tank", "type": "select",
              "options": ["propane", "fresh", "grey", "diesel", "none"], "default": "propane"},
             {"key": "tank_height_mm", "label": "Tank height (mm)", "type": "text", "default": "254"},
@@ -116,13 +124,18 @@ class Mopeka(Integration):
         data = parse_mopeka(adv.manufacturer_data.get(MOPEKA_MANUFACTURER_ID, b""))
         if data is None:
             return
-        device = adv.address.replace(":", "").lower()[-4:] or "puck"
+        fallback = adv.address.replace(":", "").lower()[-4:] or "puck"
+        device = alias_for(self.config.get("aliases"), adv.address, fallback)
         pct = level_pct(data["level_mm"], self._tank_mm())
         for measure, value in {**data, "level_pct": pct}.items():
             await self.twin.set_signal(f"mopeka.{device}.{measure}", value, source=self.info.id)
         # The layering payoff: feed the core tank signal so existing advisors
         # (LowPropane, water) run on real hardware unchanged.
-        signal = self._TANK_SIGNAL.get(str(self.config.get("tank") or "propane"))
+        # Per-device tank assignment beats the card-wide default — two pucks can
+        # feed two different tanks.
+        row = find_alias(self.config.get("aliases"), adv.address)
+        tank = (row or {}).get("tank") or self.config.get("tank") or "propane"
+        signal = self._TANK_SIGNAL.get(str(tank))
         if signal:
             await self.twin.set_signal(signal, pct, source=self.info.id)
 

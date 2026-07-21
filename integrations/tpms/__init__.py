@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import struct
 
+from openvan_core.ble import alias_for
 from openvan_core import Integration, IntegrationInfo, Permissions, Status, Transport
 
 TPMS_MANUFACTURER_ID = 0x0100
@@ -43,7 +44,7 @@ class Tpms(Integration):
         local=True,
         offline_capable=True,
         discovery="ble_scan",
-        permissions=Permissions(read=True, control=False, configure=False),
+        permissions=Permissions(read=True, control=False, configure=True),
         safety_class=0,
         status=Status.COMMUNITY,
         priority="P2",
@@ -53,6 +54,13 @@ class Tpms(Integration):
             "Universal BLE valve-cap tire sensors — pressure, temperature and "
             "sensor battery for every wheel (trailers and duals included)."
         ),
+        config_fields=[
+            {"key": "aliases", "label": "Devices", "type": "list", "default": [],
+             "item_fields": [
+                 {"key": "id", "label": "MAC / id", "type": "text"},
+                 {"key": "alias", "label": "Wheel (e.g. front_left)", "type": "text"},
+             ]},
+        ],
         warning="Advertisement format per community reverse engineering — validate against real sensors.",
     )
 
@@ -76,7 +84,8 @@ class Tpms(Integration):
         data = parse_tpms(adv.manufacturer_data.get(TPMS_MANUFACTURER_ID, b""))
         if data is None:
             return
-        sensor = adv.address.replace(":", "").lower()[-4:] or "tire"
+        fallback = adv.address.replace(":", "").lower()[-4:] or "tire"
+        sensor = alias_for(self.config.get("aliases"), adv.address, fallback)
         for measure, value in data.items():
             await self.twin.set_signal(f"tpms.{sensor}.{measure}", value, source=self.info.id)
 

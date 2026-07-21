@@ -26,11 +26,40 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable
 
 logger = logging.getLogger(__name__)
+
+
+def find_alias(aliases: object, address: str) -> dict | None:
+    """Match a user-configured device row (Settings-page list: [{id, alias, …}])
+    for a BLE address. The id matches the full MAC or the short last-4 device id,
+    case- and colon-insensitive."""
+    if not isinstance(aliases, list):
+        return None
+    normalized = address.replace(":", "").lower()
+    short = normalized[-4:]
+    for row in aliases:
+        if not isinstance(row, dict):
+            continue
+        rid = str(row.get("id", "")).replace(":", "").lower().strip()
+        if rid and rid in (normalized, short):
+            return row
+    return None
+
+
+def alias_for(aliases: object, address: str, fallback: str) -> str:
+    """The signal-key device name: the user's alias (slugged) when configured,
+    else the driver's fallback (usually the last-4 of the MAC). This is what
+    turns ``mopeka.a3f2.level_pct`` into ``mopeka.gas_bottle.level_pct``."""
+    row = find_alias(aliases, address)
+    if row is None:
+        return fallback
+    alias = re.sub(r"[^a-z0-9_]+", "_", str(row.get("alias", "")).lower()).strip("_")
+    return alias or fallback
 
 AdvHandler = Callable[["Advertisement"], Awaitable[None] | None]
 

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import struct
 
+from openvan_core.ble import alias_for
 from openvan_core import Integration, IntegrationInfo, Permissions, Status, Transport
 
 RUUVI_MANUFACTURER_ID = 0x0499
@@ -51,7 +52,7 @@ class RuuviTag(Integration):
         local=True,
         offline_capable=True,
         discovery="ble_scan",
-        permissions=Permissions(read=True, control=False, configure=False),
+        permissions=Permissions(read=True, control=False, configure=True),
         safety_class=0,
         status=Status.COMMUNITY,
         priority="P0",
@@ -63,6 +64,13 @@ class RuuviTag(Integration):
             "Battery BLE sensors broadcasting temperature/humidity/pressure. No "
             "pairing, no cloud — easy wireless monitoring of fridge or outdoor probe."
         ),
+        config_fields=[
+            {"key": "aliases", "label": "Devices", "type": "list", "default": [],
+             "item_fields": [
+                 {"key": "id", "label": "MAC / id", "type": "text"},
+                 {"key": "alias", "label": "Name", "type": "text"},
+             ]},
+        ],
     )
 
     def __init__(self, *args, **kwargs):
@@ -87,7 +95,8 @@ class RuuviTag(Integration):
         data = parse_rawv2(adv.manufacturer_data.get(RUUVI_MANUFACTURER_ID, b""))
         if data is None:
             return
-        device = adv.address.replace(":", "").lower()[-4:] or "tag"
+        fallback = adv.address.replace(":", "").lower()[-4:] or "tag"
+        device = alias_for(self.config.get("aliases"), adv.address, fallback)
         for measure, value in data.items():
             await self.twin.set_signal(f"ruuvitag.{device}.{measure}", value, source=self.info.id)
 

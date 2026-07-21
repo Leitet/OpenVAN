@@ -138,8 +138,11 @@ signals → existing advisors work on real hardware), **RuuviTag real mode**.
 Remaining substrate work (GATT sessions + TPMS TypeA shipped 2026-07):
 - Remaining passive parsers: other TPMS families (SYTPMS/Michelin/WODHMIEY) and
   **BM2/Junctek shunts** — small additions on the existing pattern.
-- Per-device aliasing/bind UI (name a MAC "fridge probe", assign a Mopeka puck to
-  a tank from the library card).
+- Per-device aliasing SHIPPED: every BLE card (RuuviTag, BTHome, Mopeka, TPMS)
+  has a Devices list on its settings page — name a MAC ("fridge probe",
+  "front_left"), and per-puck tank assignment on Mopeka (two pucks, two
+  tanks). Remaining nicety: a "recently seen devices" picker instead of
+  typing the MAC.
 
 **Wave 1 — status after the 2026-07 autonomous build session:**
 1. **Truma iNet-box emulation** (LIN) — REMAINS, now with the license verdict:

@@ -17,6 +17,7 @@ from __future__ import annotations
 import re
 import struct
 
+from openvan_core.ble import alias_for
 from openvan_core import Integration, IntegrationInfo, Permissions, Status, Transport
 
 BTHOME_UUID = "fcd2"
@@ -77,7 +78,7 @@ class BtHome(Integration):
         local=True,
         offline_capable=True,
         discovery="ble_scan",
-        permissions=Permissions(read=True, control=False, configure=False),
+        permissions=Permissions(read=True, control=False, configure=True),
         safety_class=0,
         status=Status.OPEN,
         priority="P1",
@@ -88,6 +89,13 @@ class BtHome(Integration):
             "b-parasite, …) — cheap wireless temp/humidity for fridge and "
             "pet-safety monitoring. One driver for the whole standard."
         ),
+        config_fields=[
+            {"key": "aliases", "label": "Devices", "type": "list", "default": [],
+             "item_fields": [
+                 {"key": "id", "label": "MAC / id", "type": "text"},
+                 {"key": "alias", "label": "Name", "type": "text"},
+             ]},
+        ],
         warning="Encrypted BTHome devices are not supported yet (needs bind keys).",
     )
 
@@ -112,7 +120,9 @@ class BtHome(Integration):
         data = parse_bthome(adv.service_data.get(BTHOME_UUID, b""))
         if not data:
             return
-        device = device_id(adv.address, adv.name)
+        device = alias_for(
+            self.config.get("aliases"), adv.address, device_id(adv.address, adv.name)
+        )
         for measure, value in data.items():
             await self.twin.set_signal(f"bthome.{device}.{measure}", value, source=self.info.id)
 

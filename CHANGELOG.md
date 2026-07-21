@@ -3,6 +3,18 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Per-device BLE aliasing
+
+- Every BLE card (RuuviTag, BTHome, Mopeka, TPMS) gains a **Devices** list on
+  its settings page: match a device by full MAC or short id, give it a name —
+  signals become `ruuvitag.fridge_probe.temperature` instead of
+  `ruuvitag.beef.*`, and the auto entities pick up the friendly name.
+- **Mopeka per-puck tank assignment**: each row can choose which tank the puck
+  feeds (propane/fresh/grey/diesel), beating the card-wide default — two pucks
+  can feed two different tanks, each driving its own advisors.
+- Shared `alias_for`/`find_alias` helpers in the BLE substrate; aliases apply
+  live on save (resolved per advertisement).
+
 ## 2026-07 — HA import: the federation is bidirectional
 
 - The HA bridge now **imports the home's sensors** via Home Assistant's

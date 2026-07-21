@@ -140,3 +140,50 @@ def test_ble_http_surface(tmp_path):
 
         bad = client.post("/api/sim/ble", json={"address": "x", "service_data": {"fcd2": "zz"}})
         assert bad.status_code == 400
+
+
+# --- per-device aliasing: name a MAC, assign a puck to a tank ----------------
+
+def test_alias_helpers():
+    from openvan_core.ble import alias_for, find_alias
+
+    rows = [
+        {"id": "C4:64:00:00:BE:EF", "alias": "Fridge Probe"},
+        {"id": "0001", "alias": "gas bottle", "tank": "fresh"},
+    ]
+    # Full MAC (any case/colons) and short last-4 ids both match; alias slugged.
+    assert alias_for(rows, "c46400 00beef".replace(" ", ""), "beef") == "fridge_probe"
+    assert alias_for(rows, "DD:00:00:00:00:01", "0001") == "gas_bottle"
+    assert alias_for(rows, "AA:AA:AA:AA:AA:AA", "aaaa") == "aaaa"  # unknown → fallback
+    assert alias_for(None, "x", "fb") == "fb"
+    assert find_alias(rows, "DD:00:00:00:00:01")["tank"] == "fresh"
+
+
+async def test_ruuvitag_alias_names_the_signals(core):
+    await core.set_integration_enabled("ruuvitag", True)
+    await core.set_integration_config("ruuvitag", {
+        "aliases": [{"id": "C4:64:00:00:BE:EF", "alias": "Fridge Probe"}],
+    })
+    await core.ble.inject(Advertisement(
+        address="C4:64:00:00:BE:EF",
+        manufacturer_data={0x0499: bytes.fromhex("05" "0954" "5194" "c87e" "000000000000" "ac20")},
+    ))
+    assert core.twin.get("ruuvitag.fridge_probe.temperature") == 11.94
+    assert core.twin.get("ruuvitag.beef.temperature") is None
+    # The auto entity carries the friendly name.
+    entity = core.hub.entities.get("sensor.ruuvitag_fridge_probe_temperature")
+    assert entity is not None and entity.name == "Fridge Probe Temperature"
+
+
+async def test_mopeka_per_device_tank_assignment(core):
+    await core.set_integration_enabled("mopeka", True)
+    await core.set_integration_config("mopeka", {
+        "aliases": [{"id": "0001", "alias": "water tank", "tank": "fresh"}],
+    })
+    await core.ble.inject(Advertisement(
+        address="DD:00:00:00:00:01",
+        manufacturer_data={0x0059: bytes([0x03, 0x59, 0x3E, 0x50, 0x00])},
+    ))
+    assert core.twin.get("mopeka.water_tank.level_pct") == pytest.approx(16.0, abs=0.5)
+    # This puck feeds the FRESH tank, not the card-wide propane default.
+    assert core.twin.get("fresh_water.level_pct") == pytest.approx(16.0, abs=0.5)
