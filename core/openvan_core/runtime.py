@@ -216,6 +216,9 @@ class Core:
         # Routines: load the user's saved set (or the defaults) and arm the
         # signal/time triggers.
         self.routines.load()
+        # Learned preferences may carry a structured setpoint — fold it into the
+        # default routines before arming triggers.
+        self._refresh_routine_defaults()
         self.routines.start()
         self.advisors.start()
         await self.advisors.evaluate()
@@ -271,6 +274,9 @@ class Core:
         if reply:
             self.memory_chat.record("assistant", reply)
         await self.memory_chat.maybe_consolidate(persona, language)
+        # Consolidation may have learned a new setpoint preference — fold it
+        # into the (unmodified) default routines right away.
+        self._refresh_routine_defaults()
         return result
 
     async def _route(self, text: str, persona: str | None, language: str) -> dict[str, Any]:
@@ -422,15 +428,25 @@ class Core:
         odo = self.twin.get("vehicle.odometer_km")
         return self.maintenance.complete(item_id, odo, datetime.now().date())
 
+    def effective_scene_setpoints(self) -> tuple[float, float]:
+        """(sleep_c, comfort_c) for the default routines: a *learned* preference
+        ("likes the cabin around 21°C") wins over the tuning default — the
+        learned-setpoints seam, deterministic end to end."""
+        learned = self.memory_chat.learned_setpoints()
+        sleep = learned.get("sleep_c") or self.config.tune("scene_sleep_c")
+        comfort = learned.get("comfort_c") or self.config.tune("scene_comfort_c")
+        return float(sleep), float(comfort)
+
+    def _refresh_routine_defaults(self) -> None:
+        self.routines.refresh_defaults(*self.effective_scene_setpoints())
+
     def _apply_tunables(self) -> None:
         """Rebuild the config-driven advisors/scenes/maintenance after a tuning
         change, so overrides take effect without a restart."""
         self.advisors.advisors = _build_advisors(
             self.config, self.weather, self.maintenance, self.security, self.coverage
         )
-        self.routines.refresh_defaults(
-            self.config.tune("scene_sleep_c"), self.config.tune("scene_comfort_c")
-        )
+        self._refresh_routine_defaults()
         self.maintenance.intervals = self.config.maintenance_intervals
         self.maintenance.load()
 

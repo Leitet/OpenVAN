@@ -74,9 +74,9 @@ findings back:
 - **Routines follow-ups** (automation builder + follow-ups SHIPPED: manual/
   sensor/time/sunrise/sunset(+offset)/park/drive-off triggers, ordered
   actions, waits, guards, notify-as-companion-notice, duplicate button).
-  Remaining: bind Goodnight's sleep temperature to the learned preference —
-  needs a *structured* preference extractor first (ChatMemory preferences are
-  free text today); do that as part of a "learned setpoints" seam.
+  The learned-setpoints seam SHIPPED too: `ChatMemory.learned_setpoints()`
+  deterministically parses temperature preferences (en/sv/de) and fills the
+  default routines' setpoints (user-edited routines stay untouched).
 - **Maintenance polish** — user-editable intervals; per-item history; odometer
   baseline from a real "install" reading rather than the interval window.
 

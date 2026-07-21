@@ -290,3 +290,55 @@ def test_normalize_accepts_sun_and_van():
         {"type": "sun", "event": "sunrise", "offset_min": 0.0},   # bogus → default
         {"type": "van", "event": "drive_off"},
     ]
+
+
+# --- learned setpoints seam --------------------------------------------------
+
+def _prefs(core, *prefs):
+    core.memory_chat.preferences = list(prefs)
+    core._refresh_routine_defaults()
+
+
+async def test_learned_setpoints_extraction(core):
+    core.memory_chat.preferences = [
+        "likes the cabin around 21°C",
+        "sleeps best at 17 degrees",
+        "wakes early at 7",              # not a temperature — anchored but no temp context
+        "drove 300 km yesterday",        # out of range / no cue
+    ]
+    sp = core.memory_chat.learned_setpoints()
+    assert sp == {"comfort_c": 21.0, "sleep_c": 17.0}
+    # Swedish + German phrasing works too.
+    core.memory_chat.preferences = ["gillar 19 grader i kupén", "schläft gern bei 16 grad"]
+    sp = core.memory_chat.learned_setpoints()
+    assert sp == {"comfort_c": 19.0, "sleep_c": 16.0}
+
+
+async def test_learned_setpoints_fill_default_routines(core):
+    _prefs(core, "likes the cabin around 22°C", "prefers sleeping at 15 degrees")
+    goodnight = core.routines.get("goodnight")
+    sleep_step = [s for s in goodnight["steps"] if s.get("command") == "set_temperature"][0]
+    assert sleep_step["params"]["temperature"] == 15.0
+    morning = core.routines.get("morning")
+    comfort_step = [s for s in morning["steps"] if s.get("command") == "set_temperature"][0]
+    assert comfort_step["params"]["temperature"] == 22.0
+    # And running goodnight actually sets the learned temperature.
+    res = await core.routines.run("goodnight")
+    assert res["ok"]
+    assert core.hub.entities["climate.diesel_heater"].attributes["setpoint"] == 15.0
+
+
+async def test_learned_setpoints_never_touch_edited_routines(core):
+    routines = core.routines.list()
+    routines[0]["name"] = "My goodnight"
+    await core.routines.save(routines)  # customized now
+    _prefs(core, "prefers sleeping at 12 degrees")
+    goodnight = core.routines.get("goodnight")
+    sleep_step = [s for s in goodnight["steps"] if s.get("command") == "set_temperature"][0]
+    assert sleep_step["params"]["temperature"] == 16.0  # user's set untouched
+
+
+async def test_setpoints_in_memory_snapshot(core):
+    core.memory_chat.preferences = ["likes the cabin around 20.5°C"]
+    snap = core.memory_chat.snapshot()
+    assert snap["setpoints"] == {"comfort_c": 20.5, "sleep_c": None}

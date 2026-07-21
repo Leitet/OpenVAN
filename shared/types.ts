@@ -139,6 +139,8 @@ export interface CampSourceInfo {
 export interface AssistantMemory {
   summary: string;
   preferences: string[];
+  // Structured setpoints parsed deterministically from the preferences.
+  setpoints?: { comfort_c: number | null; sleep_c: number | null };
 }
 
 export interface SceneInfo {

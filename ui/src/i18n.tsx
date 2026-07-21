@@ -514,6 +514,13 @@ const T: Record<string, Entry> = {
   "routines.steps": { en: "steps", sv: "steg", de: "Schritte" },
   "routines.test": { en: "Run now", sv: "Kör nu", de: "Jetzt ausführen" },
   "routines.message": { en: "Message", sv: "Meddelande", de: "Nachricht" },
+  "memory.setpoints": {
+    en: "Learned setpoints — these fill in the default routines:",
+    sv: "Inlärda börvärden — dessa fyller i standardrutinerna:",
+    de: "Gelernte Sollwerte — sie füllen die Standardroutinen:",
+  },
+  "memory.comfort": { en: "Comfort", sv: "Komfort", de: "Komfort" },
+  "memory.sleep": { en: "Sleep", sv: "Sömn", de: "Schlaf" },
   "routines.sunrise": { en: "Sunrise", sv: "Soluppgång", de: "Sonnenaufgang" },
   "routines.sunset": { en: "Sunset", sv: "Solnedgång", de: "Sonnenuntergang" },
   "routines.park": { en: "When parking", sv: "Vid parkering", de: "Beim Parken" },

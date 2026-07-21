@@ -251,7 +251,13 @@ So the van *learns how you want it*. `ChatMemory` holds three horizons: **turns*
 (older context folded in by the model so it isn't lost), and durable **preferences**
 ("likes the cabin around 21°C", "prefers quiet spots away from roads"). `Core.chat`
 feeds turns + summary + preferences to `converse`, and preferences also shape camp
-picks and answers — e.g. "make it comfortable" fills in the learned setpoint. Every
+picks and answers — e.g. "make it comfortable" fills in the learned setpoint.
+The **learned-setpoints seam** makes that structural: `learned_setpoints()`
+deterministically parses temperature preferences ("likes the cabin around
+21°C", en/sv/de) and `Core.effective_scene_setpoints()` folds them into the
+*default* routines (Goodnight sleeps at the learned temperature; user-edited
+routines are never touched). Extraction is a pure parser — only the *writing*
+of preferences is model-enhanced (Rule 3/4). Every
 few turns `maybe_consolidate` asks the model to update the summary + preferences;
 both persist to the config store (`assistant` namespace) so they survive restarts.
 Offline-first: the turn window always works; summary/preference *learning* is

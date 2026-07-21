@@ -298,9 +298,7 @@ def build_app(config: Config | None = None, core: Core | None = None) -> FastAPI
 
     @app.post("/api/routines/reset")
     async def reset_routines() -> dict[str, Any]:
-        return {"routines": await core.routines.reset(
-            core.config.tune("scene_sleep_c"), core.config.tune("scene_comfort_c")
-        )}
+        return {"routines": await core.routines.reset(*core.effective_scene_setpoints())}
 
     @app.get("/api/maintenance")
     async def maintenance() -> dict[str, Any]:

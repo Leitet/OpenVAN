@@ -22,9 +22,26 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# --- learned-setpoint extraction (en/sv/de, deterministic) -------------------
+# A temperature with an explicit unit ("21°C", "17 degrees", "19 grader"), or —
+# only in a sentence that talks about temperature at all — an anchored bare
+# number ("around 21", "runt 19", "um 18").
+_UNIT_TEMP_RE = re.compile(
+    r"(\d{1,2}(?:[.,]\d)?)\s*(?:°\s*c?|degrees?\b|deg\b|grader\b|grad\b|c\b)", re.I
+)
+_ANCHOR_TEMP_RE = re.compile(
+    r"(?:around|about|at|near|runt|cirka|ca|um|auf)\s+(\d{1,2}(?:[.,]\d)?)\b", re.I
+)
+_SLEEP_WORDS = ("sleep", "night", "bed", "sova", "sömn", "natt", "schlaf", "schläf", "nacht")
+_TEMP_CONTEXT = (
+    "temp", "°", "warm", "cosy", "cozy", "heat", "cabin",
+    "kupé", "grader", "varm", "värme", "kabine", "heiz",
+)
 
 _NS = "assistant"  # config-store namespace for persisted memory
 
@@ -104,7 +121,37 @@ class ChatMemory:
         return out
 
     def snapshot(self) -> dict[str, Any]:
-        return {"summary": self.summary, "preferences": list(self.preferences)}
+        return {
+            "summary": self.summary,
+            "preferences": list(self.preferences),
+            # Structured view of the free-text preferences (deterministic).
+            "setpoints": self.learned_setpoints(),
+        }
+
+    def learned_setpoints(self) -> dict[str, float | None]:
+        """The **learned setpoints seam**: deterministically parse the free-text
+        preferences ("likes the cabin around 21°C", "sleeps best at 17 degrees")
+        into structured temperatures. Offline-first — the *writing* of
+        preferences is model-enhanced, but this extraction is a pure parser, so
+        binding a learned temperature into a routine never depends on a model.
+        Later preferences win; values outside a sane cabin range are ignored."""
+        out: dict[str, float | None] = {"comfort_c": None, "sleep_c": None}
+        for pref in self.preferences:
+            text = pref.lower()
+            match = _UNIT_TEMP_RE.search(text)
+            if match is None and any(w in text for w in _TEMP_CONTEXT):
+                match = _ANCHOR_TEMP_RE.search(text)
+            if match is None:
+                continue
+            try:
+                value = float(match.group(1).replace(",", "."))
+            except ValueError:
+                continue
+            if not 5.0 <= value <= 30.0:
+                continue
+            key = "sleep_c" if any(w in text for w in _SLEEP_WORDS) else "comfort_c"
+            out[key] = value
+        return out
 
     def clear(self) -> None:
         self.turns.clear()

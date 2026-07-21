@@ -3,6 +3,25 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Learned setpoints: "likes the cabin around 21°C" becomes real
+
+- **The learned-setpoints seam**: `ChatMemory.learned_setpoints()`
+  deterministically parses the assistant's free-text preferences into
+  structured temperatures — explicit units ("21°C", "17 degrees", "19
+  grader") or anchored numbers in temperature-context sentences ("around
+  21"), classified sleep vs comfort by context words (en/sv/de), clamped to a
+  sane cabin range. A pure parser: only the *writing* of preferences is
+  model-enhanced; the binding never depends on a model.
+- **Bound into routines**: `Core.effective_scene_setpoints()` — learned wins
+  over tuning — fills the *default* routines (Goodnight sleeps at your
+  learned temperature, Morning warms to your comfort). Re-folded after every
+  chat consolidation; user-edited routines are never touched. Live-verified:
+  seeded "sleeps best at 17 degrees" → Goodnight sets 17 °C.
+- **Surfaced honestly**: the Assistant tab's "What I've learned" shows the
+  structured chips ("Comfort 21°C · Sleep 17°C — these fill in the default
+  routines") above the raw preferences; `/api/assistant/memory` carries
+  `setpoints`.
+
 ## 2026-07 — Routines follow-ups: sun & van triggers, notices, duplicate
 
 - **New triggers**: sunrise/sunset (phase transitions of the sun model; an

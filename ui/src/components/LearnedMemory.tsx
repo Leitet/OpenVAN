@@ -39,6 +39,21 @@ export function LearnedMemory() {
       ) : (
         <>
           {mem.summary && <p className="learned-summary">{mem.summary}</p>}
+          {(mem.setpoints?.sleep_c != null || mem.setpoints?.comfort_c != null) && (
+            <p className="learned-setpoints">
+              {t("memory.setpoints")}
+              {mem.setpoints?.comfort_c != null && (
+                <span className="learned-chip strong">
+                  {t("memory.comfort")} {mem.setpoints.comfort_c}°C
+                </span>
+              )}
+              {mem.setpoints?.sleep_c != null && (
+                <span className="learned-chip strong">
+                  {t("memory.sleep")} {mem.setpoints.sleep_c}°C
+                </span>
+              )}
+            </p>
+          )}
           <div className="learned-chips">
             {mem.preferences.map((p, i) => (
               <span className="learned-chip" key={i}>
