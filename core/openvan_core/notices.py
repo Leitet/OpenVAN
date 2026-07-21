@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 import math
 from abc import ABC, abstractmethod
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -25,6 +26,10 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:  # pragma: no cover
     from .hub import Hub
+
+
+# How long a routine's "notify" message stays visible as a notice.
+ROUTINE_NOTICE_TTL_S = 600.0
 
 
 @dataclass
@@ -838,6 +843,9 @@ class AdvisorEngine:
         self.hub = hub
         self.advisors = advisors if advisors is not None else default_advisors()
         self._active: dict[str, Notice] = {}
+        # Transient notices (routine "notify" steps): shown like advisor notices
+        # but time-limited — (notice, wall-clock expiry).
+        self._transient: dict[str, tuple[Notice, float]] = {}
         self._unsubscribers: list[Callable[[], None]] = []
 
     def start(self) -> None:
@@ -850,6 +858,26 @@ class AdvisorEngine:
         self._unsubscribers.append(
             self.bus.subscribe("weather.updated", self._on_change)
         )
+        self._unsubscribers.append(
+            self.bus.subscribe("routine.notify", self._on_routine_notify)
+        )
+
+    async def _on_routine_notify(self, event) -> None:
+        """A routine's notify step becomes a companion notice for a while —
+        visible where every other notice lives, without nagging forever."""
+        message = str(event.data.get("message") or "").strip()
+        if not message:
+            return
+        notice = Notice(
+            key=f"routine_{event.data.get('routine', '?')}",
+            level="info",
+            category="routine",
+            title=str(event.data.get("name") or "Routine"),
+            message=message,
+            data={"routine": event.data.get("routine")},
+        )
+        self._transient[notice.key] = (notice, time.time() + ROUTINE_NOTICE_TTL_S)
+        await self.bus.publish("notice.created", {"notice": notice.as_dict()})
 
     async def _on_change(self, _event) -> None:
         await self.evaluate()
@@ -875,9 +903,17 @@ class AdvisorEngine:
             if key not in firing:
                 cleared = self._active.pop(key)
                 await self.bus.publish("notice.cleared", {"notice": cleared.as_dict()})
+        now = time.time()
+        for key in list(self._transient):
+            notice, expires = self._transient[key]
+            if now >= expires:
+                del self._transient[key]
+                await self.bus.publish("notice.cleared", {"notice": notice.as_dict()})
 
     def active_notices(self) -> list[dict[str, Any]]:
-        return [n.as_dict() for n in self._active.values()]
+        return [n.as_dict() for n in self._active.values()] + [
+            n.as_dict() for n, _ in self._transient.values()
+        ]
 
     async def stop(self) -> None:
         for unsubscribe in self._unsubscribers:

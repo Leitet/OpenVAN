@@ -71,12 +71,12 @@ findings back:
   emptying point" map layer waits on the services layer (#12).
 - **Pet mode push alert** — the aboard-toggle + tightened band shipped; a remote
   push needs a notification channel (see #14).
-- **Routines follow-ups** (the full automation builder SHIPPED: editable
-  routines with manual/sensor/time triggers, ordered actions, waits,
-  only-continue-if guards, notify steps — Settings → Routines): surface
-  `routine.notify` in the companion/notices; more trigger types (sunrise/
-  sunset offset, van events like park/drive-off); duplicate-routine button;
-  bind Goodnight's sleep temperature to the learned preference.
+- **Routines follow-ups** (automation builder + follow-ups SHIPPED: manual/
+  sensor/time/sunrise/sunset(+offset)/park/drive-off triggers, ordered
+  actions, waits, guards, notify-as-companion-notice, duplicate button).
+  Remaining: bind Goodnight's sleep temperature to the learned preference —
+  needs a *structured* preference extractor first (ChatMemory preferences are
+  free text today); do that as part of a "learned setpoints" seam.
 - **Maintenance polish** — user-editable intervals; per-item history; odometer
   baseline from a real "install" reading rather than the interval window.
 

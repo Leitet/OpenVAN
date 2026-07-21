@@ -150,11 +150,13 @@ export interface SceneInfo {
 
 // Routines — user-programmable automations (openvan_core.routines).
 export interface RoutineTrigger {
-  type: "manual" | "signal" | "time";
+  type: "manual" | "signal" | "time" | "sun" | "van";
   signal?: string;
   op?: "above" | "below" | "equals" | "on" | "off";
   value?: number;
   at?: string; // "HH:MM" for time triggers
+  event?: string; // sun: "sunrise" | "sunset" — van: "park" | "drive_off"
+  offset_min?: number; // sun: delay after the event, counted in sim time
 }
 
 export interface RoutineStep {

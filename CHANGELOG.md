@@ -3,6 +3,21 @@
 What has landed, newest first. The forward-looking list lives in
 [backlog.md](backlog.md); architecture in [CLAUDE.md](CLAUDE.md).
 
+## 2026-07 — Routines follow-ups: sun & van triggers, notices, duplicate
+
+- **New triggers**: sunrise/sunset (phase transitions of the sun model; an
+  optional offset delays the run in *sim-time* minutes via a one-shot
+  local-time target, so bench time travel honours it) and van events —
+  "when parking" / "when driving off" (ignition edges).
+- **Notify steps surface as companion notices**: a routine's message appears
+  in the Companion panel like any advisor notice, time-limited (10 min) so it
+  informs without nagging. Live-verified: a sunset routine's "cosy mode"
+  message showed up next to the rain advisor.
+- **Duplicate button** on the routine list — copy an automation and tweak it.
+- Not built (kept honest in the backlog): binding Goodnight's sleep
+  temperature to the learned preference — ChatMemory preferences are free
+  text; it needs a structured extractor first.
+
 ## 2026-07 — Routines: the automation builder
 
 - **Scenes grew into routines** (`routines.py`): fully user-programmable

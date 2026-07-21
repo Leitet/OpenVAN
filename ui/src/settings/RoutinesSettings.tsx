@@ -6,16 +6,20 @@ import {
   Bell,
   Car,
   Clock,
+  Copy,
   DoorOpen,
   Droplet,
   Gauge,
   Hand,
   MessageSquare,
+  MapPin,
   Moon,
   Play,
   Plus,
   Shield,
   Sun,
+  Sunrise,
+  Sunset,
   Tent,
   Thermometer,
   Timer,
@@ -109,7 +113,12 @@ function usePhrases() {
   const triggerPhrase = (trigger: RoutineTrigger) =>
     trigger.type === "manual" ? t("routines.manual")
     : trigger.type === "time" ? `${t("routines.at")} ${trigger.at}`
-    : conditionPhrase(trigger);
+    : trigger.type === "sun"
+      ? t(trigger.event === "sunset" ? "routines.sunset" : "routines.sunrise") +
+        ((trigger.offset_min ?? 0) > 0 ? ` +${trigger.offset_min} min` : "")
+    : trigger.type === "van"
+      ? t(trigger.event === "drive_off" ? "routines.driveOff" : "routines.park")
+      : conditionPhrase(trigger);
   return { conditionPhrase, triggerPhrase, opText };
 }
 
@@ -261,7 +270,10 @@ function RoutineEditor({
         <div className="rt-block" key={i}>
           <span className="rt-block-icon">
             {trigger.type === "manual" ? <Hand size={14} /> :
-             trigger.type === "time" ? <Clock size={14} /> : <Gauge size={14} />}
+             trigger.type === "time" ? <Clock size={14} /> :
+             trigger.type === "sun" ? (trigger.event === "sunset" ? <Sunset size={14} /> : <Sunrise size={14} />) :
+             trigger.type === "van" ? (trigger.event === "drive_off" ? <Car size={14} /> : <MapPin size={14} />) :
+             <Gauge size={14} />}
           </span>
           {trigger.type === "manual" && <span>{t("routines.manual")}</span>}
           {trigger.type === "time" && (
@@ -276,6 +288,36 @@ function RoutineEditor({
           )}
           {trigger.type === "signal" && (
             <ConditionFields value={trigger} onChange={(p) => patchTrigger(i, p)} />
+          )}
+          {trigger.type === "sun" && (
+            <>
+              <select
+                value={trigger.event ?? "sunrise"}
+                onChange={(e) => patchTrigger(i, { event: e.target.value })}
+              >
+                <option value="sunrise">{t("routines.sunrise")}</option>
+                <option value="sunset">{t("routines.sunset")}</option>
+              </select>
+              <span className="rt-value">
+                <span>+</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={trigger.offset_min ?? 0}
+                  onChange={(e) => patchTrigger(i, { offset_min: Number(e.target.value) })}
+                />
+                <em>min</em>
+              </span>
+            </>
+          )}
+          {trigger.type === "van" && (
+            <select
+              value={trigger.event ?? "park"}
+              onChange={(e) => patchTrigger(i, { event: e.target.value })}
+            >
+              <option value="park">{t("routines.park")}</option>
+              <option value="drive_off">{t("routines.driveOff")}</option>
+            </select>
           )}
           <button className="mini danger rt-x" onClick={() => removeTrigger(i)}>
             <X size={13} />
@@ -294,6 +336,24 @@ function RoutineEditor({
         </button>
         <button className="mini" onClick={() => addTrigger({ type: "time", at: "08:00" })}>
           <Clock size={13} /> {t("routines.addTime")}
+        </button>
+        <button
+          className="mini"
+          onClick={() => addTrigger({ type: "sun", event: "sunrise", offset_min: 0 })}
+        >
+          <Sunrise size={13} /> {t("routines.sunrise")}
+        </button>
+        <button
+          className="mini"
+          onClick={() => addTrigger({ type: "sun", event: "sunset", offset_min: 0 })}
+        >
+          <Sunset size={13} /> {t("routines.sunset")}
+        </button>
+        <button className="mini" onClick={() => addTrigger({ type: "van", event: "park" })}>
+          <MapPin size={13} /> {t("routines.park")}
+        </button>
+        <button className="mini" onClick={() => addTrigger({ type: "van", event: "drive_off" })}>
+          <Car size={13} /> {t("routines.driveOff")}
         </button>
       </div>
 
@@ -550,6 +610,23 @@ export function RoutinesSettings() {
               }}
             >
               <Play size={13} />
+            </button>
+            <button
+              className="mini"
+              title={t("routines.duplicate")}
+              onClick={() =>
+                persist([
+                  ...routines,
+                  {
+                    ...JSON.parse(JSON.stringify(routine)),
+                    id: "",
+                    name: `${routine.name} (2)`,
+                    show_on_home: false,
+                  },
+                ])
+              }
+            >
+              <Copy size={13} />
             </button>
             <button className="mini" onClick={() => setEditing(routine.id)}>
               {t("integrations.configure")}

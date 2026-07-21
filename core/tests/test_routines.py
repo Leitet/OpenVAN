@@ -199,3 +199,94 @@ async def test_voice_still_runs_routines(core):
     reply = await core.chat("goodnight")
     assert reply["action"] is True
     assert core.hub.entities["light.cabin"].state == "off"
+
+
+# --- backlogged follow-ups: notices, sun + van triggers ----------------------
+
+async def test_notify_becomes_a_transient_notice(core, monkeypatch):
+    await core.routines.save(core.routines.list() + [{
+        "id": "heads_up", "name": "Heads up",
+        "triggers": [{"type": "manual"}],
+        "steps": [{"type": "notify", "message": "Battery low - lights dimmed"}],
+    }])
+    await core.routines.run("heads_up")
+    active = {n["key"]: n for n in core.advisors.active_notices()}
+    assert "routine_heads_up" in active
+    assert active["routine_heads_up"]["message"] == "Battery low - lights dimmed"
+    assert active["routine_heads_up"]["title"] == "Heads up"
+    # Time-limited: once the TTL passes, the next evaluate clears it.
+    import time as real_time
+    import openvan_core.notices as notices_mod
+    far_future = real_time.time() + 10**6
+    monkeypatch.setattr(notices_mod.time, "time", lambda: far_future)
+    await core.advisors.evaluate()
+    assert "routine_heads_up" not in {n["key"] for n in core.advisors.active_notices()}
+
+
+async def test_sun_trigger_fires_at_sunset(core):
+    await core.routines.save(core.routines.list() + [{
+        "id": "dusk_lights", "name": "Dusk lights",
+        "triggers": [{"type": "sun", "event": "sunset"}],
+        "steps": [{"type": "action", "entity_id": "light.cabin", "command": "turn_on"}],
+    }])
+    await core.twin.set_signal("environment.phase", "day", source="test")
+    await asyncio.sleep(0.02)
+    assert core.hub.entities["light.cabin"].state == "off"
+    await core.twin.set_signal("environment.phase", "dusk", source="test")
+    await asyncio.sleep(0.05)
+    assert core.hub.entities["light.cabin"].state == "on"
+
+
+async def test_sun_trigger_offset_counts_in_sim_time(core):
+    await core.routines.save(core.routines.list() + [{
+        "id": "after_sunrise", "name": "After sunrise",
+        "triggers": [{"type": "sun", "event": "sunrise", "offset_min": 5}],
+        "steps": [{"type": "action", "entity_id": "light.cabin", "command": "turn_on"}],
+    }])
+    epoch = 1784000000.0
+    await core.twin.set_signal("clock.epoch", epoch, source="test")
+    await core.twin.set_signal("environment.phase", "dawn", source="test")
+    await core.twin.set_signal("environment.phase", "day", source="test")  # sunrise
+    await asyncio.sleep(0.05)
+    assert core.hub.entities["light.cabin"].state == "off"  # queued, not yet fired
+    # Six sim-minutes later the one-shot target is crossed.
+    await core.twin.set_signal("clock.epoch", epoch + 360, source="test")
+    await asyncio.sleep(0.05)
+    assert core.hub.entities["light.cabin"].state == "on"
+
+
+async def test_van_triggers_on_ignition_edges(core):
+    await core.routines.save(core.routines.list() + [
+        {"id": "on_drive_off", "name": "Drive off",
+         "triggers": [{"type": "van", "event": "drive_off"}],
+         "steps": [{"type": "action", "entity_id": "light.cabin", "command": "turn_off"}]},
+        {"id": "on_park", "name": "Park",
+         "triggers": [{"type": "van", "event": "park"}],
+         "steps": [{"type": "action", "entity_id": "light.cabin", "command": "turn_on"}]},
+    ])
+    await core.twin.set_signal("cabin_light.on", True)
+    await core.hub.set_state("light.cabin", "on")
+    await core.twin.set_signal("vehicle.ignition", True, source="test")
+    await asyncio.sleep(0.05)
+    assert core.hub.entities["light.cabin"].state == "off"  # drive_off fired
+    await core.twin.set_signal("vehicle.ignition", False, source="test")
+    await asyncio.sleep(0.05)
+    assert core.hub.entities["light.cabin"].state == "on"  # park fired
+
+
+def test_normalize_accepts_sun_and_van():
+    taken: set[str] = set()
+    r = normalize_routine({
+        "name": "New triggers",
+        "triggers": [
+            {"type": "sun", "event": "sunset", "offset_min": 9999},
+            {"type": "sun", "event": "bogus"},
+            {"type": "van", "event": "drive_off"},
+        ],
+        "steps": [],
+    }, taken)
+    assert r["triggers"] == [
+        {"type": "sun", "event": "sunset", "offset_min": 720.0},  # clamped
+        {"type": "sun", "event": "sunrise", "offset_min": 0.0},   # bogus → default
+        {"type": "van", "event": "drive_off"},
+    ]

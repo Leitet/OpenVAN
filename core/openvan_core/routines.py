@@ -12,6 +12,10 @@ edge-triggered so a routine fires once per crossing, never every tick):
     {"type": "signal", "signal": "house_battery.soc",
      "op": "below", "value": 20}                         # above|below|equals|on|off
     {"type": "time", "at": "07:30"}                      # local (sim-clock) time
+    {"type": "sun", "event": "sunrise", "offset_min": 30}  # sunrise|sunset (+delay,
+                                                           # counted in *sim* time)
+    {"type": "van", "event": "park"}                     # park | drive_off
+                                                         # (ignition off / on edge)
 
 Steps (executed in order):
 
@@ -143,6 +147,13 @@ def normalize_routine(raw: dict[str, Any], taken: set[str]) -> dict[str, Any] | 
             at = str(t.get("at") or "")
             if re.fullmatch(r"\d{1,2}:\d{2}", at):
                 triggers.append({"type": "time", "at": at})
+        elif kind == "sun":
+            event = t.get("event") if t.get("event") in ("sunrise", "sunset") else "sunrise"
+            triggers.append({"type": "sun", "event": event,
+                             "offset_min": max(0.0, min(720.0, _num(t.get("offset_min"), 0.0)))})
+        elif kind == "van":
+            event = t.get("event") if t.get("event") in ("park", "drive_off") else "park"
+            triggers.append({"type": "van", "event": event})
     if not triggers:
         triggers = [{"type": "manual"}]
 
@@ -210,6 +221,10 @@ class RoutineEngine:
         # Edge state per (routine id, trigger index): last boolean outcome.
         self._edges: dict[tuple[str, int], bool] = {}
         self._last_minutes: int | None = None
+        self._last_phase: str | None = None
+        # Sun triggers with an offset become one-shot local-time targets, so the
+        # delay is counted in *sim* time (bench time-travel works).
+        self._pending_at: list[tuple[str, int]] = []  # (routine id, minutes-of-day)
         self._running: set[str] = set()
         self._tasks: set[asyncio.Task] = set()
         self._unsubs: list[Any] = []
@@ -277,6 +292,10 @@ class RoutineEngine:
     # --- triggers ---------------------------------------------------------
 
     def start(self) -> None:
+        # Baselines from the current world, so the first *change* is a real edge
+        # (the seeded phase/time must not be mistaken for a transition).
+        self._last_phase = str(self.twin.get("environment.phase") or "") or None
+        self._last_minutes = self._local_minutes()
         self._unsubs.append(self.bus.subscribe(SIGNAL_CHANGED, self._on_signal))
 
     async def stop(self) -> None:
@@ -296,6 +315,8 @@ class RoutineEngine:
         key = event.data.get("key")
         if key == "clock.epoch":
             await self._check_time_triggers()
+        elif key == "environment.phase":
+            await self._check_sun_triggers()
         await self._check_signal_triggers(key)
 
     async def _check_signal_triggers(self, key: str | None) -> None:
@@ -303,15 +324,55 @@ class RoutineEngine:
             if not routine["enabled"]:
                 continue
             for idx, trigger in enumerate(routine["triggers"]):
-                if trigger["type"] != "signal" or trigger["signal"] != key:
+                if trigger["type"] == "signal" and trigger["signal"] == key:
+                    now = _check(trigger["op"], self.twin.get(trigger["signal"]),
+                                 trigger.get("value", 0.0))
+                    cause = f"signal:{key}"
+                elif trigger["type"] == "van" and key == "vehicle.ignition":
+                    # park = ignition switched off; drive_off = switched on.
+                    ignition = self.twin.get("vehicle.ignition")
+                    if ignition is None:
+                        continue
+                    now = bool(ignition) if trigger["event"] == "drive_off" else not bool(ignition)
+                    cause = f"van:{trigger['event']}"
+                else:
                     continue
-                now = _check(trigger["op"], self.twin.get(trigger["signal"]),
-                             trigger.get("value", 0.0))
                 edge = (routine["id"], idx)
                 fired_before = self._edges.get(edge, False)
                 self._edges[edge] = now
                 if now and not fired_before:
-                    self._spawn(routine["id"], f"signal:{key}")
+                    self._spawn(routine["id"], cause)
+
+    async def _check_sun_triggers(self) -> None:
+        """Sunrise = the phase turning "day"; sunset = the light starting to
+        fade (phase "dusk", or a jump straight day→night). An offset delays the
+        run by sim-time minutes via a one-shot local-time target."""
+        phase = str(self.twin.get("environment.phase") or "")
+        previous, self._last_phase = self._last_phase, phase
+        if previous is None or previous == phase:
+            return
+        sunrise = phase == "day" and previous in ("dawn", "dusk", "night")
+        sunset = (phase == "dusk" and previous in ("day", "dawn")) or (
+            phase == "night" and previous == "day"
+        )
+        for routine in self._routines:
+            if not routine["enabled"]:
+                continue
+            for trigger in routine["triggers"]:
+                if trigger["type"] != "sun":
+                    continue
+                if (trigger["event"] == "sunrise" and sunrise) or (
+                    trigger["event"] == "sunset" and sunset
+                ):
+                    offset = int(trigger.get("offset_min") or 0)
+                    if offset <= 0:
+                        self._spawn(routine["id"], f"sun:{trigger['event']}")
+                    else:
+                        minutes = self._local_minutes()
+                        if minutes is not None:
+                            self._pending_at.append(
+                                (routine["id"], (minutes + offset) % (24 * 60))
+                            )
 
     async def _check_time_triggers(self) -> None:
         minutes = self._local_minutes()
@@ -320,6 +381,14 @@ class RoutineEngine:
         previous, self._last_minutes = self._last_minutes, minutes
         if previous is None or previous == minutes:
             return
+        # One-shot sun-offset targets first (consumed on fire).
+        still_pending: list[tuple[str, int]] = []
+        for routine_id, target in self._pending_at:
+            if _minute_crossed(previous, minutes, target):
+                self._spawn(routine_id, "sun:offset")
+            else:
+                still_pending.append((routine_id, target))
+        self._pending_at = still_pending
         for routine in self._routines:
             if not routine["enabled"]:
                 continue

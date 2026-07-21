@@ -514,6 +514,11 @@ const T: Record<string, Entry> = {
   "routines.steps": { en: "steps", sv: "steg", de: "Schritte" },
   "routines.test": { en: "Run now", sv: "Kör nu", de: "Jetzt ausführen" },
   "routines.message": { en: "Message", sv: "Meddelande", de: "Nachricht" },
+  "routines.sunrise": { en: "Sunrise", sv: "Soluppgång", de: "Sonnenaufgang" },
+  "routines.sunset": { en: "Sunset", sv: "Solnedgång", de: "Sonnenuntergang" },
+  "routines.park": { en: "When parking", sv: "Vid parkering", de: "Beim Parken" },
+  "routines.driveOff": { en: "When driving off", sv: "Vid avfärd", de: "Beim Losfahren" },
+  "routines.duplicate": { en: "Duplicate", sv: "Duplicera", de: "Duplizieren" },
   "integrations.placeHint": {
     en: "Drag a camera to place it on the van; drag its arrow to aim it.",
     sv: "Dra en kamera för att placera den på bilen; dra pilen för att rikta den.",
